@@ -1,13 +1,11 @@
 // ==UserScript==
 // @name         斗鱼全民星推荐自动领取pro
 // @namespace    http://tampermonkey.net/
-// @version      2.0.1
+// @version      2.0.2
 // @description  自动打开、领取并切换直播间处理全民星推荐活动红包，并尝试自动暂停视频。
 // @author       ienone
 // @original-author ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
-// @match        *://www.douyu.com/6657*
 // @match        *://www.douyu.com/*
-// @match        *://www.douyu.com/topic/*?rid=[0-9]*
 // @grant        GM_openInTab
 // @grant        GM_closeTab
 // @grant        GM_setValue
@@ -33,73 +31,64 @@
      */
     const CONFIG = {
         // --- 核心标识 ---
-        SCRIPT_PREFIX: "[全民星推荐助手]",
-        CONTROL_ROOM_ID: "6657",
-        TEMP_CONTROL_ROOM_RID: "6979222",
+        SCRIPT_PREFIX: "[全民星推荐助手]", // 脚本在控制台输出日志时使用的前缀，便于识别和过滤。
+        CONTROL_ROOM_ID: "6657", // 控制室的房间号，只有在此房间页面，脚本的控制面板UI才会加载。
+        TEMP_CONTROL_ROOM_RID: "6979222", // 备用的控制室房间号（例如斗鱼官方活动页的RID），用于兼容特殊页面。
 
         // --- 时间控制 (ms) ---
-        CHECK_INTERVAL: 1000,
-        POPUP_WAIT_TIMEOUT: 20000,
-        PANEL_WAIT_TIMEOUT: 10000,
-        ELEMENT_WAIT_TIMEOUT: 30000,
-        RED_ENVELOPE_LOAD_TIMEOUT: 15000,
-        MIN_DELAY: 1000,
-        MAX_DELAY: 2500,
-        OPEN_TAB_DELAY: 1000,
-        CLOSE_TAB_DELAY: 1500,
-        INITIAL_SCRIPT_DELAY: 3000,
-        MAX_TAB_LIFETIME_MS: 10 * 60 * 1000, // 10分钟
-        NO_ENVELOPE_SWITCH_TIMEOUT: 30000, // 30秒。如果红包区持续消失30秒，则切换房间
+        POPUP_WAIT_TIMEOUT: 20000, // 点击红包后，等待领取弹窗出现的最长超时时间。
+        PANEL_WAIT_TIMEOUT: 10000, // 查找通用UI面板或元素的默认等待超时时间。
+        ELEMENT_WAIT_TIMEOUT: 30000, // 等待播放器加载完成的超时时间，用以判断页面是否可用。
+        RED_ENVELOPE_LOAD_TIMEOUT: 15000, // 在工作标签页中，等待右下角红包活动区域加载的超时时间。
+        MIN_DELAY: 1000, // 模拟人类操作的随机延迟时间范围的最小值，用于点击等操作，避免行为过于机械。
+        MAX_DELAY: 2500, // 模拟人类操作的随机延迟时间范围的最大值。
+        OPEN_TAB_DELAY: 1000, // 打开新标签页后的固定等待时间，以确保新页面有时间开始加载。
+        CLOSE_TAB_DELAY: 1500, // 旧标签页在打开新标签页后，等待多久再关闭自己，以确保新页面已成功接管任务。
+        INITIAL_SCRIPT_DELAY: 3000, // 页面加载完成后，脚本延迟多久再开始执行，以避开页面初始化时的高资源占用期。
+        UNRESPONSIVE_TIMEOUT: 15 * 60 * 1000, // 工作标签页多久未向控制中心汇报心跳后，在面板上被标记为“无响应”状态。
 
         // --- UI 与交互 ---
-        DRAGGABLE_BUTTON_ID: 'douyu-qmx-starter-button',
-        BUTTON_POS_STORAGE_KEY: 'douyu_qmx_button_position',
-        MODAL_DISPLAY_MODE: 'floating', // 可选: 'centered', 'floating', 'inject-rank-list'
+        DRAGGABLE_BUTTON_ID: 'douyu-qmx-starter-button', // 主悬浮按钮的HTML ID。
+        BUTTON_POS_STORAGE_KEY: 'douyu_qmx_button_position', // 用于在油猴存储中记录主悬浮按钮位置的键名。
+        MODAL_DISPLAY_MODE: 'floating', // 控制面板的显示模式。可选值: 'floating'(浮动窗口), 'centered'(屏幕居中), 'inject-rank-list'(注入到排行榜)。
 
         // --- API 相关 ---
-        API_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/square/list",
-        API_RETRY_COUNT: 3,
-        API_RETRY_DELAY: 5000,
+        API_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/square/list", // 获取可领取红包直播间列表的官方API地址。
+        API_RETRY_COUNT: 3, // API请求失败时的最大重试次数。
+        API_RETRY_DELAY: 5000, // 每次API请求重试之间的等待时间。
 
         // --- 业务逻辑配置 ---
-        MAX_WORKER_TABS: 24,
-        DAILY_LIMIT_ACTION: 'CONTINUE_DORMANT', // 可选: 'STOP_ALL', 'CONTINUE_DORMANT'
-        AUTO_PAUSE_ENABLED: true,
-        AUTO_PAUSE_CHECK_INTERVAL: 2000, // 自动暂停检查间隔 (ms)
-        AUTO_PAUSE_DELAY_AFTER_ACTION: 5000,
+        MAX_WORKER_TABS: 24, // 允许同时运行的最大工作标签页（直播间）数量。
+        DAILY_LIMIT_ACTION: 'CONTINUE_DORMANT', // 当达到每日领取上限时的处理策略。可选值: 'STOP_ALL'(停止所有任务), 'CONTINUE_DORMANT'(进入休眠等待第二天)。
+        AUTO_PAUSE_ENABLED: true, // 是否启用在工作标签页中自动暂停视频播放的功能，以节省系统资源。
+        AUTO_PAUSE_DELAY_AFTER_ACTION: 5000, // 在执行领取等操作后，需要等待多久才能再次尝试自动暂停视频。
 
         // --- 存储键名 ---
-        STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state',
-        DAILY_LIMIT_REACHED_KEY: 'douyu_qmx_daily_limit_reached',
+        STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state', // 用于在油猴存储中记录脚本核心状态（如所有工作标签页信息）的键名。
+        DAILY_LIMIT_REACHED_KEY: 'douyu_qmx_daily_limit_reached', // 用于在油猴存储中记录“每日上限”状态的键名。
 
-
-        // --- 监控与轮询 ---
-        WORKER_STALE_TIMEOUT: 30000,         // 工作标签页失联超时时间 (ms)
-        WORKER_LOADING_TIMEOUT: 45000,       // 工作标签页加载超时时间 (ms)
-        COMMAND_POLL_INTERVAL: 500,          // 工作页轮询命令间隔 (ms)
-        
         // --- UI 与 API ---
-        INJECT_TARGET_RETRIES: 10,           // 侧边栏注入重试次数
-        INJECT_TARGET_INTERVAL: 500,         // 侧边栏注入重试间隔 (ms)
-        API_ROOM_FETCH_COUNT: 10,            // 单次从API获取的房间建议数量
-        UI_FEEDBACK_DELAY: 2000,             // UI提示信息（如“无新房间”）的显示时长
-        DRAG_BUTTON_DEFAULT_PADDING: 20,     // 主按钮距离屏幕边缘的默认间距 (px)
-
+        INJECT_TARGET_RETRIES: 10, // 在“注入模式”下，尝试寻找并注入UI到侧边栏排行榜的重试次数。
+        INJECT_TARGET_INTERVAL: 500, // 每次尝试注入UI到侧边栏之间的间隔时间。
+        API_ROOM_FETCH_COUNT: 10, // 单次调用API时，期望获取的直播间数量建议值。
+        UI_FEEDBACK_DELAY: 2000, // UI上临时反馈信息（如“无新房间”）的显示时长。
+        DRAG_BUTTON_DEFAULT_PADDING: 20, // 主悬浮按钮距离屏幕边缘的默认像素间距。
 
         // --- 选择器 ---
+        // 存储所有脚本需要操作的页面元素的CSS选择器，便于统一管理和修改。
         SELECTORS: {
-            redEnvelopeContainer: "#layout-Player-aside div.LiveNewAnchorSupportT-enter",
-            countdownTimer: "span.LiveNewAnchorSupportT-enter--bottom",
-            popupModal: "body > div.LiveNewAnchorSupportT-pop",
-            openButton: "div.LiveNewAnchorSupportT-singleBag--btnOpen",
-            closeButton: "div.LiveNewAnchorSupportT-pop--close",
-            criticalElement: "#js-player-video",
-            pauseButton: "div.pause-c594e8:not(.removed-9d4c42)",
-            playButton: "div.play-8dbf03:not(.removed-9d4c42)",
-            rewardText: ".LiveNewAnchorSupportT-pop .prop-item-name",
-            limitReachedPopup: "div.dy-Message-custom-content.dy-Message-info",
-            rankListContainer: "#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank",
-            anchorName: "div.Title-anchorName > h2.Title-anchorNameH2",
+            redEnvelopeContainer: "#layout-Player-aside div.LiveNewAnchorSupportT-enter", // 右下角红包活动的总容器。
+            countdownTimer: "span.LiveNewAnchorSupportT-enter--bottom", // 红包容器内显示倒计时的元素。
+            popupModal: "body > div.LiveNewAnchorSupportT-pop", // 点击红包后弹出的主模态框（弹窗）。
+            openButton: "div.LiveNewAnchorSupportT-singleBag--btnOpen", // 弹窗内的“开”或“抢”按钮。
+            closeButton: "div.LiveNewAnchorSupportT-pop--close", // 领取奖励后，弹窗上的关闭按钮。
+            criticalElement: "#js-player-video", // 用于判断页面是否加载成功的关键元素（如此处的视频播放器）。
+            pauseButton: "div.pause-c594e8:not(.removed-9d4c42)", // 播放器上的暂停按钮。
+            playButton: "div.play-8dbf03:not(.removed-9d4c42)", // 播放器上的播放按钮。
+            rewardText: ".LiveNewAnchorSupportT-pop .prop-item-name", // 领取成功后，弹窗中显示所获奖励名称的元素。
+            limitReachedPopup: "div.dy-Message-custom-content.dy-Message-info", // 斗鱼官方弹出的“今日已达上限”的提示信息元素。
+            rankListContainer: "#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank", // 在“注入模式”下，用作UI注入目标的侧边栏排行榜容器。
+            anchorName: "div.Title-anchorName > h2.Title-anchorNameH2", // 直播间页面中显示主播昵称的元素。
         }
     };
 
@@ -158,15 +147,10 @@
      * =================================================================================
      */
     const STATE = {
-        mainIntervalId: null,
-        pauseIntervalId: null,
         isWaitingForPopup: false,
         isSwitchingRoom: false,
-        tabStartTime: 0,
         lastActionTime: 0,
         isPausedByScript: false,
-        noEnvelopeSince: 0, // 记录红包区域从何时开始消失，0表示未消失
-        isWakeUpCallScheduled: false, // 是否已经为下一次抢红包设置了唤醒闹钟
     };
 
     /**
@@ -233,6 +217,7 @@
      * 模块：跨页面状态管理器 (GlobalState)
      * ---------------------------------------------------------------------------------
      * 封装所有对 GM_setValue 和 GM_getValue 的操作，用于页面间通信。
+     * 增加了详细的日志输出，用于追踪数据流。
      * =================================================================================
      */
     const GlobalState = {
@@ -241,7 +226,9 @@
          * @returns {{tabs: object, rewards: Array, command: object|null}} - 共享状态。
          */
         get() {
-            return GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {}, command: null });
+            const state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {}, command: null });
+            // 日志：记录每次读取操作，以及读取到了什么
+            return state;
         },
 
         /**
@@ -249,7 +236,27 @@
          * @param {object} state - 要保存的状态。
          */
         set(state) {
-            GM_setValue(SETTINGS.STATE_STORAGE_KEY, state);
+
+            // --- 防冲突锁机制 ---
+            const lockKey = 'douyu_qmx_state_lock';
+            if (GM_getValue(lockKey, false)) {
+                // 如果发现有锁，则延迟50毫秒后重试，避免冲突
+                setTimeout(() => this.set(state), 50);
+                return;
+            }
+
+            try {
+                // 上锁
+                GM_setValue(lockKey, true);
+
+                // 执行写入操作
+                GM_setValue(SETTINGS.STATE_STORAGE_KEY, state);
+            } catch (e) {
+                Utils.log(`[全局状态-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
+            } finally {
+                // 无论成功与否，最后都要解锁
+                GM_setValue(lockKey, false);
+            }
         },
         
         /**
@@ -260,32 +267,31 @@
          * @param {object} [options={}] - 可选的附加数据，如 { nickname: '主播名' }。
          */
         updateWorker(roomId, status, statusText, options = {}) {
-            if (!roomId) return;
+            if (!roomId) {
+                return;
+            }
+            
+            // 日志：记录哪部分代码正在尝试更新哪个房间的状态
+            const callerPage = window.location.href.includes(SETTINGS.CONTROL_ROOM_ID) ? '控制页' : `工作页(${roomId})`;
+
             const state = this.get();
 
-            // 1. 获取当前房间的数据引用。如果不存在，则创建一个新的空对象
             const tabData = state.tabs[roomId] || {};
-
-            // 2.备份旧昵称
             const preservedNickname = tabData.nickname;
 
-            // 3. 更新基础信息
-            tabData.status = status;
-            tabData.statusText = statusText;
-            tabData.lastUpdateTime = Date.now();
-
-            // 4. 应用新的 options (这会覆盖 status, statusText 等，但没关系，因为我们刚设置过)
-            Object.assign(tabData, options);
-
-            // 5. 确保昵称不丢失。
+            Object.assign(tabData, {
+                status,
+                statusText,
+                lastUpdateTime: Date.now(),
+                ...options
+            });
+            
             if (!tabData.nickname && preservedNickname) {
                 tabData.nickname = preservedNickname;
             }
 
-            // 6. 将更新后的 tabData 写回到 state 对象中
             state.tabs[roomId] = tabData;
             
-            // 7. 保存最终的完整状态
             this.set(state);
         },
 
@@ -298,7 +304,6 @@
             const state = this.get();
             delete state.tabs[roomId];
             this.set(state);
-            Utils.log(`已从状态面板移除房间: ${roomId}`);
         },
 
         /**
@@ -418,16 +423,13 @@
          */
         async safeClick(element, description) {
             if (!element) {
-                Utils.log(`[点击失败] 无法找到元素: ${description}`);
                 return false;
             }
             try {
                 if (window.getComputedStyle(element).display === 'none') {
-                     Utils.log(`[点击失败] 元素不可见: ${description}`);
                      return false;
                 }
                 await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY / 2, SETTINGS.MAX_DELAY / 2));
-                Utils.log(`尝试点击: ${description}`);
                 element.click();
                 await Utils.sleep(Utils.getRandomDelay());
                 return true;
@@ -462,262 +464,164 @@
         /**
          * 工作页面的总入口和初始化函数。
          */
-        hasReportedCountdown: false, // 是否已报告过倒计时状态
 
-
-        /**
-         * 初始化工作页面。
-         * 在这里设置所有必要的事件监听器和定时器。
-         * @returns {Promise<void>}
-         * @throws {Error} 如果无法识别当前房间ID。
-         * @description
-         * 初始化工作页面的主要逻辑：
-         * 1. 获取当前房间ID。
-         * 2. 启动命令轮询器，监听来自控制页面的指令。
-         * 3. 检查全局状态，判断是否需要进入休眠模式或关闭页面。
-         * 4. 并行等待红包活动区域和页面加载状态。
-         * 5. 启动核心任务循环，定时检查红包状态。
-         * 6. 处理红包领取逻辑，包括弹窗等待和奖励记录。
-         * 7. 自动暂停视频播放。
-         * 8. 切换房间逻辑，处理标签页切换和关闭。
-         * 9. 进入休眠模式，等待午夜刷新。
-         * 10. 统一的自毁程序，停止所有活动并关闭标签页。
-         */
         async init() {
-            Utils.log("当前是工作页面，开始初始化...");
+            Utils.log("混合模式工作单元初始化...");
             const roomId = Utils.getCurrentRoomId();
             if (!roomId) {
                 Utils.log("无法识别当前房间ID，脚本停止。");
                 return;
             }
             
-            // 启动命令轮询器，接收来自控制页面的指令
-            this.startCommandPoller(roomId);
+            await Utils.sleep(1000);
             
-            // 页面关闭前，从全局状态中移除自己
+            // 保留命令轮询器，以便接收来自控制面板的“关闭”指令
+            this.startCommandListener(roomId);
+            
+            // 页面关闭前的清理工作
             window.addEventListener('beforeunload', () => GlobalState.removeWorker(roomId));
 
-            GlobalState.updateWorker(roomId, 'OPENING', '页面加载中...');
+            // 等待页面关键元素加载完成
+            Utils.log("正在等待页面关键元素 (#js-player-video) 加载...");
+            const criticalElement = await DOM.findElement(SETTINGS.SELECTORS.criticalElement, SETTINGS.ELEMENT_WAIT_TIMEOUT);
+            if (!criticalElement) {
+                Utils.log("页面关键元素加载超时，此标签页可能无法正常工作，即将关闭。");
+                await this.selfClose();
+                return;
+            }
+            Utils.log("页面关键元素已加载。");
 
-            // 初始化检查：如果全局已达上限，则根据策略执行相应操作
+            // 获取一次性的主播名等信息
+            const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
+            const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
+            
+            // 立即汇报初始状态
+            GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname });
+
+            // 检查每日上限
             const limitState = GlobalState.getDailyLimit();
             if (limitState?.reached) {
                 Utils.log("初始化检查：检测到全局上限旗标。");
                 if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
                     await this.enterDormantMode();
                 } else {
-                    await this.stopAndClose();
+                    await this.selfClose();
                 }
-                return; // 中断后续初始化
+                return;
             }
 
-            STATE.tabStartTime = Date.now();
-            STATE.lastActionTime = Date.now();
-            
-            // 并行等待逻辑
-            Utils.log(`步骤1: 开始并行等待 [红包活动区域] 和 [页面加载状态]...`);
-            try {
-                await Promise.race([
-                    (async () => {
-                        if (await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT)) {
-                            Utils.log("成功找到 [红包活动区域]，初始化继续。");
-                            return Promise.resolve("红包区域已找到");
-                        }
-                        return Promise.reject(new Error("红包区域加载超时"));
-                    })(),
-                    (async () => {
-                        if (!await DOM.findElement(SETTINGS.SELECTORS.criticalElement, SETTINGS.ELEMENT_WAIT_TIMEOUT)) {
-                            return Promise.reject(new Error("页面关键元素加载超时"));
-                        }
-                        // 这是一个“哨兵”，它自己不会成功，只会在失败时发声
-                        await Utils.sleep(SETTINGS.ELEMENT_WAIT_TIMEOUT + 1000); 
-                    })()
-                ]);
-
-            // 红包区域已加载，获取额外信息
-            const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
-            const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`; // 获取昵称，如果失败则用房间号代替
-            
-            // 首次状态更新时，将昵称作为附加数据传递
-            GlobalState.updateWorker(roomId, 'WAITING', '初始化完成，等待红包状态', { nickname: nickname });
-
-            Utils.log(`初始化成功 (主播: ${nickname})，启动核心任务循环。`);
-            STATE.mainIntervalId = setInterval(() => this.mainLoop(), SETTINGS.CHECK_INTERVAL);
-            if (SETTINGS.AUTO_PAUSE_ENABLED) {
-                STATE.pauseIntervalId = setInterval(() => this.autoPauseVideo(), SETTINGS.AUTO_PAUSE_CHECK_INTERVAL);
-            }
-            } catch (error) {
-                Utils.log(`初始化失败: ${error.message}，将切换房间。`);
-                if (error.message.includes("红包区域")) {
-                    GlobalState.updateWorker(roomId, 'ERROR', '无红包活动');
-                } else {
-                    GlobalState.updateWorker(roomId, 'ERROR', '页面加载超时');
-                }
-                await this.switchRoom();
-            }
+            // 启动一次性的任务链，取代旧的 setInterval
+            this.findAndExecuteNextTask(roomId);
         },
 
-        /**
-         * 核心主循环，定时检查红包状态。
-         */
-        async mainLoop() {
-             // 检查全局上限旗标，如果其他标签页触发了上限，本页面也需要响应
-            if (GlobalState.getDailyLimit()?.reached) {
-                Utils.log("主循环检测到全局上限旗标，执行相应策略。");
-                this.stopAllTimers();
-                if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
-                    await this.enterDormantMode();
-                } else {
-                    await this.stopAndClose();
-                }
+        async findAndExecuteNextTask(roomId) {
+            // 每次开始寻找任务时，都尝试暂停一下视频
+            if (SETTINGS.AUTO_PAUSE_ENABLED) {
+                this.autoPauseVideo();
+            }
+
+            // 1. 寻找红包区域
+            const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
+
+            if (!redEnvelopeDiv) {
+                Utils.log("此房间无红包活动或加载超时，开始切换...");
+                GlobalState.updateWorker(roomId, 'SWITCHING', '无活动, 切换中');
+                await this.switchRoom(); // 切换房间并自毁
                 return;
-            }
-
-            if (STATE.isWaitingForPopup || STATE.isSwitchingRoom) return;
-            
-            // 检查标签页是否超时
-            if (Date.now() - STATE.tabStartTime > SETTINGS.MAX_TAB_LIFETIME_MS) {
-                Utils.log(`标签页达到最大生存时间，切换房间。`);
-                await this.switchRoom();
-                return;
-            }
-
-            const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
-            if (!redEnvelopeDiv || window.getComputedStyle(redEnvelopeDiv).display === 'none') {
-                // 红包区域不可见
-                this.hasReportedCountdown = false;
-                
-                if (STATE.noEnvelopeSince === 0) {
-                    // 第一次检测到消失，启动计时器
-                    STATE.noEnvelopeSince = Date.now();
-                    Utils.log("红包区域消失，开始计时切换...");
-                    GlobalState.updateWorker(Utils.getCurrentRoomId(), 'WAITING', '无红包活动，等待中...');
-                } else {
-                    // 已经开始计时，检查是否超时
-                    const timeout = SETTINGS.NO_ENVELOPE_SWITCH_TIMEOUT;
-                    const elapsed = Date.now() - STATE.noEnvelopeSince;
-                    if (elapsed > timeout) {
-                        Utils.log(`红包区域持续消失超过 ${timeout / 1000} 秒，执行切换。`);
-                        await this.switchRoom();
-                        return; // 切换后立即退出循环
-                    }
-                    // 未超时，更新等待状态
-                    const remaining = Math.round((timeout - elapsed) / 1000);
-                    GlobalState.updateWorker(Utils.getCurrentRoomId(), 'WAITING', `无活动, ${remaining}s后切换`);
-                }
-                return; // 结束本次循环
-            }
-
-            // 如果红包区域可见，则重置计时器
-            if (STATE.noEnvelopeSince !== 0) {
-                STATE.noEnvelopeSince = 0;
-                Utils.log("红包区域已恢复。");
             }
 
             const statusSpan = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-            if (!statusSpan) {
-                 GlobalState.updateWorker(Utils.getCurrentRoomId(), 'ERROR', '找不到状态元素');
-                 return;
-            }
+            const statusText = statusSpan ? statusSpan.textContent.trim() : '';
             
-            const statusText = statusSpan.textContent.trim();
-            const roomId = Utils.getCurrentRoomId();
-
+            // 2. 分析状态并行动
             if (statusText.includes(':')) {
-                // 如果红包区域恢复，重置“无活动”计时器
-                if (STATE.noEnvelopeSince !== 0) { STATE.noEnvelopeSince = 0; }
+                // 发现倒计时任务 -> 汇报并预约
+                const [minutes, seconds] = statusText.split(':').map(Number);
+                const durationInSeconds = (minutes * 60 + seconds);
+                // 提前 1.5 秒唤醒，留出网络和点击延迟
+                const wakeUpDelay = Math.max(0, (durationInSeconds * 1000) - 1500); 
 
-                try {
-                    const [minutes, seconds] = statusText.split(':').map(Number);
-                    const durationInSeconds = minutes * 60 + seconds;
-
-                    if (!isNaN(durationInSeconds) && durationInSeconds > 0) {
-                        // 只有在尚未设置闹钟时，才进行处理
-                        if (!STATE.isWakeUpCallScheduled) {
-                            Utils.log(`[智能定时] 发现倒计时: ${statusText}。设置唤醒闹钟...`);
-                            
-                            // 提前 1s 准备唤醒，留出反应时间
-                            const wakeUpDelay = Math.max(0, (durationInSeconds * 1000) - 1000);
-
-                            // 设置一次性的“闹钟”
-                            setTimeout(() => {
-                                Utils.log(`[智能定时] 闹钟触发！尝试立即执行一次检查...`);
-                                // 立即强制执行一次 mainLoop，而不是等待 setInterval
-                                this.mainLoop(); 
-                                // 闹钟响过后，重置标志，以便为下一次倒计时设置新闹钟
-                                STATE.isWakeUpCallScheduled = false; 
-                            }, wakeUpDelay);
-                            // 标记为已设置闹钟，防止在倒计时期间重复设置
-                            STATE.isWakeUpCallScheduled = true;
-                        }
-                        // 无论是否设置闹钟，心跳和状态更新照常进行
-                        GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`);
-                    }
-                } catch (e) { 
-                    Utils.log(`[错误] 解析倒计时失败: ${e.message}`);
-                    GlobalState.updateWorker(roomId, 'ERROR', `倒计时格式错误: ${statusText}`);
-                }
+                Utils.log(`发现新任务：倒计时 ${statusText}。`);
                 
-            } else if (statusText.includes('抢') || statusText.includes('领')) {
-                STATE.isWakeUpCallScheduled = false; // 抢的时刻到来，重置闹钟标志
-                this.hasReportedCountdown = false; // 重置报告状态，为下一次做准备
-                GlobalState.updateWorker(roomId, 'CLAIMING', `检测到可领取`);
-                if (await DOM.safeClick(redEnvelopeDiv, "右下角红包区域")) {
-                    await this.claimReward();
-                } else {
-                    GlobalState.updateWorker(roomId, 'ERROR', '点击右下角红包失败');
+                // 向控制面板汇报任务详情
+                GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, {
+                    countdown: { startTime: Date.now(), duration: durationInSeconds }
+                });
+                
+                if (SETTINGS.AUTO_PAUSE_ENABLED) {
+                    this.autoPauseVideo();
                 }
+                // 预约未来的动作
+                Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1000)} 秒后唤醒执行任务。`);
+                setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
+
+            } else if (statusText.includes('抢') || statusText.includes('领')) {
+                // 发现可立即执行的任务
+                Utils.log("发现可立即领取的任务。");
+                GlobalState.updateWorker(roomId, 'CLAIMING', '立即领取中...');
+                await this.claimAndRecheck(roomId);
+
             } else {
-                this.hasReportedCountdown = false; // 其他状态也重置
-                GlobalState.updateWorker(roomId, 'WAITING', `状态未知: ${statusText}`);
+                // 未知状态，等待一段时间再试
+                Utils.log(`状态未知: "${statusText}"，将在30秒后重新寻找。`);
+                GlobalState.updateWorker(roomId, 'WAITING', `状态未知, 稍后重试`);
+                setTimeout(() => this.findAndExecuteNextTask(roomId), 30000);
             }
         },
+
         
         /**
          * 处理点击红包后的弹窗逻辑。
          */
-        async claimReward() {
-            STATE.isWaitingForPopup = true;
-            const roomId = Utils.getCurrentRoomId();
-            GlobalState.updateWorker(roomId, 'CLAIMING', '等待弹窗...');
+        async claimAndRecheck(roomId) {
+            Utils.log("开始执行领取流程...");
+            GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...');
+            
+            const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
+            if (!await DOM.safeClick(redEnvelopeDiv, "右下角红包区域")) {
+                Utils.log("点击红包区域失败，重新寻找任务。");
+                await Utils.sleep(2000);
+                this.findAndExecuteNextTask(roomId);
+                return;
+            }
 
             const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
             if (!popup) {
-                Utils.log("等待红包弹窗超时。");
-                STATE.isWaitingForPopup = false;
+                Utils.log("等待红包弹窗超时，重新寻找任务。");
+                await Utils.sleep(2000);
+                this.findAndExecuteNextTask(roomId);
                 return;
             }
             
-            GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...');
             const openBtn = popup.querySelector(SETTINGS.SELECTORS.openButton);
             if (await DOM.safeClick(openBtn, "红包弹窗的打开按钮")) {
-                STATE.lastActionTime = Date.now();
-
-                // 立即检查是否触发上限
+                // 检查是否触发上限
                 if (await DOM.checkForLimitPopup()) {
                     GlobalState.setDailyLimit(true);
-                    // mainLoop会在下一次循环时捕获到这个状态并执行相应操作
-                    return; 
+                    Utils.log("检测到每日上限！");
+                    if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
+                        await this.enterDormantMode();
+                    } else {
+                        await this.selfClose();
+                    }
+                    return; // 达到上限，终止任务链
                 }
 
-                // 未触发上限，则尝试记录奖励并关闭弹窗
                 await Utils.sleep(1500); // 等待奖励动画
-                const rewardPopup = document.querySelector(SETTINGS.SELECTORS.popupModal);
-                if (rewardPopup) {
-                    const rewardEl = rewardPopup.querySelector(SETTINGS.SELECTORS.rewardText);
-                    if (rewardEl?.textContent) {
-                        const reward = rewardEl.textContent.trim();
-                        Utils.log(`成功领取奖励: ${reward}`);
-                    } else {
-                        Utils.log("未找到奖励文本（可能为空包）。");
-                    }
-                    const closeBtn = rewardPopup.querySelector(SETTINGS.SELECTORS.closeButton);
-                    await DOM.safeClick(closeBtn, "领取结果弹窗的关闭按钮");
-                }
+                const rewardEl = document.querySelector(SETTINGS.SELECTORS.rewardText);
+                const reward = rewardEl ? rewardEl.textContent.trim() : '空包';
+                Utils.log(`领取操作完成，获得: ${reward}`);
+                
+                const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
+                await DOM.safeClick(closeBtn, "领取结果弹窗的关闭按钮");
             } else {
-                 GlobalState.updateWorker(roomId, 'ERROR', '无法点击打开按钮');
+                 Utils.log("点击打开按钮失败。");
             }
-            STATE.isWaitingForPopup = false;
+            
+            // 核心：无论成功与否，等待后都回到起点，寻找下一个任务
+            Utils.log("操作完成，2秒后在本房间内寻找下一个任务...");
+            await Utils.sleep(2000); 
+            this.findAndExecuteNextTask(roomId);
         },
 
         /**
@@ -727,13 +631,19 @@
             if (STATE.isWaitingForPopup || STATE.isSwitchingRoom || Date.now() - STATE.lastActionTime < SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION) {
                 return;
             }
-            const pauseBtn = document.querySelector(SETTINGS.SELECTORS.pauseButton);
+            
+            // 使用 DOM.findElement 替换 querySelector，给它5秒的等待时间
+            Utils.log("正在寻找暂停按钮...");
+            const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5000); 
+            
             if (pauseBtn) {
                 Utils.log("检测到视频正在播放，尝试自动暂停...");
                 if (await DOM.safeClick(pauseBtn, "暂停按钮")) {
                     STATE.isPausedByScript = true;
-                    Utils.log("视频已通过脚本暂停。");
+                    Utils.log("视频已通过脚本暂停。"); // 只有这里出现，才代表真的成功了
                 }
+            } else {
+                Utils.log("在5秒内未找到暂停按钮，可能视频未播放或已暂停。");
             }
         },
 
@@ -748,7 +658,6 @@
             const currentRoomId = Utils.getCurrentRoomId();
 
             // 1. 冻结当前页面所有活动，并更新状态
-            this.stopAllTimers();
             GlobalState.updateWorker(currentRoomId, 'SWITCHING', '查找新房间...');
 
             try {
@@ -769,27 +678,18 @@
                     GM_openInTab(nextUrl, { active: false, setParent: true });
                     // 5. 等待交棒完成，然后彻底自毁
                     await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
-                    await this.stopAndClose(); // 使用统一的自毁程序
+                    await this.selfClose(); // 使用统一的自毁程序
                 } else {
                     Utils.log("API未能返回任何新的、未打开的房间，将关闭当前页。");
-                    await this.stopAndClose();
+                    await this.selfClose();
                 }
             } catch (error) {
                 Utils.log(`切换房间时发生严重错误: ${error.message}`);
-                await this.stopAndClose(); // 即使出错，也要确保销毁
+                await this.selfClose(); // 即使出错，也要确保销毁
             }
         },
 
-        /**
-         * 停止所有定时器。
-         */
-        stopAllTimers() {
-            if (STATE.mainIntervalId) clearInterval(STATE.mainIntervalId);
-            if (STATE.pauseIntervalId) clearInterval(STATE.pauseIntervalId);
-            STATE.mainIntervalId = null;
-            STATE.pauseIntervalId = null;
-            Utils.log("已停止所有定时器。");
-        },
+
 
         /**
          * 进入休眠模式，等待午夜刷新。
@@ -797,7 +697,6 @@
         async enterDormantMode() {
             const roomId = Utils.getCurrentRoomId();
             Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
-            this.stopAllTimers();
             GlobalState.updateWorker(roomId, 'DORMANT', '休眠中 (等待0点刷新)');
             
             const now = new Date();
@@ -808,18 +707,14 @@
             setTimeout(() => window.location.reload(), msUntilMidnight);
         },
 
-
         /**
          * 统一的自毁程序
          */
-        async stopAndClose() {
-            // 确保所有活动已停止
-            this.stopAllTimers();
-            // 从全局状态中移除自己
+        async selfClose() {
+            Utils.log("本单元任务结束，即将关闭。");
             GlobalState.removeWorker(Utils.getCurrentRoomId());
-            // 短暂等待，确保 GM_setValue 完成
-            await Utils.sleep(500);
-            // 关闭物理标签页
+            // 稍作等待，确保状态已更新
+            await Utils.sleep(500); 
             this.closeTab();
         },
         
@@ -835,30 +730,32 @@
             }
         },
 
-        /**
-         * 启动一个定时器，轮询来自控制页的命令。
-         * @param {string} roomId - 当前房间ID。
-         */
+        startCommandListener(roomId) {
+            this.commandChannel = new BroadcastChannel('douyu_qmx_commands');
+            Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
 
-        startCommandPoller(roomId) {
-            setInterval(() => {
-                const state = GlobalState.get();
-                if (state.command && (state.command.target === roomId || state.command.target === '*')) {
-                    const { action, target } = state.command;
-                    Utils.log(`接收到命令: ${action} for target ${target}`);
-
-                    // 如果是针对自己的单体指令，在执行前就从状态中清除，防止残留重复执行
-                    if (target === roomId && action !== 'CLOSE_ALL') {
-                        state.command = null;
-                        GlobalState.set(state);
-                    }
+            this.commandChannel.onmessage = (event) => {
+                const { action, target } = event.data;
+                
+                // 检查指令是否是给自己的
+                if (target === roomId || target === '*') {
+                    Utils.log(`接收到广播指令: ${action} for target ${target}`);
                     
                     if (action === 'CLOSE' || action === 'CLOSE_ALL') {
-                        this.stopAndClose(); 
+                        this.selfClose(); // 执行关闭操作
                     }
+                    // 未来可以扩展其他指令, 如 'PAUSE', 'REFRESH' 等
                 }
-            }, SETTINGS.COMMAND_POLL_INTERVAL);
+            };
+
+            // 确保页面关闭时，也关闭频道连接
+            window.addEventListener('beforeunload', () => {
+                if (this.commandChannel) {
+                    this.commandChannel.close();
+                }
+            });
         },
+
     };
 
     /**
@@ -872,12 +769,13 @@
         // --- 模块内部状态 ---
         injectionTarget: null,    // 存储被注入的DOM元素引用
         isPanelInjected: false,   // 标记是否成功进入注入模式
-
+        commandChannel: null,
         /**
          * 控制页面的总入口和初始化函数。
          */
         init() {
             Utils.log("当前是控制页面，开始设置UI...");
+            this.commandChannel = new BroadcastChannel('douyu_qmx_commands'); // 创建广播频道
             this.injectCSS();
             this.createHTML();
             // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
@@ -887,17 +785,21 @@
                 this.renderDashboard()
                 this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
             }, 1000);
+
+            // 确保页面关闭时关闭频道
+            window.addEventListener('beforeunload', () => {
+                if (this.commandChannel) {
+                    this.commandChannel.close();
+                }
+            });
         },
 
         /**
          * 注入所有UI所需的CSS样式。
          */
-        /**
-         * 最终优化版：注入所有UI所需的CSS样式
-         */
         injectCSS() {
             GM_addStyle(`
-        :root { /* Material 3 Dark Theme Palette */
+        :root {
             --md-sys-color-primary: #D0BCFF; --md-sys-color-on-primary: #381E72;
             --md-sys-color-surface-container: #211F26; --md-sys-color-on-surface: #E6E1E5;
             --md-sys-color-on-surface-variant: #CAC4D0; --md-sys-color-outline: #938F99;
@@ -1004,7 +906,7 @@
         }
         .qmx-tab-close-btn:hover { opacity: 1; color: #F44336; transform: scale(1.1); }
         
-        /* --- 设置面板统一样式 (已整合所有优化) --- */
+        /* --- 设置面板统一样式 --- */
         #qmx-settings-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
             width: 500px; max-width: 95vw; z-index: 10001;
@@ -1036,21 +938,36 @@
             padding: 12px; background-color: rgba(244, 67, 54, 0.2); border: 1px solid #F44336;
             color: #EFB8C8; border-radius: 8px; grid-column: 1 / -1;
         }
-        .qmx-settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .qmx-settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; align-items: start;}
         .qmx-settings-item { display: flex; flex-direction: column; gap: 8px; }
         .qmx-settings-item label { font-size: 14px; font-weight: 500; }
         .qmx-settings-item small { font-size: 12px; color: var(--md-sys-color-on-surface-variant); opacity: 0.8; }
-        
-        /* 数字输入框 "下沉" 效果 */
+                
+        /* --- 所有输入框的统一样式 --- */
+        /* 1. 基础样式 (对所有数字输入框生效) */
         .qmx-settings-item input[type="number"] {
-            background-color: var(--md-sys-color-surface-container); border: 1px solid var(--md-sys-color-outline);
-            color: var(--md-sys-color-on-surface); border-radius: 8px; padding: 10px; width: 100%;
-            box-sizing: border-box; box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
+            background-color: var(--md-sys-color-surface-container);
+            border: 1px solid var(--md-sys-color-outline);
+            color: var(--md-sys-color-on-surface);
+            border-radius: 8px;
+            padding: 10px; /* 默认内边距 */
+            width: 100%;
+            box-sizing: border-box;
             transition: box-shadow 0.2s, border-color 0.2s;
         }
-        .qmx-settings-item input[type="number"]:focus {
-            outline: none; border-color: var(--md-sys-color-primary);
-            box-shadow: inset 0 3px 6px rgba(0,0,0,0.1), 0 0 0 2px rgba(208, 188, 255, 0.3);
+
+        /* 2. 聚焦与对齐 (仅对不带单位的普通输入框生效) */
+        .qmx-settings-item > input[type="number"] {
+            padding-top: 12px; 
+            padding-bottom: 12px; 
+        }
+        .qmx-settings-item > input[type="number"]:hover {
+            border-color: var(--md-sys-color-primary);
+        }
+        .qmx-settings-item > input[type="number"]:focus {
+            outline: none;
+            border-color: var(--md-sys-color-primary);
+            box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.3);
         }
 
         /* 滑动开关 (Toggle Switch) */
@@ -1103,7 +1020,7 @@
         .qmx-select-options div:hover { background-color: rgba(208, 188, 255, 0.1); }
         .qmx-select-options div.selected { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); font-weight: 500; }
 
-        /* 为滚动条统一样式 (已包含设置面板) */
+        /* 为滚动条统一样式 (包含设置面板) */
         .qmx-modal-content::-webkit-scrollbar, .qmx-settings-content::-webkit-scrollbar { width: 10px; }
         .qmx-modal-content::-webkit-scrollbar-track, .qmx-settings-content::-webkit-scrollbar-track { background: var(--md-sys-color-surface-bright); border-radius: 10px; }
         .qmx-modal-content::-webkit-scrollbar-thumb, .qmx-settings-content::-webkit-scrollbar-thumb {
@@ -1163,6 +1080,179 @@
             color: #FFD6E1; /* A lighter shade for hover */
             text-decoration: underline;
         }
+
+        /* --- 设置项标签与图标 --- */
+        .qmx-settings-item label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .qmx-tooltip-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: var(--md-sys-color-outline);
+            color: var(--md-sys-color-surface-container);
+            font-size: 12px;
+            font-weight: bold;
+            cursor: help;
+            user-select: none;
+        }
+
+        /* --- 新增：全局工具提示 (Tooltip) 样式 --- */
+        #qmx-global-tooltip {
+            position: fixed; /* 使用 fixed 定位，脱离所有容器限制 */
+            background-color: #3A3841; /* M3 a slightly darker surface */
+            color: var(--md-sys-color-on-surface);
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.5;
+            z-index: 10002; /* 确保在设置面板之上 */
+            max-width: 250px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-5px); /* 初始位置偏上 */
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+            pointer-events: none; /* 自身不响应鼠标事件 */
+        }
+        #qmx-global-tooltip.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        /* --- 优化：带单位缺口的输入框 (采用 fieldset) --- */
+        /* 1. 容器样式 */
+        .qmx-fieldset-unit {
+            position: relative;
+            padding: 0;
+            margin: 0;
+            border: 1px solid var(--md-sys-color-outline);
+            border-radius: 8px;
+            background-color: var(--md-sys-color-surface-container);
+            transition: border-color 0.2s, box-shadow 0.2s; /* 添加 box-shadow 过渡 */
+            width: 100%;
+            box-sizing: border-box; 
+        }
+
+        /* 2. 悬停与聚焦效果 (应用到 fieldset 自身) */
+        .qmx-fieldset-unit:hover {
+            border-color: var(--md-sys-color-primary);
+        }
+        .qmx-fieldset-unit:focus-within {
+            border-color: var(--md-sys-color-primary);
+            box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.3); /* 将外发光应用到 fieldset */
+        }
+
+        /* 3. 内部 input 样式重置 */
+        .qmx-fieldset-unit input[type="number"] {
+            border: none;
+            background: none;
+            outline: none;
+            box-shadow: none; /* 移除任何可能继承的 box-shadow */
+            color: var(--md-sys-color-on-surface);
+            padding: 3px 10px 4px 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* 4. 单位缺口 legend 样式 */
+        .qmx-fieldset-unit legend {
+            padding: 0 6px;
+            font-size: 12px;
+            color: var(--md-sys-color-on-surface-variant);
+            margin-left: auto;
+            margin-right: 12px;
+            text-align: right;
+            pointer-events: none;
+        }
+
+        /* --- 为内容区增加 overflow-x: hidden --- */
+        .qmx-settings-content {
+            overflow-x: hidden; /* 防止横向滚动条 */
+        }
+
+        /* --- 范围滑块样式 --- */
+        .qmx-range-slider-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .qmx-range-slider-container {
+            position: relative;
+            height: 24px;
+            display: flex;
+            align-items: center;
+        }
+        .qmx-range-slider-container input[type="range"] {
+            position: absolute;
+            width: 100%;
+            height: 4px; /* 让轨道和进度条对齐 */
+            -webkit-appearance: none;
+            appearance: none;
+            background: none; /* 隐藏默认轨道 */
+            pointer-events: none; /* 让鼠标事件穿透到下面的轨道 */
+            margin: 0;
+        }
+        /* Webkit (Chrome, Safari) 浏览器滑块手柄样式 */
+        .qmx-range-slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            pointer-events: auto; /* 只有手柄可以响应鼠标事件 */
+            width: 20px;
+            height: 20px;
+            background-color: var(--md-sys-color-primary);
+            border-radius: 50%;
+            cursor: grab;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .qmx-range-slider-container input[type="range"]::-webkit-slider-thumb:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+        /* Firefox 浏览器滑块手柄样式 */
+        .qmx-range-slider-container input[type="range"]::-moz-range-thumb {
+            pointer-events: auto;
+            width: 20px;
+            height: 20px;
+            background-color: var(--md-sys-color-primary);
+            border-radius: 50%;
+            cursor: grab;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .qmx-range-slider-container input[type="range"]::-moz-range-thumb:active {
+            cursor: grabbing;
+            transform: scale(1.1);
+        }
+        .qmx-range-slider-track-container {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background-color: var(--md-sys-color-surface-container);
+            border-radius: 2px;
+        }
+        .qmx-range-slider-progress {
+            position: absolute;
+            height: 100%;
+            background-color: var(--md-sys-color-primary);
+            border-radius: 2px;
+        }
+        .qmx-range-slider-values {
+            font-size: 14px;
+            color: var(--md-sys-color-primary);
+            text-align: center;
+            font-weight: 500;
+        }
         `);
         },
 
@@ -1183,7 +1273,7 @@
                     <div id="qmx-tab-list"></div>
                 </div>
                 <div class="qmx-modal-footer">
-                    <button id="qmx-modal-settings-btn" class="qmx-modal-btn">设置</button>
+                    <button id="qmx-modal-settings-btn" class="qmx-modal-btn">设置</button>                  
                     <button id="qmx-modal-close-all-btn" class="qmx-modal-btn danger">关闭所有</button>
                     <button id="qmx-modal-open-btn" class="qmx-modal-btn primary">打开新房间</button>
                 </div>
@@ -1199,43 +1289,29 @@
             const settingsModal = document.createElement('div');
             settingsModal.id = 'qmx-settings-modal';
             document.body.appendChild(settingsModal);
+
+            const globalTooltip = document.createElement('div');
+            globalTooltip.id = 'qmx-global-tooltip';
+            document.body.appendChild(globalTooltip);
         },
 
         /**
          * 核心监控与清理函数
          */
         cleanupAndMonitorWorkers() {
-            const STALE_TIMEOUT = SETTINGS.WORKER_STALE_TIMEOUT; 
-            const LOADING_TIMEOUT = SETTINGS.WORKER_LOADING_TIMEOUT;
-
             const state = GlobalState.get();
             let stateModified = false;
 
             for (const roomId in state.tabs) {
                 const tab = state.tabs[roomId];
-                const timeDiff = Date.now() - tab.lastUpdateTime;
+                const timeSinceLastUpdate = Date.now() - tab.lastUpdateTime;
 
-                // 1. 僵尸任务处理
-                if (timeDiff > STALE_TIMEOUT) {
-                    // 如果已经不是“无响应”状态，才进行更新，避免重复写操作
-                    if (tab.status !== 'UNRESPONSIVE') {
-                        Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${STALE_TIMEOUT / 1000} 秒，标记为无响应。`);
-                        tab.status = 'UNRESPONSIVE';
-                        tab.statusText = '心跳失联，请激活标签页恢复';
-                        stateModified = true;
-                    }
-                    // 注意：我们不再删除它 (delete state.tabs[roomId])
-                    continue; 
-                }
-
-                // 2. 加载超时监控
-                if (tab.status === 'OPENING' && timeDiff > LOADING_TIMEOUT) {
-                    if (!tab.statusText.includes('请点击激活')) {
-                        Utils.log(`[加载监控] 任务 ${roomId} 卡在加载状态超过 ${LOADING_TIMEOUT/1000} 秒，更新UI提示用户。`);
-                        tab.statusText = '加载缓慢，请点击激活';
-                        tab.status = 'ERROR'; 
-                        stateModified = true;
-                    }
+                // 规则：如果一个标签页（无论何种状态）长时间没有任何通信，则判定为失联
+                if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== 'UNRESPONSIVE') {
+                    Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 60000} 分钟，标记为无响应。`);
+                    tab.status = 'UNRESPONSIVE';
+                    tab.statusText = '心跳失联，请激活标签页或重启';
+                    stateModified = true;
                 }
             }
 
@@ -1245,17 +1321,68 @@
         },
 
         /**
-         * 修改：显示设置面板并填充当前配置 (采用新网格布局)
+         * 显示设置面板并填充当前配置
          */
         showSettingsPanel() {
             const modal = document.getElementById('qmx-settings-modal');
+
+            // --- 数据准备区 ---
+
+            // 1. 带单位输入的元数据
+            const settingsMeta = {
+                'setting-initial-script-delay': { value: SETTINGS.INITIAL_SCRIPT_DELAY / 1000, unit: '秒' },
+                'setting-auto-pause-delay': { value: SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION / 1000, unit: '秒' },
+                'setting-unresponsive-timeout': { value: SETTINGS.UNRESPONSIVE_TIMEOUT / 60000, unit: '分钟' },
+                'setting-red-envelope-timeout': { value: SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT / 1000, unit: '秒' },
+                'setting-popup-wait-timeout': { value: SETTINGS.POPUP_WAIT_TIMEOUT / 1000, unit: '秒' },
+                'setting-worker-loading-timeout': { value: SETTINGS.ELEMENT_WAIT_TIMEOUT / 1000, unit: '秒' },
+                'setting-close-tab-delay': { value: SETTINGS.CLOSE_TAB_DELAY / 1000, unit: '秒' },
+                'setting-api-retry-delay': { value: SETTINGS.API_RETRY_DELAY / 1000, unit: '秒' },
+            };
+
+            // 2. 所有工具提示的文本
+            const allTooltips = {
+                'control-room': '只有在此房间号的直播间中才能看到插件面板。',
+                'auto-pause': '自动暂停非活动直播间视频，大幅降低资源占用。',
+                'initial-script-delay': '页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。',
+                'auto-pause-delay': '领取红包后等待多久才再次尝试暂停视频。',
+                'unresponsive-timeout': '标签页多久未汇报心跳后，在面板上标记为“无响应”。',
+                'red-envelope-timeout': '进入直播间后，最长等待多久来寻找红包活动，超时后将切换房间。',
+                'popup-wait-timeout': '点击红包后，等待领取弹窗出现的最长时间。',
+                'worker-loading-timeout': '新开的标签页卡在加载状态多久后，被判定为加载失败或缓慢。',
+                'range-delay': '脚本在每次点击等操作前后随机等待的时间范围，模拟真人行为。',
+                'close-tab-delay': '旧页面在打开新页面后，等待多久再关闭自己，确保新页面已接管。',
+                'max-worker-tabs': '同时运行的直播间数量。',
+                'api-room-fetch-count': '每次从API获取的房间数。增加可提高找到新房间的几率。',
+                'api-retry-count': '获取房间列表失败时的重试次数。',
+                'api-retry-delay': 'API请求失败后，等待多久再重试。'
+            };
             
-            // --- 1. 四标签页HTML结构 ---
+            // --- 动态生成HTML ---
+
+            // 辅助函数：动态生成带单位输入框的HTML
+            const createUnitInput = (id, label) => {
+                const meta = settingsMeta[id];
+                return `
+                    <div class="qmx-settings-item">
+                        <label for="${id}">
+                            ${label}
+                            <span class="qmx-tooltip-icon" data-tooltip-key="${id.replace('setting-','') }">?</span>
+                        </label>
+                        <fieldset class="qmx-fieldset-unit">
+                            <legend>${meta.unit}</legend>
+                            <input type="number" id="${id}" value="${meta.value}">
+                        </fieldset>
+                    </div>
+                `;
+            };
+
+            // --- 完整HTML结构 ---
             modal.innerHTML = `
                 <div class="qmx-settings-header">
                     <div class="qmx-settings-tabs">
                         <button class="tab-link active" data-tab="basic">基本设置</button>
-                        <button class="tab-link" data-tab="timing">时间设定</button>
+                        <button class="tab-link" data-tab="perf">性能与延迟</button>
                         <button class="tab-link" data-tab="advanced">高级设置</button>
                         <button class="tab-link" data-tab="about">关于</button>
                     </div>
@@ -1265,17 +1392,15 @@
                     <div id="tab-basic" class="tab-content active">
                         <div class="qmx-settings-grid">
                             <div class="qmx-settings-item">
-                                <label for="setting-control-room-id">控制室房间号</label>
+                                <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
                                 <input type="number" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
-                                <small><b>警告：</b>只有在这个房间号的直播间中才能看到插件面板，所以请确保房间号正确无误。</small>
                             </div>
                             <div class="qmx-settings-item">
-                                <label>自动暂停后台视频</label>
+                                <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                                 <label class="qmx-toggle">
                                     <input type="checkbox" id="setting-auto-pause" ${SETTINGS.AUTO_PAUSE_ENABLED ? 'checked' : ''}>
                                     <span class="slider"></span>
                                 </label>
-                                <small>自动暂停非活动直播间视频，大幅降低资源占用。</small>
                             </div>
                             <div class="qmx-settings-item">
                                 <label>达到上限后的行为</label>
@@ -1284,10 +1409,9 @@
                                     <div class="qmx-select-options"></div>
                                     <select id="setting-daily-limit-action" style="display: none;">
                                         <option value="STOP_ALL" ${SETTINGS.DAILY_LIMIT_ACTION === 'STOP_ALL' ? 'selected' : ''}>直接关停所有任务</option>
-                                        <option value="CONTINUE_DORMANT" ${SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT' ? 'selected' : ''}>进入休眠模式，过了24点再战🤜</option>
+                                        <option value="CONTINUE_DORMANT" ${SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT' ? 'selected' : ''}>进入休眠模式，等待刷新</option>
                                     </select>
                                 </div>
-                                <small>任务达到上限后是全部关闭还是休眠等待刷新。</small>
                             </div>
                             <div class="qmx-settings-item">
                                 <label>控制中心显示模式</label>
@@ -1300,89 +1424,61 @@
                                         <option value="inject-rank-list" ${SETTINGS.MODAL_DISPLAY_MODE === 'inject-rank-list' ? 'selected' : ''}>替换排行榜显示</option>
                                     </select>
                                 </div>
-                                <small>控制面板的显示方式。修改后需刷新生效。</small>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ==================== Tab 2: 时间设定 ==================== -->
-                    <div id="tab-timing" class="tab-content">
+                    <!-- ==================== Tab 2: 性能与延迟 ==================== -->
+                    <div id="tab-perf" class="tab-content">
                         <div class="qmx-settings-grid">
-                            <div class="qmx-settings-item">
-                                <label for="setting-max-tab-lifetime">标签页最大生存时间 (分钟)</label>
-                                <input type="number" id="setting-max-tab-lifetime" value="${SETTINGS.MAX_TAB_LIFETIME_MS / 60000}">
-                                <small>防止卡死，单个标签页最长存在多久后自动切换 </small>
+                            ${createUnitInput('setting-initial-script-delay', '脚本初始启动延迟')}
+                            ${createUnitInput('setting-auto-pause-delay', '领取后暂停延迟')}
+                            ${createUnitInput('setting-unresponsive-timeout', '工作页失联超时')}
+                            ${createUnitInput('setting-red-envelope-timeout', '红包活动加载超时')}
+                            ${createUnitInput('setting-popup-wait-timeout', '红包弹窗等待超时')}
+                            ${createUnitInput('setting-worker-loading-timeout', '播放器加载超时')}
+                            <div class="qmx-settings-item" style="grid-column: 1 / -1;">
+                                <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>
+                                <div class="qmx-range-slider-wrapper">
+                                    <div class="qmx-range-slider-container">
+                                        <div class="qmx-range-slider-track-container"><div class="qmx-range-slider-progress"></div></div>
+                                        <input type="range" id="setting-min-delay" min="0.1" max="5" step="0.1" value="${SETTINGS.MIN_DELAY / 1000}">
+                                        <input type="range" id="setting-max-delay" min="0.1" max="5" step="0.1" value="${SETTINGS.MAX_DELAY / 1000}">
+                                    </div>
+                                    <div class="qmx-range-slider-values"></div>
+                                </div>
                             </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-no-envelope-timeout">无活动时切换延迟 (秒)</label>
-                                <input type="number" id="setting-no-envelope-timeout" value="${SETTINGS.NO_ENVELOPE_SWITCH_TIMEOUT / 1000}">
-                                <small>红包区域消失后多久，切换到新房间</small>
-                            </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-check-interval">主循环检查间隔 (ms)</label>
-                                <input type="number" id="setting-check-interval" value="${SETTINGS.CHECK_INTERVAL}">
-                                <small>检查红包状态的频率。太快了可能导致卡顿&被浏览器限制</small>
-                            </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-popup-wait-timeout">红包弹窗等待超时 (ms)</label>
-                                <input type="number" id="setting-popup-wait-timeout" value="${SETTINGS.POPUP_WAIT_TIMEOUT}">
-                                <small>模拟点击红包后，等待领取弹窗出现的最长时间</small>
-                            </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-worker-stale-timeout">工作页失联超时 (ms)</label>
-                                <input type="number" id="setting-worker-stale-timeout" value="${SETTINGS.WORKER_STALE_TIMEOUT}">
-                                <small>到达指定时长后会在面板提醒切换一下以保活，权宜之计😭 </small>
-                            </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-worker-loading-timeout">工作页加载超时 (ms)</label>
-                                <input type="number" id="setting-worker-loading-timeout" value="${SETTINGS.WORKER_LOADING_TIMEOUT}">
-                                <small>新开的页面卡在“加载中”多久后判定为加载失败，触发切换 </small>
-                            </div>
+                            ${createUnitInput('setting-close-tab-delay', '关闭标签页延迟')}
                         </div>
                     </div>
 
                     <!-- ==================== Tab 3: 高级设置 ==================== -->
                     <div id="tab-advanced" class="tab-content">
                         <div class="qmx-settings-grid">
-                            <div class="qmx-settings-warning" style="grid-column: 1 / -1;">
-                                <b>高级设置区域：</b> 修改此处的参数可能影响脚本的性能和稳定性，请谨慎修改。
-                            </div>
                             <div class="qmx-settings-item">
-                                <label for="setting-max-tabs">最大工作标签页数量</label>
+                                <label for="setting-max-tabs">最大工作标签页数量 <span class="qmx-tooltip-icon" data-tooltip-key="max-worker-tabs">?</span></label>
                                 <input type="number" id="setting-max-tabs" value="${SETTINGS.MAX_WORKER_TABS}">
-                                <small>同时运行的直播间数量。</small>
                             </div>
                             <div class="qmx-settings-item">
-                                <label for="setting-api-fetch-count">单次API获取房间数</label>
+                                <label for="setting-api-fetch-count">单次API获取房间数 <span class="qmx-tooltip-icon" data-tooltip-key="api-room-fetch-count">?</span></label>
                                 <input type="number" id="setting-api-fetch-count" value="${SETTINGS.API_ROOM_FETCH_COUNT}">
-                                <small>每次获取的房间数。增加可提高找到新房间的几率，不过一般不会找不到。</small>
                             </div>
                             <div class="qmx-settings-item">
-                                <label for="setting-api-retry-count">API请求重试次数</label>
+                                <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
                                 <input type="number" id="setting-api-retry-count" value="${SETTINGS.API_RETRY_COUNT}">
-                                <small>获取房间列表失败时的重试次数，一般不会失败。</small>
                             </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-api-retry-delay">API重试延迟 (ms)</label>
-                                <input type="number" id="setting-api-retry-delay" value="${SETTINGS.API_RETRY_DELAY}">
-                                <small>API请求失败后，等待多久再重试。</small>
-                            </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-open-tab-delay">打开标签页延迟 (ms)</label>
-                                <input type="number" id="setting-open-tab-delay" value="${SETTINGS.OPEN_TAB_DELAY}">
-                                <small>打开新页面后的等待时间，可适当增加以确保页面响应。</small>
-                            </div>
-                            <div class="qmx-settings-item">
-                                <label for="setting-close-tab-delay">关闭标签页延迟 (ms)</label>
-                                <input type="number" id="setting-close-tab-delay" value="${SETTINGS.CLOSE_TAB_DELAY}">
-                                <small>旧页面等待多久后关闭自己，以确保新页面已接管。</small>
-                            </div>
+                            
+                            ${createUnitInput('setting-api-retry-delay', 'API重试延迟')}
+                            
+                            <!-- 新增：添加两个空的占位符，使网格平衡为 2x3 -->
+                            <div class="qmx-settings-item"></div>
+                            <div class="qmx-settings-item"></div>
                         </div>
                     </div>
                     
                     <!-- ==================== Tab 4: 关于 ==================== -->
                     <div id="tab-about" class="tab-content">
-                        <h4>关于脚本 <span class="version-tag">v2.0.1</span></h4>
+                        <h4>关于脚本 <span class="version-tag">v2.0.2</span></h4>
                         <h4>致谢</h4>
                         <p>
                             本脚本基于
@@ -1393,17 +1489,33 @@
                         </p>
                         <h4>一些tips</h4>
                         <ul>
-                            <li>新开的后台直播间可能因浏览器策略不加载，手动切换过去几秒即可</li>
-                            <li>标签页在后台久了可能被标记为“无响应”，同样是切换激活一下就能恢复心跳</li>
-                            <li>由于后台定时器限制，倒计时结束时可能无法立即响应，可以到点后手动切过去抢</li>
-                            <li>脚本bug不少，目前只能说勉强能跑。但时间精力有限暂时不打算改了＞︿＜</li>
+                            <li>这次重构了抢红包的逻辑，应该会显著降低了CPU占用，不会被浏览器限制了</li>
+                            <li>简单测试了一下，应该抢的更多了<li>
+                            <li>显示面板的状态同步不完整,明天再改<li>
+                            <li>设置界面输入框没对齐，明天再修<li>
+                            <li>脚本还是bug不少，随缘修了＞︿＜</li>
                         </ul>
-
+                        <h4>v2.0.2 更新日志</h4>
+                        <ul>
+                        <li><b>【核心重构】</b>工作页逻辑从固定轮询升级为链式任务，响应更及时，资源占用更低，规避因后台活动被浏览器限制。</li>
+                        <li><b>【通信升级】</b>将控制页与工作页之间的通信方式从轮询升级为监听，降低占用且更加可靠。</li>
+                        <li><b>【UI改进】</b>大幅重构了设置面板：
+                            <ul>
+                            <li>重新组织标签页，新增“性能与延迟”分类。</li>
+                            <li>为模拟操作延迟增加了可视化的“范围滑块”控件。</li>
+                            <li>为所有关键设置项添加了“帮助提示”图标，方便用户理解。</li>
+                            <li>优化了输入框样式，提升了整体视觉效果和易用性。</li>
+                            </ul>
+                        </li>
+                        <li><b>【配置清理】</b>移除了设置面板中因逻辑重构而失效的旧配置项（如“主循环检查间隔”、“工作页加载超时”等），使配置更简洁、易于理解。</li>
+                        <li><b>【监控优化】</b>简化了控制面板对“失联”标签页的判断逻辑，统一为更健壮的“无响应超时”机制。</li>
+                        <li><b>【匹配简化】</b>简化了脚本的<code>@match</code>匹配规则，避免了因规则重叠导致在同一页面上运行多个脚本实例的问题，降低了资源占用。</li>
+                        </ul>
                         <h4>源码与社区</h4>
                         <ul>
-                            <li>可以在 <a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
-                            <li>发现BUG或有功能建议，欢迎提交 <a href="https://github.com/ienone/douyu-qmx-pro/issues" target="_blank" rel="noopener noreferrer">Issue</a>（不过大概率不会修……）</li>
-                            <li>如果你有能力进行改进，非常欢迎提交 <a href="https://github.com/ienone/douyu-qmx-pro/pulls" target="_blank" rel="noopener noreferrer">Pull Request</a>！</li>
+                            <li>可以在 <a href="https://github.com/ienone/eilatam" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
+                            <li>发现BUG或有功能建议，欢迎提交 <a href="https://github.com/ienone/eilatam/issues" target="_blank" rel="noopener noreferrer">Issue</a>（不过大概率不会修……）</li>
+                            <li>如果你有能力进行改进，非常欢迎提交 <a href="https://github.com/ienone/eilatam/pulls" target="_blank" rel="noopener noreferrer">Pull Request</a>！</li>
                         </ul>
                     </div>
                 </div>
@@ -1414,15 +1526,36 @@
                 </div>
             `;
 
-            // --- 2. 激活所有交互元素 ---
-            // 激活自定义下拉菜单
+            // --- 激活所有交互元素 ---
+
+            // 1. 激活全局工具提示 (Tooltip)
+            const globalTooltip = document.getElementById('qmx-global-tooltip');
+            modal.addEventListener('mouseover', (e) => {
+                const icon = e.target.closest('.qmx-tooltip-icon');
+                if (!icon) return;
+                const key = icon.dataset.tooltipKey;
+                if (allTooltips[key]) {
+                    globalTooltip.textContent = allTooltips[key];
+                    const iconRect = icon.getBoundingClientRect();
+                    globalTooltip.style.left = `${iconRect.left + iconRect.width / 2}px`;
+                    globalTooltip.style.top = `${iconRect.top}px`;
+                    globalTooltip.style.transform = `translate(-50%, calc(-100% - 8px))`;
+                    globalTooltip.classList.add('visible');
+                }
+            });
+            modal.addEventListener('mouseout', (e) => {
+                if (e.target.closest('.qmx-tooltip-icon')) {
+                    globalTooltip.classList.remove('visible');
+                }
+            });
+            
+            // 2. 激活自定义下拉菜单
             modal.querySelectorAll('.qmx-select').forEach(wrapper => {
                 const nativeSelect = wrapper.querySelector('select');
                 const styledSelect = wrapper.querySelector('.qmx-select-styled');
                 const optionsList = wrapper.querySelector('.qmx-select-options');
-                
                 styledSelect.textContent = nativeSelect.options[nativeSelect.selectedIndex].text;
-                optionsList.innerHTML = ''; // 清空旧选项
+                optionsList.innerHTML = '';
                 for (const option of nativeSelect.options) {
                     const optionDiv = document.createElement('div');
                     optionDiv.textContent = option.text;
@@ -1430,7 +1563,6 @@
                     if (option.selected) optionDiv.classList.add('selected');
                     optionsList.appendChild(optionDiv);
                 }
-
                 styledSelect.addEventListener('click', (e) => {
                     e.stopPropagation();
                     document.querySelectorAll('.qmx-select.active').forEach(el => {
@@ -1438,7 +1570,6 @@
                     });
                     wrapper.classList.toggle('active');
                 });
-
                 optionsList.querySelectorAll('div').forEach(optionDiv => {
                     optionDiv.addEventListener('click', () => {
                         styledSelect.textContent = optionDiv.textContent;
@@ -1451,12 +1582,30 @@
             });
             document.addEventListener('click', () => modal.querySelectorAll('.qmx-select.active').forEach(el => el.classList.remove('active')));
 
-            // 激活UI
+            // 3. 激活范围滑块
+            const minSlider = modal.querySelector('#setting-min-delay');
+            const maxSlider = modal.querySelector('#setting-max-delay');
+            const sliderValues = modal.querySelector('.qmx-range-slider-values');
+            const progress = modal.querySelector('.qmx-range-slider-progress');
+            function updateSliderView() {
+                if (parseFloat(minSlider.value) > parseFloat(maxSlider.value)) {
+                    maxSlider.value = minSlider.value;
+                }
+                sliderValues.textContent = `${minSlider.value} s - ${maxSlider.value} s`;
+                const minPercent = ((minSlider.value - minSlider.min) / (minSlider.max - minSlider.min)) * 100;
+                const maxPercent = ((maxSlider.value - maxSlider.min) / (maxSlider.max - minSlider.min)) * 100;
+                progress.style.left = `${minPercent}%`;
+                progress.style.width = `${maxPercent - minPercent}%`;
+            }
+            minSlider.addEventListener('input', updateSliderView);
+            maxSlider.addEventListener('input', updateSliderView);
+            updateSliderView();
+
+            // 4. 激活UI显示和底部按钮
             document.getElementById('qmx-modal-backdrop').classList.add('visible');
             modal.classList.add('visible');
             document.body.classList.add('qmx-modal-open-scroll-lock');
 
-            // 绑定底部按钮事件
             modal.querySelector('#qmx-settings-cancel-btn').onclick = () => this.hideSettingsPanel();
             modal.querySelector('#qmx-settings-save-btn').onclick = () => this.saveSettings();
             modal.querySelector('#qmx-settings-reset-btn').onclick = () => {
@@ -1466,7 +1615,7 @@
                 }
             };
 
-            // 绑定标签页切换事件
+            // 5. 激活标签页切换
             modal.querySelectorAll('.tab-link').forEach(button => {
                 button.onclick = (e) => {
                     const tabId = e.target.dataset.tab;
@@ -1477,7 +1626,6 @@
                 };
             });
         },
-
 
         /**
          * 隐藏设置面板
@@ -1493,10 +1641,10 @@
         },
 
         /**
-         * 修改：从UI读取并保存设置 (包含所有新选项)
+         * 从UI读取并保存设置
          */
         saveSettings() {
-            // 从UI读取所有暴露出来的值
+            // 从UI读取所有暴露出来的值，并进行单位转换
             const newSettings = {
                 // Tab 1: 基本设置
                 CONTROL_ROOM_ID: document.getElementById('setting-control-room-id').value,
@@ -1504,32 +1652,38 @@
                 DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
                 MODAL_DISPLAY_MODE: document.getElementById('setting-modal-mode').value,
                 
-                // Tab 2: 时间设定 (注意单位转换)
-                MAX_TAB_LIFETIME_MS: parseInt(document.getElementById('setting-max-tab-lifetime').value, 10) * 60000,
-                NO_ENVELOPE_SWITCH_TIMEOUT: parseInt(document.getElementById('setting-no-envelope-timeout').value, 10) * 1000,
-                CHECK_INTERVAL: parseInt(document.getElementById('setting-check-interval').value, 10),
-                POPUP_WAIT_TIMEOUT: parseInt(document.getElementById('setting-popup-wait-timeout').value, 10),
-                WORKER_STALE_TIMEOUT: parseInt(document.getElementById('setting-worker-stale-timeout').value, 10),
-                WORKER_LOADING_TIMEOUT: parseInt(document.getElementById('setting-worker-loading-timeout').value, 10),
+                // Tab 2: 性能与延迟 (注意单位转换：从 秒/分钟 转为 毫秒)
+                INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById('setting-initial-script-delay').value) * 1000,
+                AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat(document.getElementById('setting-auto-pause-delay').value) * 1000,
+                UNRESPONSIVE_TIMEOUT: parseInt(document.getElementById('setting-unresponsive-timeout').value, 10) * 60000,
+                RED_ENVELOPE_LOAD_TIMEOUT: parseFloat(document.getElementById('setting-red-envelope-timeout').value) * 1000,
+                POPUP_WAIT_TIMEOUT: parseFloat(document.getElementById('setting-popup-wait-timeout').value) * 1000,
+                ELEMENT_WAIT_TIMEOUT: parseFloat(document.getElementById('setting-worker-loading-timeout').value) * 1000,
+                MIN_DELAY: parseFloat(document.getElementById('setting-min-delay').value) * 1000,
+                MAX_DELAY: parseFloat(document.getElementById('setting-max-delay').value) * 1000,
+                CLOSE_TAB_DELAY: parseFloat(document.getElementById('setting-close-tab-delay').value) * 1000,
 
                 // Tab 3: 高级设置
                 MAX_WORKER_TABS: parseInt(document.getElementById('setting-max-tabs').value, 10),
                 API_ROOM_FETCH_COUNT: parseInt(document.getElementById('setting-api-fetch-count').value, 10),
                 API_RETRY_COUNT: parseInt(document.getElementById('setting-api-retry-count').value, 10),
-                API_RETRY_DELAY: parseInt(document.getElementById('setting-api-retry-delay').value, 10),
-                OPEN_TAB_DELAY: parseInt(document.getElementById('setting-open-tab-delay').value, 10),
-                CLOSE_TAB_DELAY: parseInt(document.getElementById('setting-close-tab-delay').value, 10),
+                API_RETRY_DELAY: parseFloat(document.getElementById('setting-api-retry-delay').value) * 1000,
             };
 
             // 获取所有已存在的用户设置，以保留那些未在UI中暴露的设置
             const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY, {});
+            // 将未在UI中暴露的旧设置与新设置合并
             const finalSettingsToSave = Object.assign(existingUserSettings, newSettings);
+
+            // 删除已废弃的 OPEN_TAB_DELAY，以防旧配置残留
+            delete finalSettingsToSave.OPEN_TAB_DELAY;
 
             SettingsManager.save(finalSettingsToSave);
 
             alert("设置已保存！页面将刷新以应用所有更改。");
             window.location.reload();
         },
+
         /**
          * 为所有UI元素绑定事件监听器
          */
@@ -1563,35 +1717,14 @@
                 modalBackdrop.onclick = () => this.hidePanel();
             }
             
-            // --- 面板内部按钮事件 ---
             document.getElementById('qmx-modal-open-btn').onclick = () => this.openOneNewTab();
             document.getElementById('qmx-modal-settings-btn').onclick = () => this.showSettingsPanel();
-            // document.getElementById('qmx-modal-reset-limit-btn').onclick = () => {
-            //     Utils.log("[测试功能] 用户点击了重置上限按钮。");
-            //     GlobalState.setDailyLimit(false);
-            //     alert("每日上限状态已被重置！");
-            //     this.renderDashboard();
-            // };
-
             document.getElementById('qmx-modal-close-all-btn').onclick = () => {
                 if (confirm("确定要关闭所有工作标签页吗？")) {
-                    Utils.log("发出 CLOSE_ALL 广播指令...");
-                    const state = GlobalState.get();
-                    state.command = { action: 'CLOSE_ALL', target: '*', timestamp: Date.now() };
-                    GlobalState.set(state);
-
-                    // 在发出指令后，设置一个延迟定时器来清理该指令
-                    setTimeout(() => {
-                        const currentState = GlobalState.get();
-                        // 再次检查，确保我们清除的是自己发出的指令，防止误删其他指令
-                        if (currentState.command && currentState.command.action === 'CLOSE_ALL') {
-                            Utils.log("清理已过期的 CLOSE_ALL 广播指令。");
-                            currentState.command = null;
-                            GlobalState.set(currentState);
-                        }
-                    }, SETTINGS.UI_FEEDBACK_DELAY); // 延迟2秒执行，确保所有worker都有足够时间收到指令
+                    Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
+                    this.commandChannel.postMessage({ action: 'CLOSE_ALL', target: '*' }); // 直接发送消息
                 }
-            };
+            }
 
             document.getElementById('qmx-tab-list').addEventListener('click', (e) => {
                 const closeButton = e.target.closest('.qmx-tab-close-btn');
@@ -1602,17 +1735,15 @@
                 if (!roomId) return;
 
                 Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
-
-                // --- 核心逻辑 ---
-                // 1. 立即从全局状态中移除该条目
+                
+                // 1. 立即更新UI和状态 (这部分保留)
                 const state = GlobalState.get();
                 delete state.tabs[roomId];
-
-                // 2. 同时，仍然发送一个CLOSE指令
-                //    如果标签页还活着，它会收到这个指令并关闭自己
-                //    如果它已经死了（是幽灵），指令无效但无妨
-                state.command = { action: 'CLOSE', target: roomId, timestamp: Date.now() };
-                GlobalState.set(state);
+                GlobalState.set(state); // 仍然需要更新 tabs 列表
+                
+                // 2. 发送关闭指令
+                Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
+                this.commandChannel.postMessage({ action: 'CLOSE', target: roomId }); // 通过广播发送单点指令
 
                 // 3. 立即在UI上模拟移除，而不是等待下一次renderDashboard
                 roomItem.style.opacity = '0';
@@ -1630,38 +1761,40 @@
             const tabList = document.getElementById('qmx-tab-list');
             if (!tabList) return;
 
-            // --- 准备阶段 ---
             const tabIds = Object.keys(state.tabs);
+            Utils.log(`[Render] 开始渲染，检测到 ${tabIds.length} 个活动标签页。IDs: [${tabIds.join(', ')}]`); // 新增日志
+
             document.getElementById('qmx-active-tabs-count').textContent = tabIds.length;
             
             const statusDisplayMap = {
                 OPENING: '加载中', WAITING: '等待中', CLAIMING: '领取中',
-                SWITCHING: '切换中', DORMANT: '休眠中', ERROR: '出错了',UNRESPONSIVE: '无响应'
+                SWITCHING: '切换中', DORMANT: '休眠中', ERROR: '出错了', UNRESPONSIVE: '无响应'
             };
 
             const existingRoomIds = new Set(Array.from(tabList.children).map(node => node.dataset.roomId).filter(Boolean));
+            Utils.log(`[Render] 当前UI上显示的IDs: [${Array.from(existingRoomIds).join(', ')}]`); // 新增日志
 
-            // --- 增量更新逻辑 ---
+            // --- 核心更新/创建循环 ---
             tabIds.forEach(roomId => {
                 const tabData = state.tabs[roomId];
                 let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
+                
+                let currentStatusText = tabData.statusText; 
 
-                // 计算状态文本
-                let currentStatusText = tabData.statusText;
-                if (tabData.countdown && tabData.status === 'WAITING') {
-                    const elapsed = (Date.now() - tabData.countdown.startTime) / 1000;
-                    const remaining = Math.max(0, tabData.countdown.duration - elapsed);
-                    currentStatusText = (remaining > 0) ? `倒计时 ${Utils.formatTime(remaining)}` : '等待开抢...';
+                if (tabData.status === 'WAITING' && tabData.countdown) {
+                    const elapsedSeconds = (Date.now() - tabData.countdown.startTime) / 1000;
+                    const remainingSeconds = Math.max(0, tabData.countdown.duration - elapsedSeconds);
+                    currentStatusText = (remainingSeconds > 0) ? `倒计时 ${Utils.formatTime(remainingSeconds)}` : '等待开抢...';
                 }
 
                 if (existingItem) {
-                    // --- A. 如果条目已存在，则只更新内容 ---
+                    // --- A. 如果条目已存在，则只更新内容 (UPDATE path) ---
+                    Utils.log(`[Render] 房间 ${roomId}: UI条目已存在，准备更新。状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
                     const nicknameEl = existingItem.querySelector('.qmx-tab-nickname');
                     const statusNameEl = existingItem.querySelector('.qmx-tab-status-name');
                     const statusTextEl = existingItem.querySelector('.qmx-tab-status-text');
                     const dotEl = existingItem.querySelector('.qmx-tab-status-dot');
                     
-                    // 只有在新状态提供了昵称时才更新，否则保持不变
                     if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
                         nicknameEl.textContent = tabData.nickname;
                     }
@@ -1675,10 +1808,10 @@
                         statusTextEl.textContent = currentStatusText;
                     }
                 } else {
-                    // --- B. 如果条目不存在，则创建并添加入场动画 ---
+                    // --- B. 如果条目不存在，则创建并添加 (CREATE path) ---
+                    Utils.log(`[Render] 房间 ${roomId}: UI条目不存在，执行创建！状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
                     const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
                     tabList.appendChild(newItem);
-                    
                     requestAnimationFrame(() => {
                         newItem.classList.add('qmx-item-enter-active');
                         setTimeout(() => newItem.classList.remove('qmx-item-enter'), 300);
@@ -1686,18 +1819,19 @@
                 }
             });
 
-            // --- 处理删除 ---
+            // --- 处理删除 (DELETE path) ---
             existingRoomIds.forEach(roomId => {
                 if (!state.tabs[roomId]) {
                     const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
                     if (itemToRemove && !itemToRemove.classList.contains('qmx-item-exit-active')) {
+                        Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`); // 新增日志
                         itemToRemove.classList.add('qmx-item-exit-active');
                         setTimeout(() => itemToRemove.remove(), 300);
                     }
                 }
             });
-
-            // --- 处理空列表的情况 ---
+            
+            // --- 处理空列表和上限状态 ---
             const emptyMsg = tabList.querySelector('.qmx-empty-list-msg');
             if (tabIds.length === 0) {
                 if (!emptyMsg) {
@@ -1706,11 +1840,8 @@
             } else if (emptyMsg) {
                 emptyMsg.remove();
             }
-            
-            // --- 渲染上限状态 ---
             this.renderLimitStatus();
         },
-
         
         /**
          * 专门处理和渲染每日上限状态的UI部分。
@@ -1896,8 +2027,6 @@
             handle.addEventListener('mousedown', onMouseDown);
         },
 
-
-
         /**
          * 显示控制面板
          */
@@ -2000,7 +2129,7 @@
                         setTimeout(() => waitForTarget(retries - 1, interval), interval);
                     } else {
                         Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
-                        Utils.log("[优雅降级] 自动切换到 'floating' 备用模式。");
+                        Utils.log("[降级] 自动切换到 'floating' 备用模式。");
                         SETTINGS.MODAL_DISPLAY_MODE = 'floating';
                         this.applyModalMode();
                         SETTINGS.MODAL_DISPLAY_MODE = 'inject-rank-list';
