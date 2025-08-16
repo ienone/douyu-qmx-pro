@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         斗鱼全民星推荐自动领取pro
 // @namespace    http://tampermonkey.net/
-// @version      2.0.3
+// @version      2.0.4
 // @description  原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
 // @author       ienone
 // @original-author ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
@@ -218,6 +218,7 @@
         DAILY_LIMIT_REACHED_KEY: 'douyu_qmx_daily_limit_reached', // 用于在油猴存储中记录“每日上限”状态的键名。
 
         // --- UI 与 API ---
+        DEFAULT_THEME : 'dark',
         INJECT_TARGET_RETRIES: 10, // 在“注入模式”下，尝试寻找并注入UI到侧边栏排行榜的重试次数。
         INJECT_TARGET_INTERVAL: 500, // 每次尝试注入UI到侧边栏之间的间隔时间。
         API_ROOM_FETCH_COUNT: 10, // 单次调用API时，期望获取的直播间数量建议值。
@@ -259,9 +260,11 @@
          */
         get() {
             const userSettings = GM_getValue(this.STORAGE_KEY, {});
-            // 使用 Object.assign 创建一个新对象，避免修改原始的 CONFIG
-            // 用户设置会覆盖同名的默认设置
-            return Object.assign({}, CONFIG, userSettings);
+            const themeSetting = GM_getValue('douyu_qmx_theme', CONFIG.DEFAULT_THEME);
+            
+            // 合并用户设置，并强制包含主题设置
+            const finalSettings = Object.assign({}, CONFIG, userSettings, { THEME: themeSetting });
+            return finalSettings;
         },
 
         /**
@@ -269,6 +272,11 @@
          * @param {object} settingsToSave - 只包含用户修改过的设置的对象。
          */
         save(settingsToSave) {
+            // 在保存时，将主题设置单独存储，因为它需要实时应用
+            const theme = settingsToSave.THEME;
+            delete settingsToSave.THEME;
+            GM_setValue('douyu_qmx_theme', theme);
+            
             GM_setValue(this.STORAGE_KEY, settingsToSave);
         },
 
@@ -277,6 +285,7 @@
          */
         reset() {
             GM_deleteValue(this.STORAGE_KEY);
+            GM_deleteValue('douyu_qmx_theme'); // 重置主题设置
         }
     };
 
@@ -288,7 +297,7 @@
      * =================================================================================
      */
     const SETTINGS = SettingsManager.get();
-
+    SETTINGS.THEME = GM_getValue('douyu_qmx_theme', SETTINGS.DEFAULT_THEME);
     /**
      * =================================================================================
      * 模块：运行时状态 (STATE)
@@ -358,6 +367,24 @@
             return `${paddedMinutes}:${paddedSeconds}`;
         }
 
+    };
+
+    /**
+     * =================================================================================
+     * 模块：主题管理器 (ThemeManager)
+     * ---------------------------------------------------------------------------------
+     */
+    const ThemeManager = {
+        /**
+         * 将主题应用到 body 元素上。
+         * @param {string} theme - 'light' or 'dark'.
+         */
+        applyTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            // 也更新 SETTINGS 对象，以便脚本内部逻辑知道当前主题
+            SETTINGS.THEME = theme;
+            GM_setValue('douyu_qmx_theme', theme);
+        }
     };
 
     /**
@@ -962,6 +989,7 @@
             Utils.log("当前是控制页面，开始设置UI...");
             this.commandChannel = new BroadcastChannel('douyu_qmx_commands'); // 创建广播频道
             this.injectCSS();
+            ThemeManager.applyTheme(SETTINGS.THEME); 
             this.createHTML();
             // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
             this.applyModalMode();
@@ -984,17 +1012,52 @@
          */
         injectCSS() {
             GM_addStyle(`
+        /* ---------------------------------- */
+        /* --- 1. CSS 变量定义 --- */
+        /* ---------------------------------- */
         :root {
-            --md-sys-color-primary: #D0BCFF; --md-sys-color-on-primary: #381E72;
-            --md-sys-color-surface-container: #211F26; --md-sys-color-on-surface: #E6E1E5;
-            --md-sys-color-on-surface-variant: #CAC4D0; --md-sys-color-outline: #938F99;
-            --md-sys-color-surface-bright: #36343B; --md-sys-color-tertiary: #EFB8C8;
-            --md-sys-color-scrim: #000000;
-            --status-color-waiting: #4CAF50; --status-color-claiming: #2196F3;
-            --status-color-switching: #FFC107; --status-color-error: #F44336;
-            --status-color-opening: #9C27B0; --status-color-dormant: #757575;
+            color-scheme: light dark;
+            --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+            --status-color-waiting: #4CAF50; 
+            --status-color-claiming: #2196F3;
+            --status-color-switching: #FFC107; 
+            --status-color-error: #F44336;
+            --status-color-opening: #9C27B0; 
+            --status-color-dormant: #757575;
             --status-color-unresponsive: #FFA000;
         }
+
+        body[data-theme="dark"] {
+            --md-sys-color-primary: #D0BCFF; 
+            --md-sys-color-on-primary: #381E72;
+            --md-sys-color-surface-container: #211F26; 
+            --md-sys-color-on-surface: #E6E1E5;
+            --md-sys-color-on-surface-variant: #CAC4D0; 
+            --md-sys-color-outline: #938F99;
+            --md-sys-color-surface-bright: #36343B; 
+            --md-sys-color-tertiary: #EFB8C8;
+            --md-sys-color-scrim: #000000;
+            --surface-container-highest: #3D3B42; 
+            --primary-container: #4F378B;
+            --on-primary-container: #EADDFF;
+        }
+
+        body[data-theme="light"] {
+            /* 经过优化的日间模式颜色，层次更分明 */
+            --md-sys-color-primary: #6750A4;
+            --md-sys-color-on-primary: #FFFFFF;
+            --md-sys-color-surface-container: #F3EDF7;
+            --md-sys-color-surface-bright: #FEF7FF;
+            --md-sys-color-on-surface: #1C1B1F;
+            --md-sys-color-on-surface-variant: #49454F;
+            --md-sys-color-outline: #79747E;
+            --md-sys-color-tertiary: #7D5260;
+            --md-sys-color-scrim: #000000;
+            --surface-container-highest: #E6E0E9;
+            --primary-container: #EADDFF;
+            --on-primary-container: #21005D;
+        }
+
         /* --- 核心布局与基础组件 --- */
         .is-dragging { transition: none !important; }
         .qmx-hidden { display: none !important; }
@@ -1155,6 +1218,19 @@
             box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.3);
         }
 
+
+        /* --- 隐藏数字输入框的原生步进器箭头 --- */
+        /* Webkit 浏览器 (Chrome, Safari, Edge) */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        /* Firefox 浏览器 */
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
         /* 滑动开关 (Toggle Switch) */
         .qmx-toggle { position: relative; display: inline-block; width: 52px; height: 30px; }
         .qmx-toggle input { opacity: 0; width: 0; height: 0; }
@@ -1290,11 +1366,11 @@
         /* --- 新增：全局工具提示 (Tooltip) 样式 --- */
         #qmx-global-tooltip {
             position: fixed; /* 使用 fixed 定位，脱离所有容器限制 */
-            background-color: #3A3841; /* M3 a slightly darker surface */
+            background-color:  var(--surface-container-highest); 
             color: var(--md-sys-color-on-surface);
             padding: 8px 12px;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             font-size: 12px;
             font-weight: 400;
             line-height: 1.5;
@@ -1438,7 +1514,114 @@
             text-align: center;
             font-weight: 500;
         }
-        `);
+
+        /* 1. 总容器 (label.theme-switch) */
+        /* 它的作用是定义一个固定的、可供鼠标悬停的区域 */
+        .theme-switch {
+            position: relative;
+            display: block; /* 使用 block 或 inline-block */
+            width: 60px;  /* 固定的、展开后的宽度 */
+            height: 34px;
+            cursor: pointer;
+            /* 取消容器自身的过渡，它应该是稳定的 */
+            transition: none; 
+        }
+
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* 2. 背景轨道 (.slider-track) */
+        /* 这个元素专门负责实现“展开”和“收缩”的动画 */
+        .slider-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 34px; /* 默认是收缩状态，和圆点一样大 */
+            height: 34px;
+            background-color: var(--surface-container-highest);
+            border-radius: 17px; /* 收缩时是圆形 */
+                        
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2), 
+                            inset -2px -2px 4px rgba(255,255,255,0.05);
+
+            transition: width 0.3s ease, left 0.3s ease, border-radius 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        /* ★ 鼠标悬停时，轨道展开 */
+        .theme-switch:hover .slider-track {
+            width: 60px; /* 展开为长条形 */
+        }
+
+        /* ★ 当开关被选中(夜间模式)且鼠标未悬停时，收缩的轨道移动到右边 */
+        .theme-switch input:checked + .slider-track {
+            left: 26px; /* 60px - 34px = 26px，移动到最右侧 */
+        }
+        /* 鼠标悬停在已选中的开关上时，轨道也要保持在左侧展开 */
+        .theme-switch:hover input:checked + .slider-track {
+            left: 0;
+        }
+
+
+        /* 3. 滑块圆点 (.slider-dot) */
+        /* 这个元素只负责左右平移，动画路径单一且稳定 */
+        .slider-dot {
+            position: absolute;
+            height: 26px;
+            width: 26px;
+            left: 4px; /* 初始内边距 */
+            top: 4px;
+            background-color: var(--md-sys-color-primary);
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, box-shadow 0.3s ease;
+
+        }
+
+        /* ★ 当开关被选中(夜间模式)时，圆点向右移动 */
+        .theme-switch input:checked ~ .slider-dot {
+            transform: translateX(26px); /* 移动固定的26px */
+            background-color: var(--primary-container);
+        }
+
+
+        /* 4. 图标样式 */
+        .slider-dot .icon {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            color: var(--md-sys-color-on-primary);
+            transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sun {
+            opacity: 1;
+            transform: translateY(0) rotate(0deg);
+        }
+        .moon {
+            opacity: 0;
+            transform: translateY(20px) rotate(-45deg); /* 从下方进入 */
+        }
+
+        input:checked ~ .slider-dot .sun {
+            opacity: 0;
+            transform: translateY(-20px) rotate(45deg); /* 向上方退出 */
+        }
+        input:checked ~ .slider-dot .moon {
+            opacity: 1;
+            transform: translateY(0) rotate(0deg);
+            color: var(--md-sys-color-on-surface);
+        }
+                `);
         },
 
         createHTML() {
@@ -1580,6 +1763,37 @@
                         <button class="tab-link" data-tab="perf">性能与延迟</button>
                         <button class="tab-link" data-tab="advanced">高级设置</button>
                         <button class="tab-link" data-tab="about">关于</button>
+                        <!-- 主题模式切换开关 -->
+                        <div class="qmx-settings-item">
+                            <div class="theme-switch-wrapper">
+                                <label class="theme-switch">
+                                    <input type="checkbox" id="setting-theme-mode" ${SETTINGS.THEME === 'dark' ? 'checked' : ''}>
+                                    
+                                    <!-- 1. 背景轨道：只负责展开和收缩的动画 -->
+                                    <span class="slider-track"></span>
+
+                                    <!-- 2. 滑块圆点：只负责左右移动和图标切换 -->
+                                    <span class="slider-dot">
+                                        <span class="icon sun">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                                <circle cx="12" cy="12" r="5"></circle>
+                                                <line x1="12" y1="1" x2="12" y2="3"></line>
+                                                <line x1="12" y1="21" x2="12" y2="23"></line>
+                                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                                                <line x1="1" y1="12" x2="3" y2="12"></line>
+                                                <line x1="21" y1="12" x2="23" y2="12"></line>
+                                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                                            </svg>   
+                                        </span>                                    
+                                        <span class="icon moon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-3.51 1.713-6.636 4.398-8.552a.75.75 0 01.818.162z" clip-rule="evenodd"></path></svg>
+                                        </span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="qmx-settings-content">
@@ -1674,7 +1888,7 @@
                     
                     <!-- ==================== Tab 4: 关于 ==================== -->
                     <div id="tab-about" class="tab-content">
-                        <h4>关于脚本 <span class="version-tag">v2.0.3</span></h4>
+                        <h4>关于脚本 <span class="version-tag">v2.0.4</span></h4>
                         <h4>致谢</h4>
                         <p>
                             本脚本基于
@@ -1824,6 +2038,14 @@
                     modal.querySelector(`#tab-${tabId}`).classList.add('active');
                 };
             });
+            
+            const themeToggle = modal.querySelector('#setting-theme-mode');
+            if (themeToggle) {
+                themeToggle.addEventListener('change', (e) => {
+                    const newTheme = e.target.checked ? 'dark' : 'light';
+                    ThemeManager.applyTheme(newTheme);
+                });
+            }
         },
 
         /**
@@ -1850,6 +2072,7 @@
                 AUTO_PAUSE_ENABLED: document.getElementById('setting-auto-pause').checked,
                 DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
                 MODAL_DISPLAY_MODE: document.getElementById('setting-modal-mode').value,
+                THEME: document.getElementById('setting-theme-mode').checked ? 'light' : 'dark', // 保存主题设置
                 
                 // Tab 2: 性能与延迟 (单位转换：从 秒/分钟 转为 毫秒)
                 INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById('setting-initial-script-delay').value) * 1000,
