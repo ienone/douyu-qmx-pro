@@ -7,7 +7,7 @@
 // @original-author ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
 // @match        *://www.douyu.com/*
 // @grant        GM_openInTab
-// @grant        GM_closeTab
+// @grant        window.close
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
@@ -864,8 +864,6 @@
             }
         },
 
-
-
         /**
          * 进入休眠模式，等待午夜刷新。
          */
@@ -907,12 +905,7 @@
          * 关闭标签页。
          */
         closeTab() {
-            try {
-                GM_closeTab();
-            } catch (e) {
-                // 备用关闭方法
-                window.close();
-            }
+            window.close();
         },
 
         startCommandListener(roomId) {

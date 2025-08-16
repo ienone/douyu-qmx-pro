@@ -1,8 +1,15 @@
 # 斗鱼全民星推荐Pro
 
-[![版本](https://img.shields.io/badge/Version-2.0.1-blue.svg)](https://greasyfork.org/zh-CN/scripts/你的脚本ID)[![许可证](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)[![原作者](https://img.shields.io/badge/Original-ysl--ovo-orange.svg)](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
+[![版本](https://img.shields.io/badge/Version-2.0.4-blue.svg)](https://greasyfork.org/zh-CN/scripts/543589-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96pro)[![许可证](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)[![原作者](https://img.shields.io/badge/Original-ysl--ovo-orange.svg)](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
 
 用于自动领取斗鱼【全民星推荐】活动红包的油猴脚本。本脚本基于 [ysl-ovo 的原版脚本](https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96) 进行二次开发，在保留核心功能的基础上，重构了整体架构并新增了可视化管理面板。
+
+---
+## 关于斗鱼新版界面的说明
+
+- 由于目前我还没被灰度到斗鱼新版UI，因此无法确认新版星推荐红包/切换回旧版相关页面元素的具体情况，进而暂时无法进行适配和调试。
+- 后续如有条件将会进行更新，或者有能看到的朋友们能进行修改……
+---
 
 ## 用户界面 (UI)
 
