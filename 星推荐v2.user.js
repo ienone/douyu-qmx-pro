@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         斗鱼全民星推荐自动领取pro
 // @namespace    http://tampermonkey.net/
-// @version      2.0.4
+// @version      2.0.4a
 // @description  原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
 // @author       ienone
 // @original-author ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
@@ -16,8 +16,6 @@
 // @connect      list-www.douyu.com
 // @run-at       document-idle
 // @license      MIT
-// @downloadURL https://update.greasyfork.org/scripts/543589/%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96pro.user.js
-// @updateURL https://update.greasyfork.org/scripts/543589/%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96pro.meta.js
 // ==/UserScript==
 
 (function() {
@@ -242,6 +240,7 @@
             limitReachedPopup: "div.dy-Message-custom-content.dy-Message-info", // 斗鱼官方弹出的“今日已达上限”的提示信息元素。
             rankListContainer: "#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank", // 在“注入模式”下，用作UI注入目标的侧边栏排行榜容器。
             anchorName: "div.Title-anchorName > h2.Title-anchorNameH2", // 直播间页面中显示主播昵称的元素。
+            switchUIButton: 'a.icon__jumpoldweb'
         }
     };
 
@@ -263,7 +262,7 @@
         get() {
             const userSettings = GM_getValue(this.STORAGE_KEY, {});
             const themeSetting = GM_getValue('douyu_qmx_theme', CONFIG.DEFAULT_THEME);
-            
+
             // 合并用户设置，并强制包含主题设置
             const finalSettings = Object.assign({}, CONFIG, userSettings, { THEME: themeSetting });
             return finalSettings;
@@ -278,7 +277,7 @@
             const theme = settingsToSave.THEME;
             delete settingsToSave.THEME;
             GM_setValue('douyu_qmx_theme', theme);
-            
+
             GM_setValue(this.STORAGE_KEY, settingsToSave);
         },
 
@@ -352,7 +351,7 @@
          * @returns {string|null} - 房间号或 null。
          */
         getCurrentRoomId() {
-            const match = window.location.href.match(/douyu\.com\/(?:topic\/[^?]+\?rid=|(\d+))/);
+            const match = window.location.href.match(/douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/);
             return match ? (match[1] || new URLSearchParams(window.location.search).get('rid')) : null;
         },
 
@@ -435,7 +434,7 @@
                 GM_setValue(lockKey, false);
             }
         },
-        
+
         /**
          * 更新单个工作标签页的状态，支持附加数据
          * @param {string} roomId - 房间ID。
@@ -445,7 +444,7 @@
          */
         updateWorker(roomId, status, statusText, options = {}) {
             if (!roomId) return;
-            
+
             const state = this.get();
             const oldTabData = state.tabs[roomId] || {};
 
@@ -466,10 +465,10 @@
                     delete newTabData[key];
                 }
             }
-            
+
             // 4. 将处理干净的新对象赋给状态树
             state.tabs[roomId] = newTabData;
-            
+
             this.set(state);
         },
 
@@ -630,7 +629,7 @@
             return false;
         }
     };
-    
+
     /**
      * =================================================================================
      * 模块：工作页面 (WorkerPage)
@@ -653,10 +652,10 @@
             GlobalState.updateWorker(roomId, 'OPENING', '页面加载中...', { countdown: null, nickname: null });
 
             await Utils.sleep(1000);
-            
+
             // 保留命令轮询器，以便接收来自控制面板的“关闭”指令
             this.startCommandListener(roomId);
-            
+
             // 页面关闭前的清理工作
             window.addEventListener('beforeunload', () => {
                 GlobalState.removeWorker(roomId);
@@ -676,10 +675,17 @@
             }
             Utils.log("页面关键元素已加载。");
 
+            const switchUIButton = await DOM.findElement(SETTINGS.SELECTORS.switchUIButton, SETTINGS.ELEMENT_WAIT_TIMEOUT);
+            if (switchUIButton) {
+                Utils.log("返回旧版按钮已加载。");
+                DOM.safeClick(switchUIButton, "返回旧版按钮")
+            }
+
+
             // 获取一次性的主播名等信息
             const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
             const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
-            
+
             // 立即汇报初始状态
             GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname, countdown: null });
 
@@ -727,7 +733,7 @@
 
             const statusSpan = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
             const statusText = statusSpan ? statusSpan.textContent.trim() : '';
-            
+
             // 2. 分析状态并行动
             if (statusText.includes(':')) {
                 // 发现倒计时任务 -> 汇报并预约
@@ -737,17 +743,17 @@
                 const endTime = Date.now() + remainingSeconds * 1000;
 
                 Utils.log(`发现新任务：倒计时 ${statusText}。`);
-                
+
                 // 向控制面板汇报任务详情
                 GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, {
                     countdown: { endTime: endTime}
                 });
-                
+
                 if (SETTINGS.AUTO_PAUSE_ENABLED) {
                     this.autoPauseVideo();
                 }
                 // 预约未来的动作
-                const wakeUpDelay = Math.max(0, (remainingSeconds * 1000) - 1500); 
+                const wakeUpDelay = Math.max(0, (remainingSeconds * 1000) - 1500);
                 Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1000)} 秒后唤醒执行任务。`);
                 setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
 
@@ -765,14 +771,14 @@
             }
         },
 
-        
+
         /**
          * 处理点击红包后的弹窗逻辑。
          */
         async claimAndRecheck(roomId) {
             Utils.log("开始执行领取流程...");
             GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...', { countdown: null });
-            
+
             const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
             if (!await DOM.safeClick(redEnvelopeDiv, "右下角红包区域")) {
                 Utils.log("点击红包区域失败，重新寻找任务。");
@@ -788,7 +794,7 @@
                 this.findAndExecuteNextTask(roomId);
                 return;
             }
-            
+
             const openBtn = popup.querySelector(SETTINGS.SELECTORS.openButton);
             if (await DOM.safeClick(openBtn, "红包弹窗的打开按钮")) {
                 // 检查是否触发上限
@@ -806,27 +812,27 @@
                 await Utils.sleep(1500); // 等待奖励动画
                 // 不再查找具体的奖励文本，而是查找代表“成功”的容器
                 const successIndicator = await DOM.findElement(
-                    SETTINGS.SELECTORS.rewardSuccessIndicator, 
-                    3000, 
-                    popup   
+                    SETTINGS.SELECTORS.rewardSuccessIndicator,
+                    3000,
+                    popup
                 );
 
                 // 根据是否找到成功标志来确定奖励信息
                 const reward = successIndicator ? '领取成功 ' : '空包或失败';
                 Utils.log(`领取操作完成，结果: ${reward}`);
-    
-                GlobalState.updateWorker(roomId, 'WAITING', `领取到: ${reward}`, { countdown: null });                
+
+                GlobalState.updateWorker(roomId, 'WAITING', `领取到: ${reward}`, { countdown: null });
                 const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
                 await DOM.safeClick(closeBtn, "领取结果弹窗的关闭按钮");
             } else {
                  Utils.log("点击打开按钮失败。");
             }
-            
-            STATE.lastActionTime = Date.now(); 
+
+            STATE.lastActionTime = Date.now();
 
             // 核心：无论成功与否，等待后都回到起点，寻找下一个任务
             Utils.log("操作完成，2秒后在本房间内寻找下一个任务...");
-            await Utils.sleep(2000); 
+            await Utils.sleep(2000);
             this.findAndExecuteNextTask(roomId);
         },
 
@@ -837,11 +843,11 @@
             if ( STATE.isSwitchingRoom || Date.now() - STATE.lastActionTime < SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION) {
                 return;
             }
-            
+
             // 使用 DOM.findElement 替换 querySelector，给它5秒的等待时间
             Utils.log("正在寻找暂停按钮...");
-            const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5000); 
-            
+            const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5000);
+
             if (pauseBtn) {
                 Utils.log("检测到视频正在播放，尝试自动暂停...");
                 if (await DOM.safeClick(pauseBtn, "暂停按钮")) {
@@ -902,11 +908,11 @@
             const roomId = Utils.getCurrentRoomId();
             Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
             GlobalState.updateWorker(roomId, 'DORMANT', '休眠中 (等待0点刷新)', { countdown: null });
-            
+
             const now = new Date();
             const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 1, 0);
             const msUntilMidnight = tomorrow.getTime() - now.getTime();
-            
+
             Utils.log(`将在 ${Math.round(msUntilMidnight / 1000 / 60)} 分钟后自动刷新页面。`);
             setTimeout(() => window.location.reload(), msUntilMidnight);
         },
@@ -923,7 +929,7 @@
             if (this.pauseSentinelInterval) {
                 clearInterval(this.pauseSentinelInterval);
             }
-            
+
             // 异步地调用状态移除，不阻塞后续的关闭操作
             GlobalState.removeWorker(roomId);
             await Utils.sleep(300);
@@ -931,7 +937,7 @@
             // 3. 执行关闭
             this.closeTab();
         },
-        
+
         /**
          * 关闭标签页。
          */
@@ -950,11 +956,11 @@
 
             this.commandChannel.onmessage = (event) => {
                 const { action, target } = event.data;
-                
+
                 // 检查指令是否是给自己的
                 if (target === roomId || target === '*') {
                     Utils.log(`接收到广播指令: ${action} for target ${target}`);
-                    
+
                     if (action === 'CLOSE' || action === 'CLOSE_ALL') {
                         this.selfClose(roomId); // 执行关闭操作
                     }
@@ -991,7 +997,7 @@
             Utils.log("当前是控制页面，开始设置UI...");
             this.commandChannel = new BroadcastChannel('douyu_qmx_commands'); // 创建广播频道
             this.injectCSS();
-            ThemeManager.applyTheme(SETTINGS.THEME); 
+            ThemeManager.applyTheme(SETTINGS.THEME);
             this.createHTML();
             // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
             this.applyModalMode();
@@ -1020,26 +1026,26 @@
         :root {
             color-scheme: light dark;
             --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
-            --status-color-waiting: #4CAF50; 
+            --status-color-waiting: #4CAF50;
             --status-color-claiming: #2196F3;
-            --status-color-switching: #FFC107; 
+            --status-color-switching: #FFC107;
             --status-color-error: #F44336;
-            --status-color-opening: #9C27B0; 
+            --status-color-opening: #9C27B0;
             --status-color-dormant: #757575;
             --status-color-unresponsive: #FFA000;
         }
 
         body[data-theme="dark"] {
-            --md-sys-color-primary: #D0BCFF; 
+            --md-sys-color-primary: #D0BCFF;
             --md-sys-color-on-primary: #381E72;
-            --md-sys-color-surface-container: #211F26; 
+            --md-sys-color-surface-container: #211F26;
             --md-sys-color-on-surface: #E6E1E5;
-            --md-sys-color-on-surface-variant: #CAC4D0; 
+            --md-sys-color-on-surface-variant: #CAC4D0;
             --md-sys-color-outline: #938F99;
-            --md-sys-color-surface-bright: #36343B; 
+            --md-sys-color-surface-bright: #36343B;
             --md-sys-color-tertiary: #EFB8C8;
             --md-sys-color-scrim: #000000;
-            --surface-container-highest: #3D3B42; 
+            --surface-container-highest: #3D3B42;
             --primary-container: #4F378B;
             --on-primary-container: #EADDFF;
         }
@@ -1082,7 +1088,7 @@
             opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
         }
         #qmx-modal-backdrop.visible { opacity: 0.5; visibility: visible; }
-        
+
         /* --- 主控制面板样式 --- */
         #qmx-modal-container {
             background-color: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface);
@@ -1150,12 +1156,12 @@
         .qmx-modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .qmx-modal-btn.danger { border-color: #F44336; color: #F44336; }
         .qmx-modal-btn.danger:hover { background-color: rgba(244, 67, 54, 0.1); }
-        .qmx-tab-close-btn { 
+        .qmx-tab-close-btn {
             flex-shrink: 0; background: none; border: none; color: var(--md-sys-color-on-surface-variant);
             font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; opacity: 0.6; transition: all 0.2s;
         }
         .qmx-tab-close-btn:hover { opacity: 1; color: #F44336; transform: scale(1.1); }
-        
+
         /* --- 设置面板统一样式 --- */
         #qmx-settings-modal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95);
@@ -1192,7 +1198,7 @@
         .qmx-settings-item { display: flex; flex-direction: column; gap: 8px; }
         .qmx-settings-item label { font-size: 14px; font-weight: 500; }
         .qmx-settings-item small { font-size: 12px; color: var(--md-sys-color-on-surface-variant); opacity: 0.8; }
-                
+
         /* --- 所有输入框的统一样式 --- */
         /* 1. 基础样式 (对所有数字输入框生效) */
         .qmx-settings-item input[type="number"] {
@@ -1208,8 +1214,8 @@
 
         /* 2. 聚焦与对齐 (仅对不带单位的普通输入框生效) */
         .qmx-settings-item > input[type="number"] {
-            padding-top: 12px; 
-            padding-bottom: 12px; 
+            padding-top: 12px;
+            padding-bottom: 12px;
         }
         .qmx-settings-item > input[type="number"]:hover {
             border-color: var(--md-sys-color-primary);
@@ -1368,7 +1374,7 @@
         /* --- 新增：全局工具提示 (Tooltip) 样式 --- */
         #qmx-global-tooltip {
             position: fixed; /* 使用 fixed 定位，脱离所有容器限制 */
-            background-color:  var(--surface-container-highest); 
+            background-color:  var(--surface-container-highest);
             color: var(--md-sys-color-on-surface);
             padding: 8px 12px;
             border-radius: 8px;
@@ -1401,7 +1407,7 @@
             background-color: var(--md-sys-color-surface-container);
             transition: border-color 0.2s, box-shadow 0.2s; /* 添加 box-shadow 过渡 */
             width: 100%;
-            box-sizing: border-box; 
+            box-sizing: border-box;
         }
 
         /* 2. 悬停与聚焦效果 (应用到 fieldset 自身) */
@@ -1526,7 +1532,7 @@
             height: 34px;
             cursor: pointer;
             /* 取消容器自身的过渡，它应该是稳定的 */
-            transition: none; 
+            transition: none;
         }
 
         .theme-switch input {
@@ -1545,8 +1551,8 @@
             height: 34px;
             background-color: var(--surface-container-highest);
             border-radius: 17px; /* 收缩时是圆形 */
-                        
-            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2), 
+
+            box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2),
                             inset -2px -2px 4px rgba(255,255,255,0.05);
 
             transition: width 0.3s ease, left 0.3s ease, border-radius 0.3s ease, box-shadow 0.3s ease;
@@ -1643,7 +1649,7 @@
                     <div id="qmx-tab-list"></div>
                 </div>
                 <div class="qmx-modal-footer">
-                    <button id="qmx-modal-settings-btn" class="qmx-modal-btn">设置</button>                  
+                    <button id="qmx-modal-settings-btn" class="qmx-modal-btn">设置</button>
                     <button id="qmx-modal-close-all-btn" class="qmx-modal-btn danger">关闭所有</button>
                     <button id="qmx-modal-open-btn" class="qmx-modal-btn primary">打开新房间</button>
                 </div>
@@ -1737,7 +1743,7 @@
                 'api-retry-count': '获取房间列表失败时的重试次数。',
                 'api-retry-delay': 'API请求失败后，等待多久再重试。'
             };
-            
+
             // --- 动态生成HTML ---
 
             // 辅助函数：动态生成带单位输入框的HTML
@@ -1770,7 +1776,7 @@
                             <div class="theme-switch-wrapper">
                                 <label class="theme-switch">
                                     <input type="checkbox" id="setting-theme-mode" ${SETTINGS.THEME === 'dark' ? 'checked' : ''}>
-                                    
+
                                     <!-- 1. 背景轨道：只负责展开和收缩的动画 -->
                                     <span class="slider-track"></span>
 
@@ -1787,8 +1793,8 @@
                                                 <line x1="21" y1="12" x2="23" y2="12"></line>
                                                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
                                                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                                            </svg>   
-                                        </span>                                    
+                                            </svg>
+                                        </span>
                                         <span class="icon moon">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-3.51 1.713-6.636 4.398-8.552a.75.75 0 01.818.162z" clip-rule="evenodd"></path></svg>
                                         </span>
@@ -1879,18 +1885,18 @@
                                 <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
                                 <input type="number" id="setting-api-retry-count" value="${SETTINGS.API_RETRY_COUNT}">
                             </div>
-                            
+
                             ${createUnitInput('setting-api-retry-delay', 'API重试延迟')}
-                            
+
                             <!-- 新增：添加两个空的占位符，使网格平衡为 2x3 -->
                             <div class="qmx-settings-item"></div>
                             <div class="qmx-settings-item"></div>
                         </div>
                     </div>
-                    
+
                     <!-- ==================== Tab 4: 关于 ==================== -->
                     <div id="tab-about" class="tab-content">
-                        <h4>关于脚本 <span class="version-tag">v2.0.4</span></h4>
+                        <h4>关于脚本 <span class="version-tag">v2.0.4a</span></h4>
                         <h4>致谢</h4>
                         <p>
                             本脚本基于
@@ -1963,7 +1969,7 @@
                     globalTooltip.classList.remove('visible');
                 }
             });
-            
+
             // 2. 激活自定义下拉菜单
             modal.querySelectorAll('.qmx-select').forEach(wrapper => {
                 const nativeSelect = wrapper.querySelector('select');
@@ -2040,7 +2046,7 @@
                     modal.querySelector(`#tab-${tabId}`).classList.add('active');
                 };
             });
-            
+
             const themeToggle = modal.querySelector('#setting-theme-mode');
             if (themeToggle) {
                 themeToggle.addEventListener('change', (e) => {
@@ -2075,7 +2081,7 @@
                 DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
                 MODAL_DISPLAY_MODE: document.getElementById('setting-modal-mode').value,
                 THEME: document.getElementById('setting-theme-mode').checked ? 'light' : 'dark', // 保存主题设置
-                
+
                 // Tab 2: 性能与延迟 (单位转换：从 秒/分钟 转为 毫秒)
                 INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById('setting-initial-script-delay').value) * 1000,
                 AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat(document.getElementById('setting-auto-pause-delay').value) * 1000,
@@ -2118,7 +2124,7 @@
             const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
             const modalContainer = document.getElementById('qmx-modal-container');
             const modalBackdrop = document.getElementById('qmx-modal-backdrop');
-            
+
             // --- 核心交互：主按钮的点击与拖拽 ---
             this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
 
@@ -2141,7 +2147,7 @@
             if (SETTINGS.MODAL_DISPLAY_MODE !== 'inject-rank-list') {
                 modalBackdrop.onclick = () => this.hidePanel();
             }
-            
+
             document.getElementById('qmx-modal-open-btn').onclick = () => this.openOneNewTab();
             document.getElementById('qmx-modal-settings-btn').onclick = () => this.showSettingsPanel();
             document.getElementById('qmx-modal-close-all-btn').onclick = () => {
@@ -2160,12 +2166,12 @@
                 if (!roomId) return;
 
                 Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
-                
+
                 // 1. 立即更新UI和状态 (这部分保留)
                 const state = GlobalState.get();
                 delete state.tabs[roomId];
                 GlobalState.set(state); // 仍然需要更新 tabs 列表
-                
+
                 // 2. 发送关闭指令
                 Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
                 this.commandChannel.postMessage({ action: 'CLOSE', target: roomId }); // 通过广播发送单点指令
@@ -2190,7 +2196,7 @@
             Utils.log(`[Render] 开始渲染，检测到 ${tabIds.length} 个活动标签页。IDs: [${tabIds.join(', ')}]`); // 新增日志
 
             document.getElementById('qmx-active-tabs-count').textContent = tabIds.length;
-            
+
             const statusDisplayMap = {
                 OPENING: '加载中', WAITING: '等待中', CLAIMING: '领取中',
                 SWITCHING: '切换中', DORMANT: '休眠中', ERROR: '出错了', UNRESPONSIVE: '无响应'
@@ -2203,13 +2209,13 @@
             tabIds.forEach(roomId => {
                 const tabData = state.tabs[roomId];
                 let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
-                
-                let currentStatusText = tabData.statusText; 
+
+                let currentStatusText = tabData.statusText;
 
                 // 使用 endTime 来计算剩余时间
-                if (tabData.status === 'WAITING' && tabData.countdown?.endTime) { 
+                if (tabData.status === 'WAITING' && tabData.countdown?.endTime) {
                     const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1000;
-                    
+
                     if (remainingSeconds > 0) {
                         currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
                     } else {
@@ -2224,11 +2230,11 @@
                     const statusNameEl = existingItem.querySelector('.qmx-tab-status-name');
                     const statusTextEl = existingItem.querySelector('.qmx-tab-status-text');
                     const dotEl = existingItem.querySelector('.qmx-tab-status-dot');
-                    
+
                     if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
                         nicknameEl.textContent = tabData.nickname;
                     }
-                    
+
                     const newStatusName = `[${statusDisplayMap[tabData.status] || tabData.status}]`;
                     if (statusNameEl.textContent !== newStatusName) {
                         statusNameEl.textContent = newStatusName;
@@ -2260,7 +2266,7 @@
                     }
                 }
             });
-            
+
             // --- 处理空列表和上限状态 ---
             const emptyMsg = tabList.querySelector('.qmx-empty-list-msg');
             if (tabIds.length === 0) {
@@ -2272,7 +2278,7 @@
             }
             this.renderLimitStatus();
         },
-        
+
         /**
          * 专门处理和渲染每日上限状态的UI部分。
          */
@@ -2297,7 +2303,7 @@
                     header.parentNode.insertBefore(limitMessageEl, header.nextSibling); // 确保在标题下方插入
                     document.querySelector('.qmx-modal-header').after(limitMessageEl);
                 }
-                
+
                 if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
                     limitMessageEl.textContent = '今日已达上限。任务休眠中，可新增标签页为明日准备。';
                     openBtn.disabled = false;
@@ -2330,7 +2336,7 @@
 
             openBtn.disabled = true;
             openBtn.textContent = '正在查找...';
-            
+
             try {
                 const openedRoomIds = new Set(Object.keys(state.tabs));
                 const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
@@ -2338,7 +2344,7 @@
                     const rid = url.match(/\/(\d+)/)?.[1];
                     return rid && !openedRoomIds.has(rid);
                 });
-                
+
                 if (newUrl) {
                     const newRoomId = newUrl.match(/\/(\d+)/)[1];
                     GlobalState.updateWorker(newRoomId, 'OPENING', '正在打开...');
@@ -2358,7 +2364,7 @@
                 // renderDashboard会负责将按钮文本恢复正确
             }
         },
-            
+
 
         /**
          * 设置拖拽功能 (v3: 使用 CSS 变量解耦，解决动画问题)
@@ -2393,13 +2399,13 @@
                     setPosition(defaultX, defaultY);
                 }
             }
-            
+
             const onMouseDown = (e) => {
                 if (e.button !== 0) return;
 
                 isMouseDown = true;
                 hasDragged = false;
-                
+
                 const rect = element.getBoundingClientRect();
                 startX = e.clientX;
                 startY = e.clientY;
@@ -2408,7 +2414,7 @@
 
                 element.classList.add('is-dragging'); // 拖动开始时，立即禁用动画
                 handle.style.cursor = 'grabbing';
-                
+
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp, { once: true });
             };
@@ -2438,7 +2444,7 @@
             const onMouseUp = () => {
                 isMouseDown = false;
                 document.removeEventListener('mousemove', onMouseMove);
-                
+
                 element.classList.remove('is-dragging');
                 handle.style.cursor = 'grab';
 
@@ -2463,7 +2469,7 @@
         showPanel() {
             const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
             const modalContainer = document.getElementById('qmx-modal-container');
-            
+
             mainButton.classList.add('hidden');
 
             if (this.isPanelInjected) {
@@ -2567,8 +2573,8 @@
                 };
                 waitForTarget();
                 return;
-            } 
-            
+            }
+
             // 对于所有非注入模式 (centered, floating)
             this.isPanelInjected = false;
             modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
@@ -2586,12 +2592,12 @@
      */
     function main() {
         const currentUrl = window.location.href;
-        const isControlRoom = currentUrl.includes(`/${SETTINGS.CONTROL_ROOM_ID}`) || 
+        const isControlRoom = currentUrl.includes(`/${SETTINGS.CONTROL_ROOM_ID}`) ||
                               (currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${SETTINGS.TEMP_CONTROL_ROOM_RID}`));
 
         if (isControlRoom) {
             ControlPage.init();
-        } else if (currentUrl.match(/douyu\.com\/(\d+)/) || currentUrl.match(/douyu\.com\/topic\/.*rid=(\d+)/)) {
+        } else if (currentUrl.match(/douyu\.com\/(?:beta\/)?(\d+)/) || currentUrl.match(/douyu\.com\/(?:beta\/)?topic\/.*rid=(\d+)/)) {
             WorkerPage.init();
         } else {
             Utils.log("当前页面非控制页或工作页，脚本不活动。");
@@ -2602,4 +2608,4 @@
     Utils.log(`脚本将在 ${SETTINGS.INITIAL_SCRIPT_DELAY / 1000} 秒后开始初始化...`);
     setTimeout(main, SETTINGS.INITIAL_SCRIPT_DELAY);
 
-})(); 
+})();
