@@ -9,6 +9,8 @@
 
 - 由于目前我还没被灰度到斗鱼新版UI，因此无法确认新版星推荐红包/切换回旧版相关页面元素的具体情况，进而暂时无法进行适配和调试。
 - 后续如有条件将会进行更新，或者有能看到的朋友们能进行修改……
+- 已发布 [v2.0.4a 预发布版](https://github.com/ienone/douyu-qmx-pro/releases/tag/v.2.0.4a) 尝试解决新版UI问题。但据[用户反馈](https://github.com/ienone/douyu-qmx-pro/issues/3#issuecomment-3194206924)，返回旧版的按钮可能已不存在，欢迎测试
+
 ---
 
 ## 用户界面 (UI)
