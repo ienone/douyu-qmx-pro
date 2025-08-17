@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         斗鱼全民星推荐自动领取pro
 // @namespace    http://tampermonkey.net/
-// @version      2.0.4a
+// @version      2.0.5
 // @description  原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
 // @author       ienone
 // @original-author ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
@@ -638,10 +638,25 @@
      * =================================================================================
      */
     const WorkerPage = {
+
+        /**
+         * 在后台非阻塞地查找并点击“返回旧版”按钮。
+         * 这是一个可选操作，不阻塞主初始化流程。
+         */
+        async handleOptionalUISwitch() {
+            Utils.log("开始在后台非阻塞地查找“返回旧版”按钮...");
+            const switchUIButton = await DOM.findElement(SETTINGS.SELECTORS.switchUIButton,  SETTINGS.ELEMENT_WAIT_TIMEOUT);
+            if (switchUIButton) {
+                Utils.log("后台查找成功：发现“返回旧版”按钮，执行点击。");
+                DOM.safeClick(switchUIButton, "返回旧版按钮");
+            } else {
+                Utils.log("后台查找：未找到“返回旧版”按钮，操作跳过。");
+            }
+        },
+
         /**
          * 工作页面的总入口和初始化函数。
          */
-
         async init() {
             Utils.log("混合模式工作单元初始化...");
             const roomId = Utils.getCurrentRoomId();
@@ -675,12 +690,7 @@
             }
             Utils.log("页面关键元素已加载。");
 
-            const switchUIButton = await DOM.findElement(SETTINGS.SELECTORS.switchUIButton, SETTINGS.ELEMENT_WAIT_TIMEOUT);
-            if (switchUIButton) {
-                Utils.log("返回旧版按钮已加载。");
-                DOM.safeClick(switchUIButton, "返回旧版按钮")
-            }
-
+            this.handleOptionalUISwitch();
 
             // 获取一次性的主播名等信息
             const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
@@ -885,6 +895,13 @@
 
                 if (nextUrl) {
                     Utils.log(`确定下一个房间链接: ${nextUrl}`);
+
+                    const nextRoomId = nextUrl.match(/\/(\d+)/)[1];
+                    const pendingWorkers = GM_getValue('qmx_pending_workers', []);
+                    pendingWorkers.push(nextRoomId);
+                    GM_setValue('qmx_pending_workers', pendingWorkers);
+                    Utils.log(`已将房间 ${nextRoomId} 加入待处理列表。`);
+
                     // 4. 打开新标签页（交棒）
                     GM_openInTab(nextUrl, { active: false, setParent: true });
                     await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
@@ -1896,42 +1913,35 @@
 
                     <!-- ==================== Tab 4: 关于 ==================== -->
                     <div id="tab-about" class="tab-content">
-                        <h4>关于脚本 <span class="version-tag">v2.0.4a</span></h4>
+                        <h4>关于脚本 <span class="version-tag">v2.0.5</span></h4>
                         <h4>致谢</h4>
-                        <p>
-                            本脚本基于
-                            <a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>
-                            的插件
-                            <a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
-                            进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享
-                        </p>
+                        <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
+                            进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享</li>
+                        <li>v2.0.5更新中的“兼容斗鱼新版UI”功能由<a href="https://github.com/Truthss" target="_blank" rel="noopener noreferrer">@Truthss</a> 在 <a href="https://github.com/ienone/douyu-qmx-pro/pull/5" target="_blank" rel="noopener noreferrer">#5</a> 中贡献，非常感谢！</li>
                         <h4>一些tips</h4>
                         <ul>
-                            <li>引入HackTimer，应该能有效避免后台限制</li>
-                            <li>简单测试了一下，应该抢的更多了</li>
-                            <li>自动暂停不完备，还有问题，晚上看玩出直播时再确定问题</li>
+                            <li>每天大概1000左右金币到上限</li>
+                            <li>注意这个活动到晚上的时候，100/50/20星光棒的选项可能空了(奖池对应项会变灰)这时候攒金币过了12点再抽，比较有性价比</li>
+                            <li>后台标签页有时会在还剩几秒时卡死在红包弹窗界面(标签页倒计时不动了)，然后就死循环了。这是已知bug但暂未定位到问题，请手动刷新界面</li>
                             <li>脚本还是bug不少，随缘修了＞︿＜</li>
                             <li>读取奖励内容文本需要用api实现，暂时搁置</li>
                         </ul>
-                        <h4>v2.0.3 更新日志</h4>
+                        <h4>脚本更新日志 (v2.0.5)</h4>
                         <ul>
-                            <li><b>【可靠性提升】</b>
+                            <li><b>【修复】工作标签页</b>
                                 <ul>
-                                    <li><b>引入了<code>HackTimer</code>库，确保脚本在后台也能更精确地执行任务，这次大抵真的能用了，不会被杀后台</b></li>
-                                    <li>优化了多标签页间的状态同步逻辑，使其更加健壮，有效防止状态丢失或错乱</li>
-                                    <li>修正了对红包领取成功状态的判断，使其更加稳定</li>
+                                    <li>原本在不是领取红包的斗鱼直播间，脚本也会工作并且暂停播放/关闭标签页，现加入验证机制优化了这个问题</li>
                                 </ul>
                             </li>
-                            <li><b>【逻辑优化】</b>重写了倒计时处理机制，使用更可靠的结束时间戳。这修复了因浏览器后台标签页降速或脚本卡顿时，倒计时不准或显示不更新的BUG</li>
-                            <li><b>【稳定性增强】</b>新增了对“切换中”状态的兜底超时监控。如果一个标签页卡在切换过程中超过30秒，主控面板会自动将其清理，防止“幽灵”标签页在面板残留</li>
-                            <li><b>【冗余删减】</b>移除了多个已失效或冗余的内部状态变量</li>
-                            <li><b>【UI与配置】</b>
+                            <li><b>【优化】初步兼容斗鱼新版UI</b>
                                 <ul>
-                                    <li>在设置面板中新增了“切换中状态兜底超时”的配置项。</li>
-                                    <li>更新并润色了部分设置项的帮助提示文本，使其更易于理解。</li>
+                                    <li>现在脚本能够识别并兼容 URL 中带有 <code>/beta/</code> 的新版直播间页面</li>
+                                    <li>在进入新版页面后，脚本会尝试寻找并点击“返回旧版”的按钮，以领取红包</li>
+                                    <li><b>请注意</b>：根据<a href="https://github.com/ienone/douyu-qmx-pro/issues/3#issuecomment-3194206924" target="_blank" rel="noopener noreferrer">用户反馈</a>，对于部分用户而言斗鱼官方可能已经移除了这个“返回旧版”的按钮，所以<b>这个功能不一定能起作用</b>，欢迎大家测试和反馈……</li>
                                 </ul>
                             </li>
-                        </ul>
+                             <li><b>【优化】“关闭所有”功能优化</b></li>
+                        </ul>     
                         <h4>源码与社区</h4>
                         <ul>
                             <li>可以在 <a href="https://github.com/ienone/eilatam" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
@@ -2152,11 +2162,24 @@
             document.getElementById('qmx-modal-settings-btn').onclick = () => this.showSettingsPanel();
             document.getElementById('qmx-modal-close-all-btn').onclick = () => {
                 if (confirm("确定要关闭所有工作标签页吗？")) {
+                    Utils.log("用户请求关闭所有标签页。");
+
+                    // 1: 向所有工作页广播关闭指令
                     Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
-                    this.commandChannel.postMessage({ action: 'CLOSE_ALL', target: '*' }); // 直接发送消息
+                    this.commandChannel.postMessage({ action: 'CLOSE_ALL', target: '*' });
+
+                    // 2: 清空全局状态中的所有标签页，无论工作页是否收到指令，控制中心都认为它们已被处理
+                    Utils.log("强制清空全局状态中的标签页列表...");
+                    const state = GlobalState.get();
+                    if (Object.keys(state.tabs).length > 0) {
+                        state.tabs = {}; // 直接清空
+                        GlobalState.set(state);
+                    }
+
+                    // 3: 重新渲染UI，面板变空
+                    this.renderDashboard();
                 }
             }
-
             document.getElementById('qmx-tab-list').addEventListener('click', (e) => {
                 const closeButton = e.target.closest('.qmx-tab-close-btn');
                 if (!closeButton) return;
@@ -2347,6 +2370,12 @@
 
                 if (newUrl) {
                     const newRoomId = newUrl.match(/\/(\d+)/)[1];
+
+                    const pendingWorkers = GM_getValue('qmx_pending_workers', []);
+                    pendingWorkers.push(newRoomId);
+                    GM_setValue('qmx_pending_workers', pendingWorkers);
+                    Utils.log(`已将房间 ${newRoomId} 加入待处理列表。`);
+
                     GlobalState.updateWorker(newRoomId, 'OPENING', '正在打开...');
                     GM_openInTab(newUrl, { active: false, setParent: true });
                     Utils.log(`打开指令已发送: ${newUrl}`);
@@ -2597,13 +2626,34 @@
 
         if (isControlRoom) {
             ControlPage.init();
-        } else if (currentUrl.match(/douyu\.com\/(?:beta\/)?(\d+)/) || currentUrl.match(/douyu\.com\/(?:beta\/)?topic\/.*rid=(\d+)/)) {
-            WorkerPage.init();
+            return; // 控制页逻辑独立，直接返回
+        }
+
+        // --- 工作页身份验证逻辑 ---
+        const roomId = Utils.getCurrentRoomId();
+        // 只有在明确是直播间页面的情况下才继续验证
+        if (roomId && (currentUrl.match(/douyu\.com\/(?:beta\/)?(\d+)/) || currentUrl.match(/douyu\.com\/(?:beta\/)?topic\/.*rid=(\d+)/))) {
+            const pendingWorkers = GM_getValue('qmx_pending_workers', []);
+            const myIndex = pendingWorkers.indexOf(roomId);
+
+            if (myIndex > -1) {
+                // 验证通过
+                Utils.log(`[身份验证] 房间 ${roomId} 在待处理列表中，确认为工作页。`);
+
+                // 关键一步：从列表中移除自己，完成“报到”，避免刷新后重复执行
+                pendingWorkers.splice(myIndex, 1);
+                GM_setValue('qmx_pending_workers', pendingWorkers);
+
+                // 初始化工作页逻辑
+                WorkerPage.init();
+            } else {
+                // 验证失败，是普通页面
+                Utils.log("当前直播间非脚本指定的工作页，脚本不活动。");
+            }
         } else {
             Utils.log("当前页面非控制页或工作页，脚本不活动。");
         }
     }
-
     // 延迟启动脚本，等待页面加载
     Utils.log(`脚本将在 ${SETTINGS.INITIAL_SCRIPT_DELAY / 1000} 秒后开始初始化...`);
     setTimeout(main, SETTINGS.INITIAL_SCRIPT_DELAY);

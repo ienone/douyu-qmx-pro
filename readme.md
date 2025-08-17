@@ -1,15 +1,16 @@
 # 斗鱼全民星推荐Pro
 
-[![版本](https://img.shields.io/badge/Version-2.0.4-blue.svg)](https://greasyfork.org/zh-CN/scripts/543589-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96pro)[![许可证](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)[![原作者](https://img.shields.io/badge/Original-ysl--ovo-orange.svg)](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
+[![版本](https://img.shields.io/badge/Version-2.0.5-blue.svg)](https://greasyfork.org/zh-CN/scripts/543589-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96pro)
+[![许可证](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)[![原作者](https://img.shields.io/badge/Original-ysl--ovo-orange.svg)](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
 
 用于自动领取斗鱼【全民星推荐】活动红包的油猴脚本。本脚本基于 [ysl-ovo 的原版脚本](https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96) 进行二次开发，在保留核心功能的基础上，重构了整体架构并新增了可视化管理面板。
 
 ---
 ## 关于斗鱼新版界面的说明
 
-- 由于目前我还没被灰度到斗鱼新版UI，因此无法确认新版星推荐红包/切换回旧版相关页面元素的具体情况，进而暂时无法进行适配和调试。
+- 由于目前我还没被灰度到斗鱼新版UI，因此无法确认新版星推荐红包/切换回旧版相关页面元素的具体情况，进而暂时无法进行适配和调试
 - 后续如有条件将会进行更新，或者有能看到的朋友们能进行修改……
-- 已发布 [v2.0.4a 预发布版](https://github.com/ienone/douyu-qmx-pro/releases/tag/v.2.0.4a) 尝试解决新版UI问题。但据[用户反馈](https://github.com/ienone/douyu-qmx-pro/issues/3#issuecomment-3194206924)，返回旧版的按钮可能已不存在，欢迎测试
+- [v2.0.5](https://github.com/ienone/douyu-qmx-pro/releases/tag/v.2.0.5) 尝试解决新版UI问题。但据[用户反馈](https://github.com/ienone/douyu-qmx-pro/issues/3#issuecomment-3194206924)，返回旧版的按钮可能已不存在，欢迎测试
 
 ---
 
@@ -76,22 +77,23 @@
 
 ## 📖 关于 (About)
 
-这部分内容与脚本设置面板中的“关于”页同步。
-
 #### 致谢
-本脚本基于 [ysl-ovo](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo) 的插件 [《斗鱼全民星推荐自动领取》](https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96) 进行功能改进与界面美化，同样遵循MIT许可证开源。感谢原作者的分享。
-
+- 本脚本基于 [ysl-ovo](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo) 的插件 [《斗鱼全民星推荐自动领取》](https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96) 进行功能改进与界面美化，同样遵循MIT许可证开源。感谢原作者的分享。
+-  [v2.0.5](https://github.com/ienone/douyu-qmx-pro/releases/tag/v.2.0.5)更新中的“适配新版 UI”功能由 [@Truthss](https://github.com/Truthss) 在 [#5](https://github.com/ienone/douyu-qmx-pro/pull/5) 中贡献，非常感谢！
 #### 一些Tips
-*   新开的后台直播间可能因浏览器策略不加载，手动切换过去几秒即可。
-*   标签页在后台久了可能被标记为“无响应”，同样是切换激活一下就能恢复心跳。
-*   由于后台定时器限制，倒计时结束时可能无法立即响应，可以到点后手动切过去抢。
-*   脚本bug不少，目前只能说勉强能跑。但时间精力有限暂时不打算改了＞︿＜
-
+*   新开的后台直播间可能因浏览器策略不加载，手动切换过去几秒即可
+*   标签页在后台久了可能被标记为“无响应”，同样是切换激活一下就能恢复心跳
+*   由于后台定时器限制，倒计时结束时可能无法立即响应，可以到点后手动切过去抢
+*   每天大概1000左右金币到上限
+*   注意这个活动到晚上的时候，100/50/20星光棒的选项可能空了(奖池对应项会变灰)这时候攒金币过了12点再抽，比较有性价比
+*   后台标签页有时会在还剩几秒时卡死在红包弹窗界面(标签页倒计时不动了)，然后就死循环了。这是已知bug但暂未定位到问题，请手动刷新界面
+*   脚本还是bug不少，随缘修了＞︿＜
+*   读取奖励内容文本需要用api实现，暂时搁置
 #### 源码与社区
 *   可以在 [GitHub](https://github.com/ienone/eilatam) 查看本脚本源码。
 *   发现BUG或有功能建议，欢迎提交 [Issue](https://github.com/ienone/eilatam/issues)（不过大概率不会修……）。
 *   如果你有能力进行改进，非常欢迎提交 [Pull Request](https://github.com/ienone/eilatam/pulls)！
 
-## 📄 许可证 (License)
+## 📄 License
 
-本脚本使用 [MIT License](https://opensource.org/licenses/MIT) 授权。
+本脚本使用 [MIT License](https://opensource.org/licenses/MIT) 授权
