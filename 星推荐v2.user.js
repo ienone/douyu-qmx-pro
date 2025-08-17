@@ -690,38 +690,59 @@
             }
             Utils.log("页面关键元素已加载。");
 
-            this.handleOptionalUISwitch();
+        Utils.log("开始并行检测 UI 版本和红包活动...");
+        try {
+            const findSwitchButtonPromise = DOM.findElement(SETTINGS.SELECTORS.switchUIButton, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT); // 15秒寻找切换按钮
+            const findRedEnvelopePromise = DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT); // 15秒寻找红包
 
-            // 获取一次性的主播名等信息
-            const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
-            const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
+            const firstElementFound = await Promise.race([
+                findSwitchButtonPromise,
+                findRedEnvelopePromise
+            ]);
 
-            // 立即汇报初始状态
-            GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname, countdown: null });
-
-            // 检查每日上限
-            const limitState = GlobalState.getDailyLimit();
-            if (limitState?.reached) {
-                Utils.log("初始化检查：检测到全局上限旗标。");
-                if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
-                    await this.enterDormantMode();
-                } else {
-                    await this.selfClose(roomId);
-                }
+            if (!firstElementFound) {
+                Utils.log("并行检测超时，未找到关键元素，判定为无效房间。");
+                await this.switchRoom();
                 return;
             }
 
-            // 启动一次性的任务链，取代旧的 setInterval
-            this.findAndExecuteNextTask(roomId);
+            // 检查找到的元素是哪个
+            if (firstElementFound.matches(SETTINGS.SELECTORS.switchUIButton)) {
+                // --- 场景1: 找到了“返回旧版”按钮，说明是新版UI ---
+                Utils.log("检测到新版 UI，正在点击“返回旧版”并等待页面重载...");
+                GlobalState.updateWorker(roomId, 'OPENING', '切换旧版UI...');
+                await DOM.safeClick(firstElementFound, "返回旧版按钮");
 
-            // 周期性检查视频状态
-            if (SETTINGS.AUTO_PAUSE_ENABLED) {
-                Utils.log("启动独立的视频暂停哨兵 (每8秒检查一次)...");
-                this.pauseSentinelInterval = setInterval(() => {
-                    this.autoPauseVideo();
-                }, 8000); // 8秒的间隔
+            } else if (firstElementFound.matches(SETTINGS.SELECTORS.redEnvelopeContainer)) {
+                // --- 场景2: 找到了红包容器，说明是旧版UI ---
+                Utils.log("检测到旧版 UI 且红包已加载，直接开始任务。");
+                const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
+                const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
+                GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname, countdown: null });
+                
+                // 检查每日上限
+                const limitState = GlobalState.getDailyLimit();
+                if (limitState?.reached) {
+                    Utils.log("初始化检查：检测到全局上限旗标。");
+                    if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
+                        await this.enterDormantMode();
+                    } else {
+                        await this.selfClose(roomId);
+                    }
+                    return;
+                }
+
+                this.findAndExecuteNextTask(roomId); // 直接进入任务流程
+
+                if (SETTINGS.AUTO_PAUSE_ENABLED) {
+                    this.pauseSentinelInterval = setInterval(() => this.autoPauseVideo(), 8000);
+                }
             }
 
+        } catch (error) {
+            Utils.log(`UI版本检测时发生错误: ${error.message}，切换房间。`);
+            await this.switchRoom();
+        }
         },
 
         async findAndExecuteNextTask(roomId) {
