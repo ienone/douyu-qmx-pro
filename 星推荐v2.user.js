@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         斗鱼全民星推荐自动领取pro
 // @namespace    http://tampermonkey.net/
-// @version      2.0.5
+// @version      2.0.6
 // @description  原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
 // @author       ienone
 // @original-author ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
 // @match        *://www.douyu.com/*
 // @grant        GM_openInTab
-// @grant        GM_closeTab
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
@@ -188,7 +187,7 @@
 
         // --- 时间控制 (ms) ---
         POPUP_WAIT_TIMEOUT: 20000, // 点击红包后，等待领取弹窗出现的最长超时时间。
-        PANEL_WAIT_TIMEOUT: 10000, // 查找通用UI面板或元素的默认等待超时时间。
+        PANEL_WAIT_TIMEOUT: 10000, // 查找通用UI面板或元素、等待失联的默认等待超时时间。
         ELEMENT_WAIT_TIMEOUT: 30000, // 等待播放器加载完成的超时时间，用以判断页面是否可用。
         RED_ENVELOPE_LOAD_TIMEOUT: 15000, // 在工作标签页中，等待右下角红包活动区域加载的超时时间。
         MIN_DELAY: 1000, // 模拟人类操作的随机延迟时间范围的最小值，用于点击等操作，避免行为过于机械。
@@ -197,6 +196,9 @@
         INITIAL_SCRIPT_DELAY: 3000, // 页面加载完成后，脚本延迟多久再开始执行，以避开页面初始化时的高资源占用期。
         UNRESPONSIVE_TIMEOUT: 15 * 60 * 1000, // 工作标签页多久未向控制中心汇报心跳后，在面板上被标记为“无响应”状态。
         SWITCHING_CLEANUP_TIMEOUT: 30000, // 处于“切换中”状态的标签页，超过此时间后将被自动清理，防止卡死。
+        HEALTHCHECK_INTERVAL: 10000, // 工作页中，哨兵检查UI倒计时的时间间隔。
+        DISCONNECTED_GRACE_PERIOD: 10000, // 已断开的标签页在被清理前，等待其重连的宽限时间。
+
         // --- UI 与交互 ---
         DRAGGABLE_BUTTON_ID: 'douyu-qmx-starter-button', // 主悬浮按钮的HTML ID。
         BUTTON_POS_STORAGE_KEY: 'douyu_qmx_button_position', // 用于在油猴存储中记录主悬浮按钮位置的键名。
@@ -366,7 +368,36 @@
             const paddedMinutes = String(minutes).padStart(2, '0');
             const paddedSeconds = String(seconds).padStart(2, '0');
             return `${paddedMinutes}:${paddedSeconds}`;
-        }
+        },
+
+        /**
+         * 获取当前北京时间 (UTC+8) 的 Date 对象
+         * @returns {Date} - 当前北京时间的 Date 对象
+         */
+        getBeijingTime() {
+            const now = new Date();
+            const utcMillis = now.getTime(); // 获取当前时间的UTC毫秒时间戳
+            const beijingMillis = utcMillis + (8 * 60 * 60 * 1000); // 加上8小时的毫秒数
+            return new Date(beijingMillis);
+        },
+
+        /**
+         * 将一个Date对象视为UTC时间，并格式化为 YYYY-MM-DD 的日期字符串。
+         * @param {Date} date - 任何Date对象
+         * @returns {string} - YYYY-MM-DD 格式的日期
+         */
+        formatDateAsBeijing(date) {
+            // 先将传入的任何时区的date对象转为北京时间的date对象
+            const beijingDate = new Date(date.getTime() + (8 * 60 * 60 * 1000));
+            
+            // 然后从这个新的date对象中，按UTC标准提取年月日
+            const year = beijingDate.getUTCFullYear();
+            const month = String(beijingDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(beijingDate.getUTCDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        },
+        
+
 
     };
 
@@ -447,6 +478,13 @@
 
             const state = this.get();
             const oldTabData = state.tabs[roomId] || {};
+
+            // --- 状态流转逻辑补丁 ---
+            if (status === 'DISCONNECTED' && oldTabData.status === 'SWITCHING') {
+                Utils.log(`[状态管理] 检测到正在切换的标签页已断开连接，判定为成功关闭，立即清理。`);
+                this.removeWorker(roomId); // 直接调用清理函数
+                return; // 任务完成，提前退出
+            }
 
             // 1. 创建一个包含所有新数据的临时对象
             const updates = {
@@ -639,6 +677,12 @@
      */
     const WorkerPage = {
 
+        // 新增属性，用于管理哨兵定时器
+        healthCheckTimeoutId: null,
+        currentTaskEndTime: null, 
+        lastHealthCheckTime: null,
+        lastPageCountdown: null,
+        stallLevel: 0,
         /**
          * 在后台非阻塞地查找并点击“返回旧版”按钮。
          * 这是一个可选操作，不阻塞主初始化流程。
@@ -673,7 +717,8 @@
 
             // 页面关闭前的清理工作
             window.addEventListener('beforeunload', () => {
-                GlobalState.removeWorker(roomId);
+                // GlobalState.removeWorker(roomId);
+                GlobalState.updateWorker(Utils.getCurrentRoomId(), 'DISCONNECTED', '连接已断开...');
                 // 确保在关闭时清理我们的“暂停哨兵”定时器
                 if (this.pauseSentinelInterval) {
                     clearInterval(this.pauseSentinelInterval);
@@ -753,57 +798,49 @@
         },
 
         async findAndExecuteNextTask(roomId) {
-            GlobalState.updateWorker(roomId, 'WAITING', '寻找新任务中...', { countdown: null })
-            // 每次开始寻找任务时，都尝试暂停一下视频
-            if (SETTINGS.AUTO_PAUSE_ENABLED) {
-                this.autoPauseVideo();
+            // 在每次寻找新任务时，确保取消上一个任务的哨兵
+            if (this.healthCheckTimeoutId) {
+                clearTimeout(this.healthCheckTimeoutId);
+                this.healthCheckTimeoutId = null;
             }
+            // 为每个新任务重置卡顿等级
+            this.stallLevel = 0;
 
-            // 1. 寻找红包区域
+            if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
+
             const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
 
             if (!redEnvelopeDiv) {
-                Utils.log("此房间无红包活动或加载超时，开始切换...");
                 GlobalState.updateWorker(roomId, 'SWITCHING', '无活动, 切换中', { countdown: null });
-                await this.switchRoom(); // 切换房间并自毁
+                await this.switchRoom();
                 return;
             }
 
             const statusSpan = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
             const statusText = statusSpan ? statusSpan.textContent.trim() : '';
 
-            // 2. 分析状态并行动
             if (statusText.includes(':')) {
-                // 发现倒计时任务 -> 汇报并预约
                 const [minutes, seconds] = statusText.split(':').map(Number);
                 const remainingSeconds = (minutes * 60 + seconds);
-                // 计算绝对结束时间
-                const endTime = Date.now() + remainingSeconds * 1000;
+                this.currentTaskEndTime = Date.now() + remainingSeconds * 1000;
+
+                // 为新的哨兵逻辑设置初始状态
+                this.lastHealthCheckTime = Date.now();
+                this.lastPageCountdown = remainingSeconds;
 
                 Utils.log(`发现新任务：倒计时 ${statusText}。`);
+                GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, { countdown: { endTime: this.currentTaskEndTime } });
 
-                // 向控制面板汇报任务详情
-                GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, {
-                    countdown: { endTime: endTime}
-                });
-
-                if (SETTINGS.AUTO_PAUSE_ENABLED) {
-                    this.autoPauseVideo();
-                }
-                // 预约未来的动作
                 const wakeUpDelay = Math.max(0, (remainingSeconds * 1000) - 1500);
                 Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1000)} 秒后唤醒执行任务。`);
                 setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
 
+                this.startHealthChecks(roomId, redEnvelopeDiv);
+
             } else if (statusText.includes('抢') || statusText.includes('领')) {
-                // 发现可立即执行的任务
-                Utils.log("发现可立即领取的任务。");
                 GlobalState.updateWorker(roomId, 'CLAIMING', '立即领取中...');
                 await this.claimAndRecheck(roomId);
-
             } else {
-                // 未知状态，等待一段时间再试
-                Utils.log(`状态未知: "${statusText}"，将在30秒后重新寻找。`);
                 GlobalState.updateWorker(roomId, 'WAITING', `状态未知, 稍后重试`, { countdown: null });
                 setTimeout(() => this.findAndExecuteNextTask(roomId), 30000);
             }
@@ -811,9 +848,70 @@
 
 
         /**
+         * 哨兵观察链。
+         * 信任首次获取的倒计时和由HackTimer驱动的主定时器。
+         * 哨兵只对比UI和脚本计时器的差异，并报告UI是否被“节流”(显示为STALLED)，但不修改核心的 `currentTaskEndTime`。
+         */
+        startHealthChecks(roomId, redEnvelopeDiv) {
+            const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
+            const STALL_THRESHOLD = 4;    // UI显示与脚本计时允许的最大偏差
+
+            const check = () => {
+                const currentPageStatus = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer)?.textContent.trim();
+                
+                if (!currentPageStatus || !currentPageStatus.includes(':')) {
+                    return; // UI消失，观察结束
+                }
+
+                // 1. 计算脚本的精确剩余时间 (这是我们的“真实”时间)
+                const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1000;
+                
+                // 2. 获取页面UI显示的剩余时间 (这是“可能不准”的显示时间)
+                const [pMin, pSec] = currentPageStatus.split(':').map(Number);
+                const pageRemainingSeconds = pMin * 60 + pSec;
+                
+                // 3. 计算两者偏差
+                const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
+                
+                const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
+
+                // 4. 根据偏差，只更新“状态”，不改变“核心计时”
+                if (deviation > STALL_THRESHOLD) {
+                    if (this.stallLevel === 0) { // 只在第一次检测到卡顿时记录日志
+                        Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${Utils.formatTime(pageRemainingSeconds)}`);
+                    }
+                    this.stallLevel = 1;
+                    // [关键] 只更新状态为STALLED，但countdown依然使用我们精确的endTime
+                    GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, { countdown: { endTime: this.currentTaskEndTime } });
+                } else {
+                    if (this.stallLevel > 0) {
+                        Utils.log('[哨兵] UI已从节流中恢复。');
+                        this.stallLevel = 0;
+                    }
+                    GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, { countdown: { endTime: this.currentTaskEndTime } });
+                }
+                
+                // 5. 只要我们的精确计时器没到终点，就继续观察
+                if (scriptRemainingSeconds > (CHECK_INTERVAL / 1000) + 1) {
+                    this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
+                }
+            };
+
+            this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
+        },
+
+
+
+        /**
          * 处理点击红包后的弹窗逻辑。
          */
         async claimAndRecheck(roomId) {
+
+            if (this.healthCheckTimeoutId) {
+                clearTimeout(this.healthCheckTimeoutId);
+                this.healthCheckTimeoutId = null;
+            }
+
             Utils.log("开始执行领取流程...");
             GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...', { countdown: null });
 
@@ -887,12 +985,12 @@
             const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5000);
 
             if (pauseBtn) {
-                Utils.log("检测到视频正在播放，尝试自动暂停...");
+                // Utils.log("检测到视频正在播放，尝试自动暂停...");
                 if (await DOM.safeClick(pauseBtn, "暂停按钮")) {
                     Utils.log("视频已通过脚本暂停。"); // 只有这里出现，才代表真的成功了
                 }
             } else {
-                Utils.log("在5秒内未找到暂停按钮，可能视频未播放或已暂停。");
+                // Utils.log("在5秒内未找到暂停按钮，可能视频未播放或已暂停。");
             }
         },
 
@@ -900,6 +998,12 @@
          * 切换到新的直播间。
          */
         async switchRoom() {
+
+            if (this.healthCheckTimeoutId) {
+                clearTimeout(this.healthCheckTimeoutId);
+                this.healthCheckTimeoutId = null;
+            }
+
             if (STATE.isSwitchingRoom) return;
             STATE.isSwitchingRoom = true;
 
@@ -915,7 +1019,7 @@
                 const currentState = GlobalState.get();
                 const openedRoomIds = new Set(Object.keys(currentState.tabs));
 
-                // 3. ★ Bug修复：筛选出未被打开的新房间
+                // 3. 筛选出未被打开的新房间
                 const nextUrl = apiRoomUrls.find(url => {
                     const rid = url.match(/\/(\d+)/)?.[1];
                     return rid && !openedRoomIds.has(rid);
@@ -952,13 +1056,16 @@
         async enterDormantMode() {
             const roomId = Utils.getCurrentRoomId();
             Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
-            GlobalState.updateWorker(roomId, 'DORMANT', '休眠中 (等待0点刷新)', { countdown: null });
+            GlobalState.updateWorker(roomId, 'DORMANT', '休眠中 (等待北京时间0点)', { countdown: null });
 
-            const now = new Date();
-            const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 1, 0);
+            const now = Utils.getBeijingTime();
+            const tomorrow = new Date(now.getTime());
+            tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+            tomorrow.setUTCHours(0, 0, 30, 0); // 设置为北京时间 00:00:30
+
             const msUntilMidnight = tomorrow.getTime() - now.getTime();
 
-            Utils.log(`将在 ${Math.round(msUntilMidnight / 1000 / 60)} 分钟后自动刷新页面。`);
+            Utils.log(`将在 ${Math.round(msUntilMidnight / 1000 / 60)} 分钟后自动刷新页面 (基于北京时间)。`);
             setTimeout(() => window.location.reload(), msUntilMidnight);
         },
 
@@ -970,12 +1077,15 @@
         async selfClose(roomId) {
             Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
 
-            // 在关闭前，主动清理定时器，作为双重保险
+            // 在关闭前，主动清理定时器
             if (this.pauseSentinelInterval) {
                 clearInterval(this.pauseSentinelInterval);
             }
+            // 1. 广播“正在关闭”的状态，让控制中心知道它已收到指令
+            GlobalState.updateWorker(roomId, 'SWITCHING', '任务结束，关闭中...');
+            await Utils.sleep(100); // 短暂等待确保状态写入
 
-            // 异步地调用状态移除，不阻塞后续的关闭操作
+            // 2. 异步地调用状态移除，不阻塞后续的关闭操作
             GlobalState.removeWorker(roomId);
             await Utils.sleep(300);
 
@@ -988,10 +1098,10 @@
          */
         closeTab() {
             try {
-                GM_closeTab();
+                window.close();
             } catch (e) {
                 // 备用关闭方法
-                window.close();
+                window.location.href = 'about:blank';
             }
         },
 
@@ -1071,13 +1181,15 @@
         :root {
             color-scheme: light dark;
             --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
-            --status-color-waiting: #4CAF50;
+            --status-color-waiting: #4CAF50; 
             --status-color-claiming: #2196F3;
             --status-color-switching: #FFC107;
             --status-color-error: #F44336;
             --status-color-opening: #9C27B0;
             --status-color-dormant: #757575;
             --status-color-unresponsive: #FFA000;
+            --status-color-disconnected: #BDBDBD;
+            --status-color-stalled: #9af39dff;
         }
 
         body[data-theme="dark"] {
@@ -1727,6 +1839,16 @@
                 const tab = state.tabs[roomId];
                 const timeSinceLastUpdate = Date.now() - tab.lastUpdateTime;
 
+                // 如果一个标签页标记为“断开连接”且超过了宽限期，就清理它。
+                // 准确地处理手动关闭的标签页，同时给刷新的标签页重连的机会。
+                if (tab.status === 'DISCONNECTED' && timeSinceLastUpdate > SETTINGS.DISCONNECTED_GRACE_PERIOD) {
+                    Utils.log(`[监控] 任务 ${roomId} (已断开) 超过 ${SETTINGS.DISCONNECTED_GRACE_PERIOD / 1000} 秒未重连，执行清理。`);
+                    delete state.tabs[roomId];
+                    stateModified = true;
+                    continue; // 处理完这个就检查下一个
+                }
+
+
                 // 规则: 如果一个标签页处于“切换中”状态超过30秒，我们就认为它已经关闭
                 if (tab.status === 'SWITCHING' && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
                     Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
@@ -1767,7 +1889,9 @@
                 'setting-worker-loading-timeout': { value: SETTINGS.ELEMENT_WAIT_TIMEOUT / 1000, unit: '秒' },
                 'setting-close-tab-delay': { value: SETTINGS.CLOSE_TAB_DELAY / 1000, unit: '秒' },
                 'setting-api-retry-delay': { value: SETTINGS.API_RETRY_DELAY / 1000, unit: '秒' },
-                'setting-switching-cleanup-timeout': { value: SETTINGS.SWITCHING_CLEANUP_TIMEOUT / 1000, unit: '秒' }
+                'setting-switching-cleanup-timeout': { value: SETTINGS.SWITCHING_CLEANUP_TIMEOUT / 1000, unit: '秒' },
+                'setting-healthcheck-interval': { value: SETTINGS.HEALTHCHECK_INTERVAL / 1000, unit: '秒' },
+                'setting-disconnected-grace-period': { value: SETTINGS.DISCONNECTED_GRACE_PERIOD / 1000, unit: '秒' }
             };
 
             // 2. 所有工具提示的文本
@@ -1786,7 +1910,10 @@
                 'max-worker-tabs': '同时运行的直播间数量上限。',
                 'api-room-fetch-count': '每次从API获取的房间数。增加可提高找到新房间的几率。',
                 'api-retry-count': '获取房间列表失败时的重试次数。',
-                'api-retry-delay': 'API请求失败后，等待多久再重试。'
+                'api-retry-delay': 'API请求失败后，等待多久再重试。',
+                'healthcheck-interval': '哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。',
+                'disconnected-grace-period': '刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。'
+
             };
 
             // --- 动态生成HTML ---
@@ -1901,6 +2028,9 @@
                             ${createUnitInput('setting-worker-loading-timeout', '播放器加载超时')}
                             ${createUnitInput('setting-close-tab-delay', '关闭标签页延迟')}
                             ${createUnitInput('setting-switching-cleanup-timeout', '切换中状态兜底超时')}
+                            ${createUnitInput('setting-healthcheck-interval', '哨兵健康检查间隔')}
+                            ${createUnitInput('setting-disconnected-grace-period', '断开连接清理延迟')}
+
                             <div class="qmx-settings-item" style="grid-column: 1 / -1;">
                                 <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>
                                 <div class="qmx-range-slider-wrapper">
@@ -1941,7 +2071,7 @@
 
                     <!-- ==================== Tab 4: 关于 ==================== -->
                     <div id="tab-about" class="tab-content">
-                        <h4>关于脚本 <span class="version-tag">v2.0.5</span></h4>
+                        <h4>关于脚本 <span class="version-tag">v2.0.6</span></h4>
                         <h4>致谢</h4>
                         <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
                             进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享</li>
@@ -1954,22 +2084,33 @@
                             <li>脚本还是bug不少，随缘修了＞︿＜</li>
                             <li>读取奖励内容文本需要用api实现，暂时搁置</li>
                         </ul>
-                        <h4>脚本更新日志 (v2.0.5)</h4>
+                        <h4>脚本更新日志 (v2.0.6)</h4>
                         <ul>
-                            <li><b>【修复】工作标签页</b>
+                            <li><b>【修复】增强脚本健壮性与兼容性</b>
                                 <ul>
-                                    <li>原本在不是领取红包的斗鱼直播间，脚本也会工作并且暂停播放/关闭标签页，现加入验证机制优化了这个问题</li>
+                                    <li>修复了非东八区(UTC+8)用户每日上限重置时间不正确的问题，现在脚本会以北京时间为准进行判断。</li>
+                                    <li>修复了刷新(F5)工作标签页后，该页面会因身份验证失败而“死亡”的问题。现在刷新后脚本可以正常恢复工作。</li>
                                 </ul>
                             </li>
-                            <li><b>【优化】初步兼容斗鱼新版UI</b>
+                            <li><b>【优化】核心计时与监控逻辑，标识后台UI节流</b>
                                 <ul>
-                                    <li>现在脚本能够识别并兼容 URL 中带有 <code>/beta/</code> 的新版直播间页面</li>
-                                    <li>在进入新版页面后，脚本会尝试寻找并点击“返回旧版”的按钮，以领取红包</li>
-                                    <li><b>请注意</b>：根据<a href="https://github.com/ienone/douyu-qmx-pro/issues/3#issuecomment-3194206924" target="_blank" rel="noopener noreferrer">用户反馈</a>，对于部分用户而言斗鱼官方可能已经移除了这个“返回旧版”的按钮，所以<b>这个功能不一定能起作用</b>，欢迎大家测试和反馈……</li>
+                                    <li>引入新的<code>[UI节流]</code>状态。它表示后台标签页的UI显示可能没有更新，但脚本的计时器依然正常确。<strong>这个状态不影响抢包</strong>。如需恢复UI显示，仅需切换到对应直播间一下即可</li>
+                                    <li>此状态的检测频率可在“设置”->“性能与延迟”中修改。</li>
                                 </ul>
                             </li>
-                             <li><b>【优化】“关闭所有”功能优化</b></li>
-                        </ul>     
+                            <li><b>【说明】关于部分标签页无法自动关闭的问题</b>
+                                <ul>
+                                    <li>部分工作标签页在任务结束后可能无法关闭，而是跳转到空白页。我推测这是出现在由新版UI切换旧版UI的直播间中：因为切换旧版过程中斗鱼的页面跳转逻辑导致脚本关闭此工作标签页是不被允许的行为。</li>
+                                    <li>脚本采用跳转到<code>空白页面</code>作为备用方案，这能有效停止页面的所有活动并释放资源。<strong>请注意，这个问题是按猜测修复的，我未能实际测试能否正常实现</strong></li>
+                                </ul>
+                            </li>
+                            <li><b>【说明】关于[已断联] 状态的说明</b>
+                                <ul>
+                                    <li>手动关闭或刷新工作标签页后，控制面板可能会短暂显示 [已断联] 状态，这是正常的缓冲过程，用于防止刷新时任务丢失。该状态会在宽限期后自动清除。</li>
+                                    <li>此宽限时间可在“设置”->“性能与延迟”中修改。</li>
+                                </ul>
+                            </li>
+                        </ul>
                         <h4>源码与社区</h4>
                         <ul>
                             <li>可以在 <a href="https://github.com/ienone/eilatam" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
@@ -2131,6 +2272,8 @@
                 MIN_DELAY: parseFloat(document.getElementById('setting-min-delay').value) * 1000,
                 MAX_DELAY: parseFloat(document.getElementById('setting-max-delay').value) * 1000,
                 CLOSE_TAB_DELAY: parseFloat(document.getElementById('setting-close-tab-delay').value) * 1000,
+                HEALTHCHECK_INTERVAL: parseFloat(document.getElementById('setting-healthcheck-interval').value) * 1000,
+                DISCONNECTED_GRACE_PERIOD: parseFloat(document.getElementById('setting-disconnected-grace-period').value) * 1000,   
 
                 // Tab 3: 高级设置
                 MAX_WORKER_TABS: parseInt(document.getElementById('setting-max-tabs').value, 10),
@@ -2249,8 +2392,8 @@
             document.getElementById('qmx-active-tabs-count').textContent = tabIds.length;
 
             const statusDisplayMap = {
-                OPENING: '加载中', WAITING: '等待中', CLAIMING: '领取中',
-                SWITCHING: '切换中', DORMANT: '休眠中', ERROR: '出错了', UNRESPONSIVE: '无响应'
+                OPENING: '加载中', WAITING: '等待中', CLAIMING: '领取中', SWITCHING: '切换中',
+                DORMANT: '休眠中', ERROR: '出错了', UNRESPONSIVE: '无响应', DISCONNECTED: '已断开',STALLED: 'UI节流' 
             };
 
             const existingRoomIds = new Set(Array.from(tabList.children).map(node => node.dataset.roomId).filter(Boolean));
@@ -2264,7 +2407,7 @@
                 let currentStatusText = tabData.statusText;
 
                 // 使用 endTime 来计算剩余时间
-                if (tabData.status === 'WAITING' && tabData.countdown?.endTime) {
+                if (tabData.status === 'WAITING'|| tabData.status === 'STALLED' && tabData.countdown?.endTime) {
                     const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1000;
 
                     if (remainingSeconds > 0) {
@@ -2339,7 +2482,7 @@
             const openBtn = document.getElementById('qmx-modal-open-btn');
 
             // 新的一天，自动重置上限状态
-            if (limitState?.reached && new Date(limitState.timestamp).toDateString() !== new Date().toDateString()) {
+            if (limitState?.reached && Utils.formatDateAsBeijing(new Date(limitState.timestamp)) !== Utils.formatDateAsBeijing(new Date())) {
                 Utils.log("[控制中心] 新的一天，重置每日上限旗标。");
                 GlobalState.setDailyLimit(false);
                 limitState = null; // 重置后立即生效
@@ -2650,7 +2793,7 @@
     function main() {
         const currentUrl = window.location.href;
         const isControlRoom = currentUrl.includes(`/${SETTINGS.CONTROL_ROOM_ID}`) ||
-                              (currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${SETTINGS.TEMP_CONTROL_ROOM_RID}`));
+                            (currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${SETTINGS.TEMP_CONTROL_ROOM_RID}`));
 
         if (isControlRoom) {
             ControlPage.init();
@@ -2661,17 +2804,30 @@
         const roomId = Utils.getCurrentRoomId();
         // 只有在明确是直播间页面的情况下才继续验证
         if (roomId && (currentUrl.match(/douyu\.com\/(?:beta\/)?(\d+)/) || currentUrl.match(/douyu\.com\/(?:beta\/)?topic\/.*rid=(\d+)/))) {
-            const pendingWorkers = GM_getValue('qmx_pending_workers', []);
             
-            // 只检查，不移除！
-            if (pendingWorkers.includes(roomId)) {
+            const globalTabs = GlobalState.get().tabs;
+            const pendingWorkers = GM_getValue('qmx_pending_workers', []);
+
+            // 双重验证
+            // 1. 检查自己是否已经是全局状态里公认的 worker
+            // 2. 或者，检查自己是否是刚刚被打开、尚在等待名单中的 new worker
+            if (globalTabs.hasOwnProperty(roomId) || pendingWorkers.includes(roomId)) {
                 // 验证通过，授权 WorkerPage 初始化
-                Utils.log(`[身份验证] 房间 ${roomId} 在待处理列表中，授权初始化。`);
+                Utils.log(`[身份验证] 房间 ${roomId} 身份合法，授权初始化。`);
+                //  如果是因为在全局状态中而通过的，顺便清理一下可能残留的 pending token
+                const pendingIndex = pendingWorkers.indexOf(roomId);
+                if (globalTabs.hasOwnProperty(roomId) && pendingIndex > -1) {
+                    pendingWorkers.splice(pendingIndex, 1);
+                    GM_setValue('qmx_pending_workers', pendingWorkers);
+                    Utils.log(`[身份清理] 房间 ${roomId} 已是激活状态，清理残留的待处理标记。`);
+                }
+                
                 WorkerPage.init();
             } else {
                 // 验证失败，是普通页面
-                Utils.log("当前直播间非脚本指定的工作页，脚本不活动。");
+                Utils.log(`[身份验证] 房间 ${roomId} 未在全局状态或待处理列表中，脚本不活动。`);
             }
+
         } else {
             Utils.log("当前页面非控制页或工作页，脚本不活动。");
         }
