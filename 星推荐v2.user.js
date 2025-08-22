@@ -1064,9 +1064,12 @@
         closeTab() {
             try {
                 window.close();
+                // 替换当前页面（不保留历史记录）
+                window.location.replace('about:blank');
             } catch (e) {
                 // 备用关闭方法
-                window.location.href = 'about:blank';
+                window.close();
+                window.location.replace('about:blank');
             }
         },
 
