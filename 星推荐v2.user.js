@@ -242,7 +242,6 @@
             limitReachedPopup: "div.dy-Message-custom-content.dy-Message-info", // 斗鱼官方弹出的“今日已达上限”的提示信息元素。
             rankListContainer: "#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank", // 在“注入模式”下，用作UI注入目标的侧边栏排行榜容器。
             anchorName: "div.Title-anchorName > h2.Title-anchorNameH2", // 直播间页面中显示主播昵称的元素。
-            switchUIButton: 'a.icon__jumpoldweb'
         }
     };
 
@@ -687,16 +686,6 @@
          * 在后台非阻塞地查找并点击“返回旧版”按钮。
          * 这是一个可选操作，不阻塞主初始化流程。
          */
-        async handleOptionalUISwitch() {
-            Utils.log("开始在后台非阻塞地查找“返回旧版”按钮...");
-            const switchUIButton = await DOM.findElement(SETTINGS.SELECTORS.switchUIButton,  SETTINGS.ELEMENT_WAIT_TIMEOUT);
-            if (switchUIButton) {
-                Utils.log("后台查找成功：发现“返回旧版”按钮，执行点击。");
-                DOM.safeClick(switchUIButton, "返回旧版按钮");
-            } else {
-                Utils.log("后台查找：未找到“返回旧版”按钮，操作跳过。");
-            }
-        },
 
         /**
          * 工作页面的总入口和初始化函数。
@@ -735,66 +724,42 @@
             }
             Utils.log("页面关键元素已加载。");
 
-            Utils.log("开始并行检测 UI 版本和红包活动...");
-            try {
-                const findSwitchButtonPromise = DOM.findElement(SETTINGS.SELECTORS.switchUIButton, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT); // 15秒寻找切换按钮
-                const findRedEnvelopePromise = DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT); // 15秒寻找红包
-
-                const firstElementFound = await Promise.race([
-                    findSwitchButtonPromise,
-                    findRedEnvelopePromise
-                ]);
-
-                if (!firstElementFound) {
-                    Utils.log("并行检测超时，未找到关键元素，判定为无效房间。");
-                    await this.switchRoom();
-                    return;
+            Utils.log("开始检测 UI 版本 和红包活动...");
+            if (window.location.href.includes('/beta')){
+                // --- 找到了“/beta”，说明是新版UI ---
+                GlobalState.updateWorker(roomId, 'OPENING', '切换旧版UI...');
+                localStorage.setItem("newWebLive", "A");
+                window.location.href = window.location.href.replace("/beta", "")
+            }
+            Utils.log("确认进入稳定工作状态，执行身份核销。");
+            const pendingWorkers = GM_getValue('qmx_pending_workers', []);
+            const myIndex = pendingWorkers.indexOf(roomId);
+            if (myIndex > -1) {
+                pendingWorkers.splice(myIndex, 1);
+                GM_setValue('qmx_pending_workers', pendingWorkers);
+                Utils.log(`房间 ${roomId} 已从待处理列表中移除。`);
+            }
+            const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
+            const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
+            GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname, countdown: null });
+            
+            // 检查每日上限
+            const limitState = GlobalState.getDailyLimit();
+            if (limitState?.reached) {
+                Utils.log("初始化检查：检测到全局上限旗标。");
+                if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
+                    await this.enterDormantMode();
+                } else {
+                    await this.selfClose(roomId);
                 }
+                return;
+            }
 
-                // 检查找到的元素是哪个
-                if (firstElementFound.matches(SETTINGS.SELECTORS.switchUIButton)) {
-                    // --- 场景1: 找到了“返回旧版”按钮，说明是新版UI ---
-                    Utils.log("检测到新版 UI，正在点击“返回旧版”并等待页面重载...");
-                    GlobalState.updateWorker(roomId, 'OPENING', '切换旧版UI...');
-                    await DOM.safeClick(firstElementFound, "返回旧版按钮");
+            this.findAndExecuteNextTask(roomId); // 直接进入任务流程
 
-                } else if (firstElementFound.matches(SETTINGS.SELECTORS.redEnvelopeContainer)) {
-                    // --- 场景2: 找到了红包容器，说明是旧版UI ---
-                    Utils.log("检测到旧版 UI 且红包已加载");
-                    Utils.log("确认进入稳定工作状态，执行身份核销。");
-                    const pendingWorkers = GM_getValue('qmx_pending_workers', []);
-                    const myIndex = pendingWorkers.indexOf(roomId);
-                    if (myIndex > -1) {
-                        pendingWorkers.splice(myIndex, 1);
-                        GM_setValue('qmx_pending_workers', pendingWorkers);
-                        Utils.log(`房间 ${roomId} 已从待处理列表中移除。`);
-                    }
-                    const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
-                    const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
-                    GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname, countdown: null });
-                    
-                    // 检查每日上限
-                    const limitState = GlobalState.getDailyLimit();
-                    if (limitState?.reached) {
-                        Utils.log("初始化检查：检测到全局上限旗标。");
-                        if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
-                            await this.enterDormantMode();
-                        } else {
-                            await this.selfClose(roomId);
-                        }
-                        return;
-                    }
-
-                    this.findAndExecuteNextTask(roomId); // 直接进入任务流程
-
-                    if (SETTINGS.AUTO_PAUSE_ENABLED) {
-                        this.pauseSentinelInterval = setInterval(() => this.autoPauseVideo(), 8000);
-                    }
-                }
-                } catch (error) {
-                    Utils.log(`UI版本检测时发生错误: ${error.message}，切换房间。`);
-                    await this.switchRoom();
-                }
+            if (SETTINGS.AUTO_PAUSE_ENABLED) {
+                this.pauseSentinelInterval = setInterval(() => this.autoPauseVideo(), 8000);
+            }
         },
 
         async findAndExecuteNextTask(roomId) {
@@ -1099,9 +1064,12 @@
         closeTab() {
             try {
                 window.close();
+                // 替换当前页面（不保留历史记录）
+                window.location.replace('about:blank');
             } catch (e) {
                 // 备用关闭方法
-                window.location.href = 'about:blank';
+                window.close();
+                window.location.replace('about:blank');
             }
         },
 
