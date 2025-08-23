@@ -725,6 +725,7 @@
             Utils.log("页面关键元素已加载。");
 
             Utils.log("开始检测 UI 版本 和红包活动...");
+            // 保底，防止意外打开新版UI
             if (window.location.href.includes('/beta')){
                 // --- 找到了“/beta”，说明是新版UI ---
                 GlobalState.updateWorker(roomId, 'OPENING', '切换旧版UI...');
@@ -1000,6 +1001,11 @@
                     Utils.log(`已将房间 ${nextRoomId} 加入待处理列表。`);
 
                     // 4. 打开新标签页（交棒）
+                    // 保证使用旧版UI
+                    if (window.location.href.includes('/beta')){
+                        // --- 找到了“/beta”，说明是新版UI ---
+                        localStorage.setItem("newWebLive", "A");
+                    }
                     GM_openInTab(nextUrl, { active: false, setParent: true });
                     await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
                     await this.selfClose(currentRoomId); // 使用统一的"自毁程序"
@@ -2517,6 +2523,11 @@
                     Utils.log(`已将房间 ${newRoomId} 加入待处理列表。`);
 
                     GlobalState.updateWorker(newRoomId, 'OPENING', '正在打开...');
+                    // 保证使用旧版UI
+                    if (window.location.href.includes('/beta')){
+                        // --- 找到了“/beta”，说明是新版UI ---
+                        localStorage.setItem("newWebLive", "A");
+                    }
                     GM_openInTab(newUrl, { active: false, setParent: true });
                     Utils.log(`打开指令已发送: ${newUrl}`);
                 } else {
