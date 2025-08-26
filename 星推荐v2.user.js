@@ -326,8 +326,11 @@
          */
         log(message) {
             const logMsg = `${SETTINGS.SCRIPT_PREFIX} ${message}`;
-            GM_log(logMsg);
-            console.log(logMsg);
+            try {
+                GM_log(logMsg);
+            } catch (e) {
+                console.log(logMsg);
+            }
         },
 
         /**
