@@ -682,6 +682,8 @@
         lastHealthCheckTime: null,
         lastPageCountdown: null,
         stallLevel: 0,
+        // 记录剩余时间
+        remainingTimeMap: new Map(),
         /**
          * 在后台非阻塞地查找并点击“返回旧版”按钮。
          * 这是一个可选操作，不阻塞主初始化流程。
@@ -788,6 +790,17 @@
             if (statusText.includes(':')) {
                 const [minutes, seconds] = statusText.split(':').map(Number);
                 const remainingSeconds = (minutes * 60 + seconds);
+                // 维护获得的剩余时间表
+                const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
+                this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
+                //console.log(this.remainingTimeMap)
+                // 判断是否卡死
+                if (Array.from(this.remainingTimeMap.values()).some(value => value > 3)) {
+                    GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', { countdown: null });
+                    await this.switchRoom();
+                    return;
+                }
+
                 this.currentTaskEndTime = Date.now() + remainingSeconds * 1000;
 
                 // 为新的哨兵逻辑设置初始状态
