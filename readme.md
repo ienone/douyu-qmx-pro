@@ -16,9 +16,9 @@
 
 ## 用户界面 (UI)
 
-![alt text](demo.gif)
-![侧边栏模式的面板界面](menu.png)
-![设置界面](setting.png)
+![alt text](assets\demo.gif)
+![侧边栏模式的面板界面](assets\menu.png)
+![设置界面](assets\setting.png)
 ---
 
 ## ✨ 相较于原版的改进
@@ -97,3 +97,24 @@
 ## 📄 License
 
 本脚本使用 [MIT License](https://opensource.org/licenses/MIT) 授权
+
+---
+
+## 🔨 开发者
+本次重构使用vite对脚本进行解耦，增强开发体验，并使其能支持更多框架
+
+初始插件: [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey/blob/main/README_zh.md)
+
+#### 如何使用
+
+- 安装依赖
+`npm install`
+
+- 开发模式
+`npm run dev`
+
+- 构建
+`npm run build`  生成脚本位于  `dist/星推荐v2.user.js`
+
+- 如需修改脚本头部注释
+请修改 `vite.config.js`
