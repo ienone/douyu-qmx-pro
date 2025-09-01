@@ -16,9 +16,9 @@
 
 ## 用户界面 (UI)
 
-![alt text](assets\demo.gif)
-![侧边栏模式的面板界面](assets\menu.png)
-![设置界面](assets\setting.png)
+![alt text](assets/demo.gif)
+![侧边栏模式的面板界面](assets/menu.png)
+![设置界面](assets/setting.png)
 ---
 
 ## ✨ 相较于原版的改进
