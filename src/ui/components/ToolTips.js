@@ -1,5 +1,5 @@
 /**
- * @file Tooltip.js
+ * @file Tooltips.js
  * @description 负责全局工具提示的显示和管理(不含提示文本，那个在SettingsPanel.js中)
  */
 
@@ -25,7 +25,7 @@ function _ensureTooltipElement() {
  * @param {HTMLElement} parentElement - 需要监听 tooltip 触发器的容器元素。
  * @param {Object<string, string>} tooltipData - 一个键值对对象，key 对应 `data-tooltip-key` 的值，value 是要显示的文本。
  */
-export function activateTooltips(parentElement, tooltipData) {
+export function activateToolTips(parentElement, tooltipData) {
     // 参数校验，确保调用正确
     if (!parentElement || typeof tooltipData !== 'object') {
         console.warn('[Tooltip] 调用失败：必须提供 parentElement 和 tooltipData。');

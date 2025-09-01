@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name             斗鱼全民星推荐自动领取pro
 // @namespace        http://tampermonkey.net/
-// @version          2.0.6
-// @author           ienone
+// @version          2.0.7
+// @author           ienone&Truthss
 // @description      原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
 // @license          MIT
 // @match            *://www.douyu.com/*
@@ -676,7 +676,7 @@ getRooms(count, retries = SETTINGS.API_RETRY_COUNT) {
       document.body.appendChild(tooltipElement);
     }
   }
-  function activateTooltips(parentElement, tooltipData) {
+  function activateToolTips(parentElement, tooltipData) {
     if (!parentElement || typeof tooltipData !== "object") {
       console.warn("[Tooltip] 调用失败：必须提供 parentElement 和 tooltipData。");
       return;
@@ -728,7 +728,7 @@ show() {
         "disconnected-grace-period": "刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。"
       };
       modal.innerHTML = settingsPanelTemplate(SETTINGS);
-      activateTooltips(modal, allTooltips);
+      activateToolTips(modal, allTooltips);
       activateCustomSelects(modal);
       activateRangeSlider(modal);
       this.bindPanelEvents(modal);

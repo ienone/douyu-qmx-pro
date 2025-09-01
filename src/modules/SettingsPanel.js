@@ -6,7 +6,7 @@
 import { settingsPanelTemplate } from '../ui/templates';
 import { activateCustomSelects } from '../ui/components/CustomSelect';
 import { activateRangeSlider } from '../ui/components/RangeSlider';
-import { activateTooltips } from '../ui/components/Tooltip';
+import { activateToolTips } from '../ui/components/ToolTips';
 import { SETTINGS, SettingsManager } from './SettingsManager';
 import { ThemeManager } from './ThemeManager';
 
@@ -47,7 +47,7 @@ export const SettingsPanel = {
         modal.innerHTML = settingsPanelTemplate(SETTINGS);
 
         // 3. 激活所有交互式组件
-        activateTooltips(modal, allTooltips);
+        activateToolTips(modal, allTooltips);
         activateCustomSelects(modal);
         activateRangeSlider(modal);
 
