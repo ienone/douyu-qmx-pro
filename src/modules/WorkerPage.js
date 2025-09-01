@@ -1,3 +1,7 @@
+/**
+ * @file WorkerPage.js
+ * @description 工作直播间页面执行所有自动化任务流程。
+ */
 import { Utils } from '../utils/utils';
 import { GlobalState } from './GlobalState';
 import { DOM } from '../utils/DOM';
@@ -416,11 +420,10 @@ export const WorkerPage = {
         try {
             window.close();
             // 替换当前页面（不保留历史记录）
-            window.location.replace('about:blank');
+            //window.location.replace('about:blank');
         } catch (e) {
-            // // 备用关闭方法
-            // window.close();
-            // window.location.replace('about:blank');
+            // 备用关闭方法
+            window.location.replace('about:blank');
             Utils.log(`关闭失败，故障为: ${e.message}`);
         }
     },

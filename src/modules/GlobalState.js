@@ -1,3 +1,8 @@
+/**
+ * @file    GlobalState.js
+ * @description 负责管理页面的全局状态，包括标签页状态信息等。
+ */
+
 import { Utils } from '../utils/utils';
 import { SETTINGS } from './SettingsManager';
 

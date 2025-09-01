@@ -1,3 +1,7 @@
+/**
+ * @file ThemeManager.js
+ * @description 负责管理页面的日夜主题设置。
+ */
 import { SETTINGS } from './SettingsManager';
 
 /**

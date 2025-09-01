@@ -1,3 +1,8 @@
+/**
+ * @file    SettingsManager.js
+ * @description 负责加载、合并和保存用户配置。
+ */
+
 import { CONFIG } from '../utils/CONFIG';
 
 /**
@@ -55,6 +60,7 @@ const SettingsManager = {
  */
 const SETTINGS = SettingsManager.get();
 SETTINGS.THEME = GM_getValue('douyu_qmx_theme', SETTINGS.DEFAULT_THEME);
+
 /**
  * =================================================================================
  * 模块：运行时状态 (STATE)
