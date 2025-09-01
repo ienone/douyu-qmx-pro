@@ -23,6 +23,9 @@ export default defineConfig({
                 fileName: '星推荐v2.user.js',
                 sourcemap: 'inline',
             },
+            server: {
+                mountGmApi: true,
+            }
         }),
     ],
 });
