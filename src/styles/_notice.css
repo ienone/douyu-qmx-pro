@@ -12,7 +12,9 @@
 
 #qmx-notice-modal .qmx-modal-content p {
     margin-bottom: 12px;
-    line-height: 1.5;
+    line-height: 1.6;
+    font-size: 15px;
+    color: var(--md-sys-color-on-surface-variant);
 }
 
 #qmx-notice-modal .qmx-modal-content ul {
@@ -21,8 +23,10 @@
 }
 
 #qmx-notice-modal .qmx-modal-content li {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     position: relative;
+    font-size: 15px;
+    line-height: 1.6;
 }
 
 #qmx-notice-modal .qmx-modal-content li::before {
@@ -34,7 +38,46 @@
 }
 
 #qmx-notice-modal h3 {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 500;
     margin: 0;
+}
+
+/* h4标题样式 - 与设置页面保持一致 */
+#qmx-notice-modal h4 {
+    color: var(--md-sys-color-primary);
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+/* 警告文本样式 */
+#qmx-notice-modal .qmx-warning-text {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-left: 4px solid #FFC107;
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 4px;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+#qmx-notice-modal .qmx-warning-text strong {
+    color: #FF8F00;
+}
+
+/* 链接样式 - 与设置页面保持一致 */
+#qmx-notice-modal a {
+    color: var(--md-sys-color-tertiary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+#qmx-notice-modal a:hover {
+    color: #FFD6E1;
+    text-decoration: underline;
 }
