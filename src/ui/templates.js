@@ -266,9 +266,9 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 </ul>
                 <h4>源码与社区</h4>
                 <ul class="qmx-styled-list">
-                    <li>可以在 <a href="https://github.com/ienone/eilatam" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
-                    <li>发现BUG或有功能建议，欢迎提交 <a href="https://github.com/ienone/eilatam/issues" target="_blank" rel="noopener noreferrer">Issue</a>（不过大概率不会修……）</li>
-                    <li>如果你有能力进行改进，非常欢迎提交 <a href="https://github.com/ienone/eilatam/pulls" target="_blank" rel="noopener noreferrer">Pull Request</a>！</li>
+                    <li>可以在 <a href="https://github.com/ienone/douyu-qmx-pro/" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
+                    <li>发现BUG或有功能建议，欢迎提交 <a href="https://github.com/ienone/douyu-qmx-pro/issues" target="_blank" rel="noopener noreferrer">Issue</a>（不过大概率不会修……）</li>
+                    <li>如果你有能力进行改进，非常欢迎提交 <a href="https://github.com/ienone/douyu-qmx-pro/pulls" target="_blank" rel="noopener noreferrer">Pull Request</a>！</li>
                 </ul>
             </div>
         </div>
