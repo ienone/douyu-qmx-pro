@@ -237,48 +237,35 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 </div>
                 -->
                 
-                <h4>关于脚本 <span class="version-tag">v2.0.6</span></h4>
+                <h4>关于脚本 <span class="version-tag">v2.0.7</span></h4>
                 <h4>致谢</h4>
-                <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
-                    进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享</li>
-                <li>v2.0.5更新中的“兼容斗鱼新版UI”功能由<a href="https://github.com/Truthss" target="_blank" rel="noopener noreferrer">@Truthss</a> 在 <a href="https://github.com/ienone/douyu-qmx-pro/pull/5" target="_blank" rel="noopener noreferrer">#5</a> 中贡献，非常感谢！</li>
+                <ul class="qmx-styled-list">
+                    <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
+                        进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享</li>
+                    <li>兼容斗鱼新版UI的相关功能与项目重构主要由<a href="https://github.com/Truthss" target="_blank" rel="noopener noreferrer">@Truthss</a> 贡献，非常感谢！</li>
+                </ul>
                 <h4>一些tips</h4>
-                <ul>
+                <ul class="qmx-styled-list">
                     <li>每天大概1000左右金币到上限</li>
                     <li>注意这个活动到晚上的时候，100/50/20星光棒的选项可能空了(奖池对应项会变灰)这时候攒金币过了12点再抽，比较有性价比</li>
-                    <li>后台标签页有时会在还剩几秒时卡死在红包弹窗界面(标签页倒计时不动了)，然后就死循环了。这是已知bug但暂未定位到问题，请手动刷新界面</li>
+                    <li>后台标签页有时会在还剩几秒时卡死在红包弹窗界面(标签页倒计时不动了)，然后就死循环了。目前已部分修复此问题</li>
                     <li>脚本还是bug不少，随缘修了＞︿＜</li>
-                    <li>读取奖励内容文本需要用api实现，暂时搁置</li>
+                    <li>DouyuEx 的“阻止P2P上传”功能位置：点击精灵球->从左往右第四个🛠️样貌的选项->右侧菜单顶部 </li>
                 </ul>
-                <h4>脚本更新日志 (v2.0.6)</h4>
-                <ul>
-                    <li><b>【修复】增强脚本健壮性与兼容性</b>
-                        <ul>
-                            <li>修复了非东八区(UTC+8)用户每日上限重置时间不正确的问题，现在脚本会以北京时间为准进行判断。</li>
-                            <li>修复了刷新(F5)工作标签页后，该页面会因身份验证失败而“死亡”的问题。现在刷新后脚本可以正常恢复工作。</li>
+                <h4>脚本更新日志 (v2.0.7)</h4>
+                <ul class="qmx-styled-list">
+                    <li>【新增】“校准模式”提高计时精度 (98b3ce8)</b>
+                        <ul class = "qmx-style-list">
+                            <li><b>注意：启用校准模式前要先关闭 DouyuEx 的“阻止P2P上传”功能！</b></li>
                         </ul>
                     </li>
-                    <li><b>【优化】核心计时与监控逻辑，标识后台UI节流</b>
-                        <ul>
-                            <li>引入新的<code>[UI节流]</code>状态。它表示后台标签页的UI显示可能没有更新，但脚本的计时器依然正常确。<strong>这个状态不影响抢包</strong>。如需恢复UI显示，仅需切换到对应直播间一下即可</li>
-                            <li>此状态的检测频率可在“设置”->“性能与延迟”中修改。</li>
-                        </ul>
-                    </li>
-                    <li><b>【说明】关于部分标签页无法自动关闭的问题</b>
-                        <ul>
-                            <li>部分工作标签页在任务结束后可能无法关闭，而是跳转到空白页。我推测这是出现在由新版UI切换旧版UI的直播间中：因为切换旧版过程中斗鱼的页面跳转逻辑导致脚本关闭此工作标签页是不被允许的行为。</li>
-                            <li>脚本采用跳转到<code>空白页面</code>作为备用方案，这能有效停止页面的所有活动并释放资源。<strong>请注意，这个问题是按猜测修复的，我未能实际测试能否正常实现</strong></li>
-                        </ul>
-                    </li>
-                    <li><b>【说明】关于[已断联] 状态的说明</b>
-                        <ul>
-                            <li>手动关闭或刷新工作标签页后，控制面板可能会短暂显示 [已断联] 状态，这是正常的缓冲过程，用于防止刷新时任务丢失。该状态会在宽限期后自动清除。</li>
-                            <li>此宽限时间可在“设置”->“性能与延迟”中修改。</li>
-                        </ul>
-                    </li>
+                    <li>【修复】修复达到每日上限后，点击“关闭所有”功能时 UI 界面残留的问题</b></li>
+                    <li>【优化】优化返回旧版UI逻辑，修复无法跳转空白页 by @Truthss</b></li>
+                    <li>【修复】尝试修复红包倒计时卡死 by @Truthss </b></li>
+                    <li>【重构】使用Vite对项目进行解耦重构 by @Truthss | @ienone </b></li>
                 </ul>
                 <h4>源码与社区</h4>
-                <ul>
+                <ul class="qmx-styled-list">
                     <li>可以在 <a href="https://github.com/ienone/eilatam" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
                     <li>发现BUG或有功能建议，欢迎提交 <a href="https://github.com/ienone/eilatam/issues" target="_blank" rel="noopener noreferrer">Issue</a>（不过大概率不会修……）</li>
                     <li>如果你有能力进行改进，非常欢迎提交 <a href="https://github.com/ienone/eilatam/pulls" target="_blank" rel="noopener noreferrer">Pull Request</a>！</li>

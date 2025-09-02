@@ -24,12 +24,12 @@ export const FirstTimeNotice = {
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <p>注意：如果同时使用了DouyuEx插件"阻止P2P上传"功能，可能会导致后台星推荐红包倒计时不准确。</p>
                     <p>为了获得更精确的倒计时，您可以：</p>
-                    <ul>
-                        <li>关闭DouyuEx中的"阻止P2P上传"功能</li>
-                        <li>进入设置 -> 性能与延迟 -> 开启"校准模式"</li>
+                    <ul class="qmx-styled-list">
+                        <li>1. 关闭DouyuEx中的"阻止P2P上传"功能(详见设置->关于->一些tips底部)</li>
+                        <li>2. 进入设置 -> 性能与延迟 -> 开启"校准模式"</li>
                     </ul>
+                    <p>注意："校准模式"和DouyuEx插件"阻止P2P上传"功能不可并存，</p>
                 </div>
                 <div class="qmx-modal-footer">
                     <button id="qmx-notice-settings-btn" class="qmx-modal-btn">前往设置</button>
