@@ -40,6 +40,7 @@ export const SettingsPanel = {
             'api-retry-delay': 'API请求失败后，等待多久再重试。',
             'healthcheck-interval': '哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。',
             'disconnected-grace-period': '刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。',
+            'calibration-mode': '启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能',
 
         };
 
@@ -98,6 +99,7 @@ export const SettingsPanel = {
             UNRESPONSIVE_TIMEOUT: parseInt( document.getElementById('setting-unresponsive-timeout').value, 10) * 60000,
             RED_ENVELOPE_LOAD_TIMEOUT: parseFloat( document.getElementById('setting-red-envelope-timeout').value) * 1000,
             POPUP_WAIT_TIMEOUT: parseFloat( document.getElementById('setting-popup-wait-timeout').value) * 1000,
+            CALIBRATION_MODE_ENABLED: document.getElementById('setting-calibration-mode').checked,
             ELEMENT_WAIT_TIMEOUT: parseFloat( document.getElementById('setting-worker-loading-timeout').value) * 1000,
             MIN_DELAY: parseFloat( document.getElementById('setting-min-delay').value) * 1000,
             MAX_DELAY: parseFloat( document.getElementById('setting-max-delay').value) * 1000,

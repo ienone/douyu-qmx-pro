@@ -117,10 +117,18 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
                         <input type="number" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
                     </div>
+                    <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
                         <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                         <label class="qmx-toggle">
                             <input type="checkbox" id="setting-auto-pause" ${SETTINGS.AUTO_PAUSE_ENABLED ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item">
+                        <label>启用校准模式 <span class="qmx-tooltip-icon" data-tooltip-key="calibration-mode">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-calibration-mode" ${SETTINGS.CALIBRATION_MODE_ENABLED ? 'checked' : ''}>
                             <span class="slider"></span>
                         </label>
                     </div>

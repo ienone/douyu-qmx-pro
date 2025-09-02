@@ -25,6 +25,9 @@ export const WorkerPage = {
     stallLevel: 0,
     // 记录剩余时间
     remainingTimeMap: new Map(),
+    // 新增属性，用于校准模式
+    consecutiveStallCount: 0,
+    previousDeviation: 0,
     /**
      * 在后台非阻塞地查找并点击“返回旧版”按钮。
      * 这是一个可选操作，不阻塞主初始化流程。
@@ -169,7 +172,7 @@ export const WorkerPage = {
     /**
      * 哨兵观察链。
      * 信任首次获取的倒计时和由HackTimer驱动的主定时器。
-     * 哨兵只对比UI和脚本计时器的差异，并报告UI是否被“节流”(显示为STALLED)，但不修改核心的 `currentTaskEndTime`。
+     * 哨兵只对比UI和脚本计时器的差异，并报告UI是否被"节流"(显示为STALLED)，但不修改核心的 `currentTaskEndTime`。
      */
     startHealthChecks(roomId, redEnvelopeDiv) {
         const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
@@ -182,10 +185,10 @@ export const WorkerPage = {
                 return; // UI消失，观察结束
             }
 
-            // 1. 计算脚本的精确剩余时间 (这是我们的“真实”时间)
+            // 1. 计算脚本的精确剩余时间 (这是我们的"真实"时间)
             const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1000;
 
-            // 2. 获取页面UI显示的剩余时间 (这是“可能不准”的显示时间)
+            // 2. 获取页面UI显示的剩余时间 (这是"可能不准"的显示时间)
             const [pMin, pSec] = currentPageStatus.split(':').map(Number);
             const pageRemainingSeconds = pMin * 60 + pSec;
 
@@ -193,21 +196,89 @@ export const WorkerPage = {
             const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
 
             const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
+            const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
 
-            // 4. 根据偏差，只更新“状态”，不改变“核心计时”
-            if (deviation > STALL_THRESHOLD) {
-                if (this.stallLevel === 0) { // 只在第一次检测到卡顿时记录日志
-                    Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${Utils.formatTime(pageRemainingSeconds)}`);
-                }
-                this.stallLevel = 1;
-                // [关键] 只更新状态为STALLED，但countdown依然使用我们精确的endTime
-                GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, {countdown: {endTime: this.currentTaskEndTime}});
-            } else {
-                if (this.stallLevel > 0) {
-                    Utils.log('[哨兵] UI已从节流中恢复。');
+            // 每次都打印脚本倒计时、UI显示倒计时和差值
+            Utils.log(`[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`);
+            Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? '开启' : '关闭'}`);
+
+            // 4. 根据是否开启校准模式，处理时间差异
+            if (SETTINGS.CALIBRATION_MODE_ENABLED) {
+                // 校准模式逻辑
+                if (deviation <= STALL_THRESHOLD) {
+                    // 在合理范围内，校准脚本倒计时
+                    const difference = scriptRemainingSeconds - pageRemainingSeconds;
+                    this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1000;
+                    
+                    // 只有在偏差大于0.1秒时才显示校准信息
+                    if (deviation > 0.1) {
+                        const direction = difference > 0 ? '慢' : '快';
+                        const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
+                        Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
+
+                        // 发送临时信息，让ControlPage显示
+                        GlobalState.updateWorker(roomId, 'WAITING', calibrationMessage, {countdown: {endTime: this.currentTaskEndTime}});
+
+                        // 2.5秒后，发送常规更新，让ControlPage恢复显示倒计时
+                        setTimeout(() => {
+                            // 检查任务是否还在，防止在延迟期间任务已结束
+                            if (this.currentTaskEndTime > Date.now()) {
+                                GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {countdown: {endTime: this.currentTaskEndTime}});
+                            }
+                        }, 2500);
+                    } else {
+                        // 偏差很小，静默校准，直接更新为倒计时状态
+                        GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {countdown: {endTime: this.currentTaskEndTime}});
+                    }
+                    
+                    // 重置卡顿计数
+                    this.consecutiveStallCount = 0;
+                    this.previousDeviation = 0;
                     this.stallLevel = 0;
+                    
+                } else {
+                    // 在合理范围外，判断是否卡顿加剧
+                    const deviationIncreasing = deviation > this.previousDeviation;
+
+                    this.previousDeviation = deviation;
+                    
+                    if (deviationIncreasing) {
+                        this.consecutiveStallCount++;
+                        Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
+                    } else {
+                        // 卡顿没有加剧，可能是暂时性的，重置计数
+                        this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
+                    }
+                    
+                    if (this.consecutiveStallCount >= 3) {
+                        // 连续三次检测到卡顿且差值增大，判定为卡死
+                        Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
+                        GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', {countdown: null});
+                        clearTimeout(this.healthCheckTimeoutId);
+                        this.switchRoom();
+                        return;
+                    }
+                    
+                    // 显示卡顿状态但继续监控
+                    this.stallLevel = 1;
+                    GlobalState.updateWorker(roomId, 'ERROR', `UI卡顿 (${deviation.toFixed(1)}秒)`, {countdown: {endTime: this.currentTaskEndTime}});
                 }
-                GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, {countdown: {endTime: this.currentTaskEndTime}});
+            } else {
+                // 原有逻辑
+                if (deviation > STALL_THRESHOLD) {
+                    if (this.stallLevel === 0) { // 只在第一次检测到卡顿时记录日志
+                        Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
+                    }
+                    this.stallLevel = 1;
+                    // 只更新状态为STALLED
+                    GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, {countdown: {endTime: this.currentTaskEndTime}});
+                } else {
+                    if (this.stallLevel > 0) {
+                        Utils.log('[哨兵] UI已从节流中恢复。');
+                        this.stallLevel = 0;
+                    }
+                    GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, {countdown: {endTime: this.currentTaskEndTime}});
+                }
             }
 
             // 5. 只要我们的精确计时器没到终点，就继续观察

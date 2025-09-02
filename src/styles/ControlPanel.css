@@ -1,4 +1,3 @@
-
 /* 所有UI所需的CSS样式 */
 
 /* ---------------------------------- */
@@ -611,4 +610,81 @@ input:checked ~ .slider-dot .moon {
     opacity: 1;
     transform: translateY(0) rotate(0deg);
     color: var(--md-sys-color-on-surface);
+}
+
+/* --- 首次使用提示样式 --- */
+#qmx-notice-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    width: 450px;
+    max-width: 90vw;
+    z-index: 10001;
+    background-color: var(--md-sys-color-surface-bright);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 28px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+}
+
+#qmx-notice-modal.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+#qmx-notice-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--md-sys-color-scrim);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+}
+
+#qmx-notice-backdrop.visible {
+    opacity: 0.5;
+    visibility: visible;
+}
+
+#qmx-notice-modal .qmx-modal-content {
+    padding: 16px 24px;
+}
+
+#qmx-notice-modal .qmx-modal-content p {
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+#qmx-notice-modal .qmx-modal-content ul {
+    margin: 12px 0;
+    padding-left: 20px;
+}
+
+#qmx-notice-modal .qmx-modal-content li {
+    margin-bottom: 8px;
+    position: relative;
+}
+
+#qmx-notice-modal .qmx-modal-content li::before {
+    content: '◆';
+    position: absolute;
+    left: -18px;
+    color: var(--md-sys-color-primary);
+    font-size: 12px;
+}
+
+#qmx-notice-modal h3 {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0;
 }

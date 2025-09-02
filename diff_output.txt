@@ -1,0 +1,548 @@
+diff --git a/dist/星推荐v2.user.js b/dist/星推荐v2.user.js
+index 6086e0c..ccbd646 100644
+--- a/dist/星推荐v2.user.js
++++ b/dist/星推荐v2.user.js
+@@ -54,6 +54,7 @@ MAX_WORKER_TABS: 24,
+ DAILY_LIMIT_ACTION: "CONTINUE_DORMANT",
+ AUTO_PAUSE_ENABLED: true,
+ AUTO_PAUSE_DELAY_AFTER_ACTION: 5e3,
++CALIBRATION_MODE_ENABLED: false,
+ 
+ STATE_STORAGE_KEY: "douyu_qmx_dashboard_state",
+ DAILY_LIMIT_REACHED_KEY: "douyu_qmx_daily_limit_reached",
+@@ -250,7 +251,7 @@ formatDateAsBeijing(date) {
+       console.log(logPrefix + "Initialisation failed - HTML5 Web Worker is not supported");
+     }
+   }
+-  const ControlPanelCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42;--primary-container: #4F378B;--on-primary-container: #EADDFF}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9;--primary-container: #EADDFF;--on-primary-container: #21005D}.is-dragging{transition:none!important}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible{opacity:.5;visibility:visible}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:16px 24px;font-size:24px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:all .2s ease-in-out;position:relative;flex-shrink:0}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:var(--md-sys-color-primary);transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{flex-grow:1;overflow-y:auto;padding:0 24px}.qmx-modal-content h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease}.qmx-tab-list-item:hover{background-color:#ffffff0d}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-tab-header{display:flex;align-items:baseline;justify-content:space-between}.qmx-tab-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-room-id{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.7}.qmx-tab-details{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--md-sys-color-on-surface-variant)}.qmx-tab-status-name{font-weight:500}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease-in-out}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn.primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-modal-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:#f443361a}.qmx-tab-close-btn{flex-shrink:0;background:none;border:none;color:var(--md-sys-color-on-surface-variant);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;opacity:.6;transition:all .2s}.qmx-tab-close-btn:hover{opacity:1;color:#f44336;transform:scale(1.1)}#qmx-settings-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:500px;max-width:95vw;z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:all .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500}.qmx-settings-item small{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.8}.qmx-settings-item input[type=number]{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:10px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-settings-item>input[type=number]{padding-top:12px;padding-bottom:12px}.qmx-settings-item>input[type=number]:hover{border-color:var(--md-sys-color-primary)}.qmx-settings-item>input[type=number]:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:all .3s ease}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}#tab-about{line-height:1.7;font-size:14px}#tab-about h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:20px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#tab-about h4:first-child{margin-top:0}#tab-about p{margin-bottom:10px;color:var(--md-sys-color-on-surface-variant)}#tab-about .version-tag{display:inline-block;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);padding:2px 8px;border-radius:12px;font-size:13px;font-weight:500;margin-left:8px}#tab-about ul{list-style:none;padding-left:0}#tab-about li{position:relative;padding-left:20px;margin-bottom:8px}#tab-about li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}#tab-about a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:all .2s}#tab-about a:hover{color:#ffd6e1;text-decoration:underline}.qmx-settings-item label{display:flex;align-items:center;gap:6px}.qmx-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background-color:var(--md-sys-color-outline);color:var(--md-sys-color-surface-container);font-size:12px;font-weight:700;cursor:help;-webkit-user-select:none;user-select:none}#qmx-global-tooltip{position:fixed;background-color:var(--surface-container-highest);color:var(--md-sys-color-on-surface);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px #0003;font-size:12px;font-weight:400;line-height:1.5;z-index:10002;max-width:250px;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none}#qmx-global-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-settings-content{overflow-x:hidden}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}.theme-switch{position:relative;display:block;width:60px;height:34px;cursor:pointer;transition:none}.theme-switch input{opacity:0;width:0;height:0}.slider-track{position:absolute;top:0;left:0;width:34px;height:34px;background-color:var(--surface-container-highest);border-radius:17px;box-shadow:inset 2px 2px 4px #0003,inset -2px -2px 4px #ffffff0d;transition:width .3s ease,left .3s ease,border-radius .3s ease,box-shadow .3s ease}.theme-switch:hover .slider-track{width:60px}.theme-switch input:checked+.slider-track{left:26px}.theme-switch:hover input:checked+.slider-track{left:0}.slider-dot{position:absolute;height:26px;width:26px;left:4px;top:4px;background-color:var(--md-sys-color-primary);border-radius:50%;box-shadow:0 1px 3px #0003;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 8px #0000004d;transition:transform .3s cubic-bezier(.4,0,.2,1),background-color .3s ease,box-shadow .3s ease}.theme-switch input:checked~.slider-dot{transform:translate(26px);background-color:var(--primary-container)}.slider-dot .icon{position:absolute;width:20px;height:20px;color:var(--md-sys-color-on-primary);transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.2,1)}.sun{opacity:1;transform:translateY(0) rotate(0)}.moon{opacity:0;transform:translateY(20px) rotate(-45deg)}input:checked~.slider-dot .sun{opacity:0;transform:translateY(-20px) rotate(45deg)}input:checked~.slider-dot .moon{opacity:1;transform:translateY(0) rotate(0);color:var(--md-sys-color-on-surface)}';
++  const ControlPanelCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42;--primary-container: #4F378B;--on-primary-container: #EADDFF}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9;--primary-container: #EADDFF;--on-primary-container: #21005D}.is-dragging{transition:none!important}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible{opacity:.5;visibility:visible}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:16px 24px;font-size:24px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:all .2s ease-in-out;position:relative;flex-shrink:0}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:var(--md-sys-color-primary);transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{flex-grow:1;overflow-y:auto;padding:0 24px}.qmx-modal-content h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease}.qmx-tab-list-item:hover{background-color:#ffffff0d}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-tab-header{display:flex;align-items:baseline;justify-content:space-between}.qmx-tab-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-room-id{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.7}.qmx-tab-details{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--md-sys-color-on-surface-variant)}.qmx-tab-status-name{font-weight:500}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s ease-in-out}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn.primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-modal-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:#f443361a}.qmx-tab-close-btn{flex-shrink:0;background:none;border:none;color:var(--md-sys-color-on-surface-variant);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;opacity:.6;transition:all .2s}.qmx-tab-close-btn:hover{opacity:1;color:#f44336;transform:scale(1.1)}#qmx-settings-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:500px;max-width:95vw;z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:all .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500}.qmx-settings-item small{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.8}.qmx-settings-item input[type=number]{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:10px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-settings-item>input[type=number]{padding-top:12px;padding-bottom:12px}.qmx-settings-item>input[type=number]:hover{border-color:var(--md-sys-color-primary)}.qmx-settings-item>input[type=number]:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:all .3s ease}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}#tab-about{line-height:1.7;font-size:14px}#tab-about h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:20px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#tab-about h4:first-child{margin-top:0}#tab-about p{margin-bottom:10px;color:var(--md-sys-color-on-surface-variant)}#tab-about .version-tag{display:inline-block;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);padding:2px 8px;border-radius:12px;font-size:13px;font-weight:500;margin-left:8px}#tab-about ul{list-style:none;padding-left:0}#tab-about li{position:relative;padding-left:20px;margin-bottom:8px}#tab-about li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}#tab-about a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:all .2s}#tab-about a:hover{color:#ffd6e1;text-decoration:underline}.qmx-settings-item label{display:flex;align-items:center;gap:6px}.qmx-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background-color:var(--md-sys-color-outline);color:var(--md-sys-color-surface-container);font-size:12px;font-weight:700;cursor:help;-webkit-user-select:none;user-select:none}#qmx-global-tooltip{position:fixed;background-color:var(--surface-container-highest);color:var(--md-sys-color-on-surface);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px #0003;font-size:12px;font-weight:400;line-height:1.5;z-index:10002;max-width:250px;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none}#qmx-global-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-settings-content{overflow-x:hidden}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}.theme-switch{position:relative;display:block;width:60px;height:34px;cursor:pointer;transition:none}.theme-switch input{opacity:0;width:0;height:0}.slider-track{position:absolute;top:0;left:0;width:34px;height:34px;background-color:var(--surface-container-highest);border-radius:17px;box-shadow:inset 2px 2px 4px #0003,inset -2px -2px 4px #ffffff0d;transition:width .3s ease,left .3s ease,border-radius .3s ease,box-shadow .3s ease}.theme-switch:hover .slider-track{width:60px}.theme-switch input:checked+.slider-track{left:26px}.theme-switch:hover input:checked+.slider-track{left:0}.slider-dot{position:absolute;height:26px;width:26px;left:4px;top:4px;background-color:var(--md-sys-color-primary);border-radius:50%;box-shadow:0 1px 3px #0003;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 8px #0000004d;transition:transform .3s cubic-bezier(.4,0,.2,1),background-color .3s ease,box-shadow .3s ease}.theme-switch input:checked~.slider-dot{transform:translate(26px);background-color:var(--primary-container)}.slider-dot .icon{position:absolute;width:20px;height:20px;color:var(--md-sys-color-on-primary);transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.2,1)}.sun{opacity:1;transform:translateY(0) rotate(0)}.moon{opacity:0;transform:translateY(20px) rotate(-45deg)}input:checked~.slider-dot .sun{opacity:0;transform:translateY(-20px) rotate(45deg)}input:checked~.slider-dot .moon{opacity:1;transform:translateY(0) rotate(0);color:var(--md-sys-color-on-surface)}#qmx-notice-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);width:450px;max-width:90vw;z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-notice-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}#qmx-notice-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-notice-backdrop.visible{opacity:.5;visibility:visible}#qmx-notice-modal .qmx-modal-content{padding:16px 24px}#qmx-notice-modal .qmx-modal-content p{margin-bottom:12px;line-height:1.5}#qmx-notice-modal .qmx-modal-content ul{margin:12px 0;padding-left:20px}#qmx-notice-modal .qmx-modal-content li{margin-bottom:8px;position:relative}#qmx-notice-modal .qmx-modal-content li:before{content:"◆";position:absolute;left:-18px;color:var(--md-sys-color-primary);font-size:12px}#qmx-notice-modal h3{font-size:18px;font-weight:500;margin:0}';
+   importCSS(ControlPanelCss);
+   const mainPanelTemplate = (maxTabs) => `
+     <div class="qmx-modal-header">
+@@ -340,7 +341,7 @@ formatDateAsBeijing(date) {
+             <!-- ==================== Tab 1: 基本设置 ==================== -->
+             <div id="tab-basic" class="tab-content active">
+                 <div class="qmx-settings-grid">
+-                    <div class="qmx-settings-item">
++                    <div class="qmx-settings-item" style="grid-column: 1/-1;">
+                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
+                         <input type="number" id="setting-control-room-id" value="${SETTINGS2.CONTROL_ROOM_ID}">
+                     </div>
+@@ -351,6 +352,13 @@ formatDateAsBeijing(date) {
+                             <span class="slider"></span>
+                         </label>
+                     </div>
++                    <div class="qmx-settings-item">
++                        <label>启用校准模式 <span class="qmx-tooltip-icon" data-tooltip-key="calibration-mode">?</span></label>
++                        <label class="qmx-toggle">
++                            <input type="checkbox" id="setting-calibration-mode" ${SETTINGS2.CALIBRATION_MODE_ENABLED ? "checked" : ""}>
++                            <span class="slider"></span>
++                        </label>
++                    </div>
+                     <div class="qmx-settings-item">
+                         <label>达到上限后的行为</label>
+                         <div class="qmx-select" data-target-id="setting-daily-limit-action">
+@@ -725,7 +733,8 @@ show() {
+         "api-retry-count": "获取房间列表失败时的重试次数。",
+         "api-retry-delay": "API请求失败后，等待多久再重试。",
+         "healthcheck-interval": "哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。",
+-        "disconnected-grace-period": "刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。"
++        "disconnected-grace-period": "刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。",
++        "calibration-mode": "启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能"
+       };
+       modal.innerHTML = settingsPanelTemplate(SETTINGS);
+       activateToolTips(modal, allTooltips);
+@@ -758,6 +767,7 @@ INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script
+         UNRESPONSIVE_TIMEOUT: parseInt(document.getElementById("setting-unresponsive-timeout").value, 10) * 6e4,
+         RED_ENVELOPE_LOAD_TIMEOUT: parseFloat(document.getElementById("setting-red-envelope-timeout").value) * 1e3,
+         POPUP_WAIT_TIMEOUT: parseFloat(document.getElementById("setting-popup-wait-timeout").value) * 1e3,
++        CALIBRATION_MODE_ENABLED: document.getElementById("setting-calibration-mode").checked,
+         ELEMENT_WAIT_TIMEOUT: parseFloat(document.getElementById("setting-worker-loading-timeout").value) * 1e3,
+         MIN_DELAY: parseFloat(document.getElementById("setting-min-delay").value) * 1e3,
+         MAX_DELAY: parseFloat(document.getElementById("setting-max-delay").value) * 1e3,
+@@ -809,6 +819,56 @@ bindPanelEvents(modal) {
+       }
+     }
+   };
++  const FirstTimeNotice = {
++showCalibrationNotice() {
++      const NOTICE_SHOWN_KEY = "douyu_qmx_calibration_notice_shown";
++      const hasShownNotice = GM_getValue(NOTICE_SHOWN_KEY, false);
++      if (!hasShownNotice) {
++        const noticeHTML = `
++                <div class="qmx-modal-header">
++                    <h3>倒计时精准度提示</h3>
++                    <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
++                </div>
++                <div class="qmx-modal-content">
++                    <p>注意：如果同时使用了DouyuEx插件"阻止P2P上传"功能，可能会导致倒计时不准确。</p>
++                    <p>为了获得更精确的倒计时，您可以：</p>
++                    <ul>
++                        <li>关闭DouyuEx中的"阻止P2P上传"功能</li>
++                        <li>进入设置 -> 性能与延迟 -> 开启"校准模式"</li>
++                    </ul>
++                </div>
++                <div class="qmx-modal-footer">
++                    <button id="qmx-notice-settings-btn" class="qmx-modal-btn">前往设置</button>
++                    <button id="qmx-notice-ok-btn" class="qmx-modal-btn primary">我知道了</button>
++                </div>
++            `;
++        const noticeContainer = document.createElement("div");
++        noticeContainer.id = "qmx-notice-modal";
++        noticeContainer.className = "visible mode-centered";
++        noticeContainer.innerHTML = noticeHTML;
++        const backdrop = document.createElement("div");
++        backdrop.id = "qmx-notice-backdrop";
++        backdrop.className = "visible";
++        document.body.appendChild(backdrop);
++        document.body.appendChild(noticeContainer);
++        const closeNotice = () => {
++          noticeContainer.classList.remove("visible");
++          backdrop.classList.remove("visible");
++          setTimeout(() => {
++            noticeContainer.remove();
++            backdrop.remove();
++          }, 300);
++          GM_setValue(NOTICE_SHOWN_KEY, true);
++        };
++        document.getElementById("qmx-notice-close-btn").onclick = closeNotice;
++        document.getElementById("qmx-notice-ok-btn").onclick = closeNotice;
++        document.getElementById("qmx-notice-settings-btn").onclick = () => {
++          closeNotice();
++          SettingsPanel.show();
++        };
++      }
++    }
++  };
+   const ControlPage = {
+ injectionTarget: null,
+ isPanelInjected: false,
+@@ -824,6 +884,7 @@ init() {
+         this.renderDashboard();
+         this.cleanupAndMonitorWorkers();
+       }, 1e3);
++      FirstTimeNotice.showCalibrationNotice();
+       window.addEventListener("beforeunload", () => {
+         if (this.commandChannel) {
+           this.commandChannel.close();
+@@ -987,7 +1048,7 @@ renderDashboard() {
+           `[data-room-id="${roomId}"]`
+         );
+         let currentStatusText = tabData.statusText;
+-        if (tabData.status === "WAITING" || tabData.status === "STALLED" && tabData.countdown?.endTime) {
++        if (tabData.status === "WAITING" && tabData.countdown?.endTime && (!currentStatusText || currentStatusText.startsWith("倒计时") || currentStatusText === "寻找任务中...")) {
+           const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1e3;
+           if (remainingSeconds > 0) {
+             currentStatusText = `倒计时 ${Utils.formatTime(
+@@ -1357,6 +1418,8 @@ healthCheckTimeoutId: null,
+     lastPageCountdown: null,
+     stallLevel: 0,
+ remainingTimeMap: new Map(),
++consecutiveStallCount: 0,
++    previousDeviation: 0,
+ 
+ async init() {
+       Utils.log("混合模式工作单元初始化...");
+@@ -1469,18 +1532,62 @@ startHealthChecks(roomId, redEnvelopeDiv) {
+         const pageRemainingSeconds = pMin * 60 + pSec;
+         const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
+         const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
+-        if (deviation > STALL_THRESHOLD) {
+-          if (this.stallLevel === 0) {
+-            Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${Utils.formatTime(pageRemainingSeconds)}`);
++        const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
++        Utils.log(`[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`);
++        Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? "开启" : "关闭"}`);
++        if (SETTINGS.CALIBRATION_MODE_ENABLED) {
++          if (deviation <= STALL_THRESHOLD) {
++            const difference = scriptRemainingSeconds - pageRemainingSeconds;
++            this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1e3;
++            if (deviation > 0.1) {
++              const direction = difference > 0 ? "慢" : "快";
++              const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
++              Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
++              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, { countdown: { endTime: this.currentTaskEndTime } });
++              setTimeout(() => {
++                if (this.currentTaskEndTime > Date.now()) {
++                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, { countdown: { endTime: this.currentTaskEndTime } });
++                }
++              }, 2500);
++            } else {
++              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, { countdown: { endTime: this.currentTaskEndTime } });
++            }
++            this.consecutiveStallCount = 0;
++            this.previousDeviation = 0;
++            this.stallLevel = 0;
++          } else {
++            const deviationIncreasing = deviation > this.previousDeviation;
++            this.previousDeviation = deviation;
++            if (deviationIncreasing) {
++              this.consecutiveStallCount++;
++              Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
++            } else {
++              this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
++            }
++            if (this.consecutiveStallCount >= 3) {
++              Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
++              GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
++              clearTimeout(this.healthCheckTimeoutId);
++              this.switchRoom();
++              return;
++            }
++            this.stallLevel = 1;
++            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, { countdown: { endTime: this.currentTaskEndTime } });
+           }
+-          this.stallLevel = 1;
+-          GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, { countdown: { endTime: this.currentTaskEndTime } });
+         } else {
+-          if (this.stallLevel > 0) {
+-            Utils.log("[哨兵] UI已从节流中恢复。");
+-            this.stallLevel = 0;
++          if (deviation > STALL_THRESHOLD) {
++            if (this.stallLevel === 0) {
++              Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
++            }
++            this.stallLevel = 1;
++            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, { countdown: { endTime: this.currentTaskEndTime } });
++          } else {
++            if (this.stallLevel > 0) {
++              Utils.log("[哨兵] UI已从节流中恢复。");
++              this.stallLevel = 0;
++            }
++            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, { countdown: { endTime: this.currentTaskEndTime } });
+           }
+-          GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, { countdown: { endTime: this.currentTaskEndTime } });
+         }
+         if (scriptRemainingSeconds > CHECK_INTERVAL / 1e3 + 1) {
+           this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
+diff --git a/src/modules/ControlPage.js b/src/modules/ControlPage.js
+index f3ab219..2ba5f9e 100644
+--- a/src/modules/ControlPage.js
++++ b/src/modules/ControlPage.js
+@@ -11,6 +11,7 @@ import { ThemeManager } from './ThemeManager';
+ import { GlobalState } from './GlobalState';
+ import { DouyuAPI } from '../utils/DouyuAPI';
+ import { SettingsPanel } from './SettingsPanel.js'; 
++import { FirstTimeNotice } from './FirstTimeNotice.js';
+ 
+ /**
+  * =================================================================================
+@@ -40,6 +41,9 @@ export const ControlPage = {
+             this.renderDashboard();
+             this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
+         }, 1000);
++        
++        // 显示首次使用提示
++        FirstTimeNotice.showCalibrationNotice();
+ 
+         // 确保页面关闭时关闭频道
+         window.addEventListener('beforeunload', () => {
+@@ -258,8 +262,9 @@ export const ControlPage = {
+             let currentStatusText = tabData.statusText;
+ 
+             // 使用 endTime 来计算剩余时间
+-            if (tabData.status === 'WAITING' || tabData.status === 'STALLED' &&
+-                tabData.countdown?.endTime) {
++            // 允许显示自定义文本(如校准)，但如果文本是默认或已经是倒计时格式，则由控制中心接管实时计算
++            if (tabData.status === 'WAITING' && tabData.countdown?.endTime && 
++                (!currentStatusText || currentStatusText.startsWith('倒计时') || currentStatusText === '寻找任务中...')) {
+                 const remainingSeconds = (tabData.countdown.endTime -
+                         Date.now()) /
+                     1000;
+@@ -668,7 +673,6 @@ export const ControlPage = {
+         this.isPanelInjected = false;
+         modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
+         modalContainer.classList.add(`mode-${mode}`);
+-
+     },
+ 
+ };
+diff --git a/src/modules/SettingsPanel.js b/src/modules/SettingsPanel.js
+index b410b00..67ce464 100644
+--- a/src/modules/SettingsPanel.js
++++ b/src/modules/SettingsPanel.js
+@@ -40,6 +40,7 @@ export const SettingsPanel = {
+             'api-retry-delay': 'API请求失败后，等待多久再重试。',
+             'healthcheck-interval': '哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。',
+             'disconnected-grace-period': '刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。',
++            'calibration-mode': '启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能',
+ 
+         };
+ 
+@@ -98,6 +99,7 @@ export const SettingsPanel = {
+             UNRESPONSIVE_TIMEOUT: parseInt( document.getElementById('setting-unresponsive-timeout').value, 10) * 60000,
+             RED_ENVELOPE_LOAD_TIMEOUT: parseFloat( document.getElementById('setting-red-envelope-timeout').value) * 1000,
+             POPUP_WAIT_TIMEOUT: parseFloat( document.getElementById('setting-popup-wait-timeout').value) * 1000,
++            CALIBRATION_MODE_ENABLED: document.getElementById('setting-calibration-mode').checked,
+             ELEMENT_WAIT_TIMEOUT: parseFloat( document.getElementById('setting-worker-loading-timeout').value) * 1000,
+             MIN_DELAY: parseFloat( document.getElementById('setting-min-delay').value) * 1000,
+             MAX_DELAY: parseFloat( document.getElementById('setting-max-delay').value) * 1000,
+diff --git a/src/modules/WorkerPage.js b/src/modules/WorkerPage.js
+index 532e931..ab2e0d7 100644
+--- a/src/modules/WorkerPage.js
++++ b/src/modules/WorkerPage.js
+@@ -25,6 +25,9 @@ export const WorkerPage = {
+     stallLevel: 0,
+     // 记录剩余时间
+     remainingTimeMap: new Map(),
++    // 新增属性，用于校准模式
++    consecutiveStallCount: 0,
++    previousDeviation: 0,
+     /**
+      * 在后台非阻塞地查找并点击“返回旧版”按钮。
+      * 这是一个可选操作，不阻塞主初始化流程。
+@@ -169,7 +172,7 @@ export const WorkerPage = {
+     /**
+      * 哨兵观察链。
+      * 信任首次获取的倒计时和由HackTimer驱动的主定时器。
+-     * 哨兵只对比UI和脚本计时器的差异，并报告UI是否被“节流”(显示为STALLED)，但不修改核心的 `currentTaskEndTime`。
++     * 哨兵只对比UI和脚本计时器的差异，并报告UI是否被"节流"(显示为STALLED)，但不修改核心的 `currentTaskEndTime`。
+      */
+     startHealthChecks(roomId, redEnvelopeDiv) {
+         const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
+@@ -182,10 +185,10 @@ export const WorkerPage = {
+                 return; // UI消失，观察结束
+             }
+ 
+-            // 1. 计算脚本的精确剩余时间 (这是我们的“真实”时间)
++            // 1. 计算脚本的精确剩余时间 (这是我们的"真实"时间)
+             const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1000;
+ 
+-            // 2. 获取页面UI显示的剩余时间 (这是“可能不准”的显示时间)
++            // 2. 获取页面UI显示的剩余时间 (这是"可能不准"的显示时间)
+             const [pMin, pSec] = currentPageStatus.split(':').map(Number);
+             const pageRemainingSeconds = pMin * 60 + pSec;
+ 
+@@ -193,21 +196,89 @@ export const WorkerPage = {
+             const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
+ 
+             const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
+-
+-            // 4. 根据偏差，只更新“状态”，不改变“核心计时”
+-            if (deviation > STALL_THRESHOLD) {
+-                if (this.stallLevel === 0) { // 只在第一次检测到卡顿时记录日志
+-                    Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${Utils.formatTime(pageRemainingSeconds)}`);
++            const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
++
++            // 每次都打印脚本倒计时、UI显示倒计时和差值
++            Utils.log(`[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`);
++            Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? '开启' : '关闭'}`);
++
++            // 4. 根据是否开启校准模式，处理时间差异
++            if (SETTINGS.CALIBRATION_MODE_ENABLED) {
++                // 校准模式逻辑
++                if (deviation <= STALL_THRESHOLD) {
++                    // 在合理范围内，校准脚本倒计时
++                    const difference = scriptRemainingSeconds - pageRemainingSeconds;
++                    this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1000;
++                    
++                    // 只有在偏差大于0.1秒时才显示校准信息
++                    if (deviation > 0.1) {
++                        const direction = difference > 0 ? '慢' : '快';
++                        const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
++                        Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
++
++                        // 发送临时信息，让ControlPage显示
++                        GlobalState.updateWorker(roomId, 'WAITING', calibrationMessage, {countdown: {endTime: this.currentTaskEndTime}});
++
++                        // 2.5秒后，发送常规更新，让ControlPage恢复显示倒计时
++                        setTimeout(() => {
++                            // 检查任务是否还在，防止在延迟期间任务已结束
++                            if (this.currentTaskEndTime > Date.now()) {
++                                GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {countdown: {endTime: this.currentTaskEndTime}});
++                            }
++                        }, 2500);
++                    } else {
++                        // 偏差很小，静默校准，直接更新为倒计时状态
++                        GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {countdown: {endTime: this.currentTaskEndTime}});
++                    }
++                    
++                    // 重置卡顿计数
++                    this.consecutiveStallCount = 0;
++                    this.previousDeviation = 0;
++                    this.stallLevel = 0;
++                    
++                } else {
++                    // 在合理范围外，判断是否卡顿加剧
++                    const deviationIncreasing = deviation > this.previousDeviation;
++
++                    this.previousDeviation = deviation;
++                    
++                    if (deviationIncreasing) {
++                        this.consecutiveStallCount++;
++                        Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
++                    } else {
++                        // 卡顿没有加剧，可能是暂时性的，重置计数
++                        this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
++                    }
++                    
++                    if (this.consecutiveStallCount >= 3) {
++                        // 连续三次检测到卡顿且差值增大，判定为卡死
++                        Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
++                        GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', {countdown: null});
++                        clearTimeout(this.healthCheckTimeoutId);
++                        this.switchRoom();
++                        return;
++                    }
++                    
++                    // 显示卡顿状态但继续监控
++                    this.stallLevel = 1;
++                    GlobalState.updateWorker(roomId, 'ERROR', `UI卡顿 (${deviation.toFixed(1)}秒)`, {countdown: {endTime: this.currentTaskEndTime}});
+                 }
+-                this.stallLevel = 1;
+-                // [关键] 只更新状态为STALLED，但countdown依然使用我们精确的endTime
+-                GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, {countdown: {endTime: this.currentTaskEndTime}});
+             } else {
+-                if (this.stallLevel > 0) {
+-                    Utils.log('[哨兵] UI已从节流中恢复。');
+-                    this.stallLevel = 0;
++                // 原有逻辑
++                if (deviation > STALL_THRESHOLD) {
++                    if (this.stallLevel === 0) { // 只在第一次检测到卡顿时记录日志
++                        Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
++                    }
++                    this.stallLevel = 1;
++                    // 只更新状态为STALLED
++                    GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, {countdown: {endTime: this.currentTaskEndTime}});
++                } else {
++                    if (this.stallLevel > 0) {
++                        Utils.log('[哨兵] UI已从节流中恢复。');
++                        this.stallLevel = 0;
++                    }
++                    GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, {countdown: {endTime: this.currentTaskEndTime}});
+                 }
+-                GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, {countdown: {endTime: this.currentTaskEndTime}});
+             }
+ 
+             // 5. 只要我们的精确计时器没到终点，就继续观察
+diff --git a/src/styles/ControlPanel.css b/src/styles/ControlPanel.css
+index 998e63c..e69c4ee 100644
+--- a/src/styles/ControlPanel.css
++++ b/src/styles/ControlPanel.css
+@@ -1,4 +1,3 @@
+-
+ /* 所有UI所需的CSS样式 */
+ 
+ /* ---------------------------------- */
+@@ -611,4 +610,81 @@ input:checked ~ .slider-dot .moon {
+     opacity: 1;
+     transform: translateY(0) rotate(0deg);
+     color: var(--md-sys-color-on-surface);
++}
++
++/* --- 首次使用提示样式 --- */
++#qmx-notice-modal {
++    position: fixed;
++    top: 50%;
++    left: 50%;
++    transform: translate(-50%, -50%) scale(0.95);
++    width: 450px;
++    max-width: 90vw;
++    z-index: 10001;
++    background-color: var(--md-sys-color-surface-bright);
++    color: var(--md-sys-color-on-surface);
++    border-radius: 28px;
++    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
++    display: flex;
++    flex-direction: column;
++    opacity: 0;
++    visibility: hidden;
++    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
++}
++
++#qmx-notice-modal.visible {
++    opacity: 1;
++    visibility: visible;
++    transform: translate(-50%, -50%) scale(1);
++}
++
++#qmx-notice-backdrop {
++    position: fixed;
++    top: 0;
++    left: 0;
++    width: 100vw;
++    height: 100vh;
++    background-color: var(--md-sys-color-scrim);
++    z-index: 9998;
++    opacity: 0;
++    visibility: hidden;
++    transition: opacity 0.3s ease;
++}
++
++#qmx-notice-backdrop.visible {
++    opacity: 0.5;
++    visibility: visible;
++}
++
++#qmx-notice-modal .qmx-modal-content {
++    padding: 16px 24px;
++}
++
++#qmx-notice-modal .qmx-modal-content p {
++    margin-bottom: 12px;
++    line-height: 1.5;
++}
++
++#qmx-notice-modal .qmx-modal-content ul {
++    margin: 12px 0;
++    padding-left: 20px;
++}
++
++#qmx-notice-modal .qmx-modal-content li {
++    margin-bottom: 8px;
++    position: relative;
++}
++
++#qmx-notice-modal .qmx-modal-content li::before {
++    content: '◆';
++    position: absolute;
++    left: -18px;
++    color: var(--md-sys-color-primary);
++    font-size: 12px;
++}
++
++#qmx-notice-modal h3 {
++    font-size: 18px;
++    font-weight: 500;
++    margin: 0;
+ }
+\ No newline at end of file
+diff --git a/src/ui/templates.js b/src/ui/templates.js
+index b27b197..d909493 100644
+--- a/src/ui/templates.js
++++ b/src/ui/templates.js
+@@ -113,7 +113,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
+             <!-- ==================== Tab 1: 基本设置 ==================== -->
+             <div id="tab-basic" class="tab-content active">
+                 <div class="qmx-settings-grid">
+-                    <div class="qmx-settings-item">
++                    <div class="qmx-settings-item" style="grid-column: 1/-1;">
+                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
+                         <input type="number" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
+                     </div>
+@@ -124,6 +124,13 @@ export const settingsPanelTemplate = (SETTINGS) => {
+                             <span class="slider"></span>
+                         </label>
+                     </div>
++                    <div class="qmx-settings-item">
++                        <label>启用校准模式 <span class="qmx-tooltip-icon" data-tooltip-key="calibration-mode">?</span></label>
++                        <label class="qmx-toggle">
++                            <input type="checkbox" id="setting-calibration-mode" ${SETTINGS.CALIBRATION_MODE_ENABLED ? 'checked' : ''}>
++                            <span class="slider"></span>
++                        </label>
++                    </div>
+                     <div class="qmx-settings-item">
+                         <label>达到上限后的行为</label>
+                         <div class="qmx-select" data-target-id="setting-daily-limit-action">
+diff --git a/src/utils/CONFIG.js b/src/utils/CONFIG.js
+index 5cbd7cc..61ee8cd 100644
+--- a/src/utils/CONFIG.js
++++ b/src/utils/CONFIG.js
+@@ -41,6 +41,7 @@ export const CONFIG = {
+     DAILY_LIMIT_ACTION: 'CONTINUE_DORMANT', // 当达到每日领取上限时的处理策略。可选值: 'STOP_ALL'(停止所有任务), 'CONTINUE_DORMANT'(进入休眠等待第二天)。
+     AUTO_PAUSE_ENABLED: true, // 是否启用在工作标签页中自动暂停视频播放的功能，以节省系统资源。
+     AUTO_PAUSE_DELAY_AFTER_ACTION: 5000, // 在执行领取等操作后，需要等待多久才能再次尝试自动暂停视频。
++    CALIBRATION_MODE_ENABLED: false, // 是否启用校准模式，提高倒计时精准度，尤其适用于禁用P2P的环境。
+ 
+     // --- 存储键名 ---
+     STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state', // 用于在油猴存储中记录脚本核心状态（如所有工作标签页信息）的键名。

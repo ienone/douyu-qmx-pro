@@ -11,6 +11,7 @@ import { ThemeManager } from './ThemeManager';
 import { GlobalState } from './GlobalState';
 import { DouyuAPI } from '../utils/DouyuAPI';
 import { SettingsPanel } from './SettingsPanel.js'; 
+import { FirstTimeNotice } from './FirstTimeNotice.js';
 
 /**
  * =================================================================================
@@ -40,6 +41,9 @@ export const ControlPage = {
             this.renderDashboard();
             this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
         }, 1000);
+        
+        // 显示首次使用提示
+        FirstTimeNotice.showCalibrationNotice();
 
         // 确保页面关闭时关闭频道
         window.addEventListener('beforeunload', () => {
@@ -258,8 +262,9 @@ export const ControlPage = {
             let currentStatusText = tabData.statusText;
 
             // 使用 endTime 来计算剩余时间
-            if (tabData.status === 'WAITING' || tabData.status === 'STALLED' &&
-                tabData.countdown?.endTime) {
+            // 允许显示自定义文本(如校准)，但如果文本是默认或已经是倒计时格式，则由控制中心接管实时计算
+            if (tabData.status === 'WAITING' && tabData.countdown?.endTime && 
+                (!currentStatusText || currentStatusText.startsWith('倒计时') || currentStatusText === '寻找任务中...')) {
                 const remainingSeconds = (tabData.countdown.endTime -
                         Date.now()) /
                     1000;
@@ -668,7 +673,6 @@ export const ControlPage = {
         this.isPanelInjected = false;
         modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
         modalContainer.classList.add(`mode-${mode}`);
-
     },
 
 };
