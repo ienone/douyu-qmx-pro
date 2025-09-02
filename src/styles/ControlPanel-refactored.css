@@ -1,0 +1,139 @@
+/* 主样式文件 - 模块化导入 */
+
+/* 基础层 */
+@import './_variables.css';
+@import './_base.css';
+
+/* 组件层 */
+@import './_forms.css';
+@import './_tooltip.css';
+@import './_theme-switch.css';
+
+/* 功能模块层 */
+@import './_control-panel.css';
+@import './_settings.css';
+@import './_notice.css';
+
+/* 应用通用样式到具体ID选择器 */
+
+/* 遮罩样式应用 */
+#qmx-modal-backdrop,
+#qmx-notice-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--md-sys-color-scrim);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+}
+
+#qmx-modal-backdrop.visible,
+#qmx-notice-backdrop.visible {
+    opacity: 0.5;
+    visibility: visible;
+}
+
+/* 模态框样式应用 */
+#qmx-settings-modal,
+#qmx-notice-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    z-index: 10001;
+    background-color: var(--md-sys-color-surface-bright);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 28px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+}
+
+#qmx-settings-modal.visible,
+#qmx-notice-modal.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* 按钮样式应用 */
+.qmx-modal-btn {
+    flex-grow: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--md-sys-color-outline);
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+}
+
+.qmx-modal-btn:hover {
+    background-color: rgba(208, 188, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.qmx-modal-btn:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+}
+
+.qmx-modal-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.qmx-modal-btn.primary {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+}
+
+.qmx-modal-btn.primary:hover {
+    background-color: hsl(252, 100%, 85%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.qmx-modal-btn.danger {
+    border-color: #F44336;
+    color: #F44336;
+}
+
+.qmx-modal-btn.danger:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+/* 滚动条样式应用 */
+.qmx-modal-content::-webkit-scrollbar,
+.qmx-settings-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.qmx-modal-content::-webkit-scrollbar-track,
+.qmx-settings-content::-webkit-scrollbar-track {
+    background: var(--md-sys-color-surface-bright);
+    border-radius: 10px;
+}
+
+.qmx-modal-content::-webkit-scrollbar-thumb,
+.qmx-settings-content::-webkit-scrollbar-thumb {
+    background-color: var(--md-sys-color-primary);
+    border-radius: 10px;
+    border: 2px solid var(--md-sys-color-surface-bright);
+}
+
+.qmx-modal-content::-webkit-scrollbar-thumb:hover,
+.qmx-settings-content::-webkit-scrollbar-thumb:hover {
+    background-color: #E0D1FF;
+}

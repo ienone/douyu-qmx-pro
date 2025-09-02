@@ -1,0 +1,40 @@
+/* 通知模态框样式 */
+
+/* --- 首次使用提示模态框 --- */
+#qmx-notice-modal {
+    width: 450px;
+    max-width: 90vw;
+}
+
+#qmx-notice-modal .qmx-modal-content {
+    padding: 16px 24px;
+}
+
+#qmx-notice-modal .qmx-modal-content p {
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+#qmx-notice-modal .qmx-modal-content ul {
+    margin: 12px 0;
+    padding-left: 20px;
+}
+
+#qmx-notice-modal .qmx-modal-content li {
+    margin-bottom: 8px;
+    position: relative;
+}
+
+#qmx-notice-modal .qmx-modal-content li::before {
+    content: '◆';
+    position: absolute;
+    left: -18px;
+    color: var(--md-sys-color-primary);
+    font-size: 12px;
+}
+
+#qmx-notice-modal h3 {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0;
+}

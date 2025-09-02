@@ -1,0 +1,101 @@
+/* 主题开关组件样式 */
+
+/* --- 主题开关容器 --- */
+.theme-switch {
+    position: relative;
+    display: block;
+    width: 60px;
+    height: 34px;
+    cursor: pointer;
+    transition: none;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* --- 背景轨道 --- */
+.slider-track {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 34px;
+    height: 34px;
+    background-color: var(--surface-container-highest);
+    border-radius: 17px;
+    box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2),
+                inset -2px -2px 4px rgba(255,255,255,0.05);
+    transition: width 0.3s ease, left 0.3s ease, border-radius 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 鼠标悬停时，轨道展开 */
+.theme-switch:hover .slider-track {
+    width: 60px;
+}
+
+/* 当开关被选中(夜间模式)且鼠标未悬停时，收缩的轨道移动到右边 */
+.theme-switch input:checked + .slider-track {
+    left: 26px;
+}
+
+/* 鼠标悬停在已选中的开关上时，轨道也要保持在左侧展开 */
+.theme-switch:hover input:checked + .slider-track {
+    left: 0;
+}
+
+/* --- 滑块圆点 --- */
+.slider-dot {
+    position: absolute;
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    top: 4px;
+    background-color: var(--md-sys-color-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                background-color 0.3s ease, 
+                box-shadow 0.3s ease;
+}
+
+/* 当开关被选中(夜间模式)时，圆点向右移动 */
+.theme-switch input:checked ~ .slider-dot {
+    transform: translateX(26px);
+    background-color: var(--primary-container);
+}
+
+/* --- 图标样式 --- */
+.slider-dot .icon {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    color: var(--md-sys-color-on-primary);
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sun {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+}
+
+.moon {
+    opacity: 0;
+    transform: translateY(20px) rotate(-45deg);
+}
+
+.theme-switch input:checked ~ .slider-dot .sun {
+    opacity: 0;
+    transform: translateY(-20px) rotate(45deg);
+}
+
+.theme-switch input:checked ~ .slider-dot .moon {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+    color: var(--md-sys-color-on-surface);
+}

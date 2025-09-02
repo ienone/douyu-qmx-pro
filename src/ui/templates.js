@@ -42,7 +42,7 @@ const createUnitInput = (id, label, settingsMeta) => {
                     </label>
                     <fieldset class="qmx-fieldset-unit">
                         <legend>${meta.unit}</legend>
-                        <input type="number" id="${id}" value="${meta.value}">
+                        <input type="number" class="qmx-input" id="${id}" value="${meta.value}">
                     </fieldset>
                 </div>
             `;
@@ -115,7 +115,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 <div class="qmx-settings-grid">
                     <div class="qmx-settings-item">
                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
-                        <input type="number" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
+                        <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
                     </div>
                     <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
@@ -192,15 +192,15 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 <div class="qmx-settings-grid">
                     <div class="qmx-settings-item">
                         <label for="setting-max-tabs">最大工作标签页数量 <span class="qmx-tooltip-icon" data-tooltip-key="max-worker-tabs">?</span></label>
-                        <input type="number" id="setting-max-tabs" value="${SETTINGS.MAX_WORKER_TABS}">
+                        <input type="number" class="qmx-input" id="setting-max-tabs" value="${SETTINGS.MAX_WORKER_TABS}">
                     </div>
                     <div class="qmx-settings-item">
                         <label for="setting-api-fetch-count">单次API获取房间数 <span class="qmx-tooltip-icon" data-tooltip-key="api-room-fetch-count">?</span></label>
-                        <input type="number" id="setting-api-fetch-count" value="${SETTINGS.API_ROOM_FETCH_COUNT}">
+                        <input type="number" class="qmx-input" id="setting-api-fetch-count" value="${SETTINGS.API_ROOM_FETCH_COUNT}">
                     </div>
                     <div class="qmx-settings-item">
                         <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
-                        <input type="number" id="setting-api-retry-count" value="${SETTINGS.API_RETRY_COUNT}">
+                        <input type="number" class="qmx-input" id="setting-api-retry-count" value="${SETTINGS.API_RETRY_COUNT}">
                     </div>
 
                     

@@ -1,0 +1,154 @@
+/* 设置面板样式 */
+
+/* --- 设置面板主容器 --- */
+#qmx-settings-modal {
+    width: 500px;
+    max-width: 95vw;
+}
+
+/* --- 设置面板头部 --- */
+.qmx-settings-header {
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+    flex-shrink: 0;
+}
+
+.qmx-settings-tabs {
+    display: flex;
+    gap: 8px;
+}
+
+.qmx-settings-tabs .tab-link {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    color: var(--md-sys-color-on-surface-variant);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s;
+    font-size: 14px;
+}
+
+.qmx-settings-tabs .tab-link:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+.qmx-settings-tabs .tab-link.active {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    font-weight: 500;
+}
+
+/* --- 设置面板内容区 --- */
+.qmx-settings-content {
+    padding: 16px 24px;
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 60vh;
+    scrollbar-gutter: stable;
+}
+
+.qmx-settings-content .tab-content {
+    display: none;
+}
+
+.qmx-settings-content .tab-content.active {
+    display: block;
+}
+
+/* --- 设置面板底部 --- */
+.qmx-settings-footer {
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    border-top: 1px solid var(--md-sys-color-outline);
+    flex-shrink: 0;
+}
+
+/* --- 设置项布局 --- */
+.qmx-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.qmx-settings-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.qmx-settings-item label {
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.qmx-settings-item small {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.8;
+}
+
+/* --- 设置警告提示 --- */
+.qmx-settings-warning {
+    padding: 12px;
+    background-color: rgba(244, 67, 54, 0.2);
+    border: 1px solid #F44336;
+    color: #EFB8C8;
+    border-radius: 8px;
+    grid-column: 1 / -1;
+}
+
+/* --- 关于页面样式 --- */
+#tab-about {
+    line-height: 1.7;
+    font-size: 14px;
+}
+
+#tab-about h4 {
+    color: var(--md-sys-color-primary);
+    font-size: 16px;
+    font-weight: 500;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+#tab-about h4:first-child {
+    margin-top: 0;
+}
+
+#tab-about p {
+    margin-bottom: 10px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+#tab-about .version-tag {
+    display: inline-block;
+    background-color: var(--md-sys-color-tertiary);
+    color: var(--md-sys-color-on-primary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+#tab-about a {
+    color: var(--md-sys-color-tertiary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+#tab-about a:hover {
+    color: #FFD6E1;
+    text-decoration: underline;
+}

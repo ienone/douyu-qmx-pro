@@ -1,0 +1,265 @@
+/* 主控制面板组件样式 */
+
+/* --- 启动按钮 --- */
+#douyu-qmx-starter-button {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10000;
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    cursor: grab;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0) scale(1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, opacity;
+}
+
+#douyu-qmx-starter-button .icon {
+    font-size: 28px;
+}
+
+#douyu-qmx-starter-button.hidden {
+    opacity: 0;
+    transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0) scale(0.5);
+    pointer-events: none;
+}
+
+/* --- 主控制面板容器 --- */
+#qmx-modal-container {
+    background-color: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    display: flex;
+    flex-direction: column;
+}
+
+#qmx-modal-container.mode-floating,
+#qmx-modal-container.mode-centered {
+    position: fixed;
+    z-index: 9999;
+    width: 335px;
+    max-width: 90vw;
+    max-height: 80vh;
+    border-radius: 28px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.2s ease-out;
+    will-change: transform, opacity;
+}
+
+#qmx-modal-container.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+#qmx-modal-container.mode-floating {
+    top: 0;
+    left: 0;
+    transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0);
+}
+
+#qmx-modal-container.mode-floating .qmx-modal-header {
+    cursor: move;
+}
+
+#qmx-modal-container.mode-centered {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#qmx-modal-container.mode-inject-rank-list {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    box-shadow: none;
+    border-radius: 0;
+    transform: none !important;
+}
+
+/* --- 控制面板头部 --- */
+.qmx-modal-header {
+    position: relative;
+    padding: 16px 24px;
+    font-size: 24px;
+    font-weight: 400;
+    color: var(--md-sys-color-on-surface);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.qmx-modal-close-icon {
+    width: 36px;
+    height: 36px;
+    background-color: rgba(208, 188, 255, 0.15);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.qmx-modal-close-icon:hover {
+    background-color: var(--md-sys-color-primary);
+    transform: scale(1.05) rotate(180deg);
+}
+
+.qmx-modal-close-icon::before,
+.qmx-modal-close-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 2px;
+    background-color: var(--md-sys-color-primary);
+    transition: background-color 0.2s ease-in-out;
+}
+
+.qmx-modal-close-icon:hover::before,
+.qmx-modal-close-icon:hover::after {
+    background-color: var(--md-sys-color-on-primary);
+}
+
+.qmx-modal-close-icon::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.qmx-modal-close-icon::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+/* --- 控制面板内容区 --- */
+.qmx-modal-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 24px;
+}
+
+.qmx-modal-content h3 {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 8px 0;
+}
+
+/* --- Tab 列表项 --- */
+.qmx-tab-list-item {
+    background-color: var(--md-sys-color-surface-bright);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s, transform 0.3s ease, opacity 0.3s ease;
+}
+
+.qmx-tab-list-item:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+.qmx-item-enter {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+.qmx-item-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.qmx-item-exit-active {
+    position: absolute;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all 0.3s ease;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.qmx-tab-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.qmx-tab-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 4px;
+    font-size: 14px;
+    overflow: hidden;
+}
+
+.qmx-tab-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+}
+
+.qmx-tab-nickname {
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qmx-tab-room-id {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.7;
+}
+
+.qmx-tab-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--md-sys-color-on-surface-variant);
+}
+
+.qmx-tab-status-name {
+    font-weight: 500;
+}
+
+.qmx-tab-close-btn {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.2s, color 0.2s, transform 0.2s;
+}
+
+.qmx-tab-close-btn:hover {
+    opacity: 1;
+    color: #F44336;
+    transform: scale(1.1);
+}
+
+/* --- 控制面板底部 --- */
+.qmx-modal-footer {
+    padding: 16px 24px;
+    display: flex;
+    gap: 8px;
+}

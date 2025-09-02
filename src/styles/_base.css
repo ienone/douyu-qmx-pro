@@ -1,0 +1,182 @@
+/* 基础工具类和通用组件 */
+
+/* --- 工具类 --- */
+.qmx-hidden { 
+    display: none !important; 
+}
+
+.qmx-modal-open-scroll-lock { 
+    overflow: hidden !important; 
+}
+
+.is-dragging { 
+    transition: none !important; 
+}
+
+.qmx-flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qmx-flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.qmx-flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- 通用模态框基类 --- */
+.qmx-modal-base {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    z-index: 10001;
+    background-color: var(--md-sys-color-surface-bright);
+    color: var(--md-sys-color-on-surface);
+    border-radius: 28px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+}
+
+.qmx-modal-base.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* --- 通用背景遮罩 --- */
+.qmx-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--md-sys-color-scrim);
+    z-index: 9998;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.qmx-backdrop.visible {
+    opacity: 0.5;
+    visibility: visible;
+}
+
+/* --- 通用按钮基类 --- */
+.qmx-btn {
+    padding: 10px 16px;
+    border: 1px solid var(--md-sys-color-outline);
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+}
+
+.qmx-btn:hover {
+    background-color: rgba(208, 188, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.qmx-btn:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+}
+
+.qmx-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 按钮变体 */
+.qmx-btn--primary {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+}
+
+.qmx-btn--primary:hover {
+    background-color: hsl(252, 100%, 85%);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.qmx-btn--danger {
+    border-color: #F44336;
+    color: #F44336;
+}
+
+.qmx-btn--danger:hover {
+    background-color: rgba(244, 67, 54, 0.1);
+}
+
+.qmx-btn--icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    background-color: rgba(208, 188, 255, 0.15);
+    border: none;
+    color: var(--md-sys-color-primary);
+}
+
+.qmx-btn--icon:hover {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    transform: scale(1.05) rotate(180deg);
+}
+
+/* --- 通用列表样式 --- */
+.qmx-styled-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.qmx-styled-list li {
+    position: relative;
+    padding-left: 20px;
+    margin-bottom: 8px;
+}
+
+.qmx-styled-list li::before {
+    content: '◆';
+    position: absolute;
+    left: 0;
+    top: 2px;
+    color: var(--md-sys-color-primary);
+    font-size: 12px;
+}
+
+/* --- 通用滚动条样式 --- */
+.qmx-scrollbar::-webkit-scrollbar {
+    width: 10px;
+}
+
+.qmx-scrollbar::-webkit-scrollbar-track {
+    background: var(--md-sys-color-surface-bright);
+    border-radius: 10px;
+}
+
+.qmx-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--md-sys-color-primary);
+    border-radius: 10px;
+    border: 2px solid var(--md-sys-color-surface-bright);
+}
+
+.qmx-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #E0D1FF;
+}

@@ -3,7 +3,7 @@
  * @description 负责集成控制页面的UI和交互逻辑。
  */
 
-import '../styles/ControlPanel.css';
+import '../styles/ControlPanel-refactored.css';
 import { mainPanelTemplate } from '../ui/templates.js'; 
 import { Utils } from '../utils/utils';
 import { SETTINGS } from './SettingsManager'; 
