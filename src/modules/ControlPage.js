@@ -171,7 +171,7 @@ export const ControlPage = {
             'qmx-modal-open-btn').onclick = () => this.openOneNewTab();
         document.getElementById(
             'qmx-modal-settings-btn').onclick = () => SettingsPanel.show();
-        document.getElementById('qmx-modal-close-all-btn').onclick = () => {
+        document.getElementById('qmx-modal-close-all-btn').onclick = async () => {
             if (confirm('确定要关闭所有工作标签页吗？')) {
                 Utils.log('用户请求关闭所有标签页。');
 
@@ -180,16 +180,31 @@ export const ControlPage = {
                 this.commandChannel.postMessage(
                     {action: 'CLOSE_ALL', target: '*'});
 
-                // 2: 清空全局状态中的所有标签页，无论工作页是否收到指令，控制中心都认为它们已被处理
+                // 2: 等待一段时间让工作页面有机会响应
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 3: 强制清空全局状态中的所有标签页，无论工作页是否收到指令
                 Utils.log('强制清空全局状态中的标签页列表...');
-                const state = GlobalState.get();
+                let state = GlobalState.get();
                 if (Object.keys(state.tabs).length > 0) {
+                    Utils.log(`清理前还有 ${Object.keys(state.tabs).length} 个标签页残留`);
                     state.tabs = {}; // 直接清空
                     GlobalState.set(state);
                 }
 
-                // 3: 重新渲染UI，面板变空
+                // 4: 重新渲染UI，面板变空
                 this.renderDashboard();
+                
+                // 5: 额外的清理检查，确保UI彻底清空
+                setTimeout(() => {
+                    state = GlobalState.get();
+                    if (Object.keys(state.tabs).length > 0) {
+                        Utils.log('检测到残留标签页，执行二次清理...');
+                        state.tabs = {};
+                        GlobalState.set(state);
+                        this.renderDashboard();
+                    }
+                }, 1000);
             }
         };
         document.getElementById('qmx-tab-list').

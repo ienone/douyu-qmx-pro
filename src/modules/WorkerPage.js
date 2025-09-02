@@ -118,6 +118,18 @@ export const WorkerPage = {
         // 为每个新任务重置卡顿等级
         this.stallLevel = 0;
 
+        // 检查每日上限状态
+        const limitState = GlobalState.getDailyLimit();
+        if (limitState?.reached) {
+            Utils.log(`[上限检查] 房间 ${roomId} 检测到已达每日上限。`);
+            if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
+                await this.enterDormantMode();
+            } else {
+                await this.selfClose(roomId);
+            }
+            return;
+        }
+
         if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
 
         const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
@@ -464,6 +476,41 @@ export const WorkerPage = {
      * 统一的自毁程序
      * 在关闭前，异步从全局状态中移除自己。
      * @param {string} roomId - 要移除的房间ID。
+     * @param {boolean} fromCloseAll - 是否来自"关闭所有"指令。
+     */
+    async selfClose(roomId, fromCloseAll = false) {
+        Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
+
+        // 在关闭前，主动清理定时器
+        if (this.pauseSentinelInterval) {
+            clearInterval(this.pauseSentinelInterval);
+        }
+        
+        // 如果是来自"关闭所有"指令，跳过状态更新，直接移除和关闭
+        if (fromCloseAll) {
+            Utils.log(`[关闭所有] 跳过状态更新，直接关闭标签页 (房间: ${roomId})`);
+            GlobalState.removeWorker(roomId);
+            await Utils.sleep(100);
+            this.closeTab();
+            return;
+        }
+
+        // 1. 广播"正在关闭"的状态，让控制中心知道它已收到指令
+        GlobalState.updateWorker(roomId, 'SWITCHING', '任务结束，关闭中...');
+        await Utils.sleep(100); // 短暂等待确保状态写入
+
+        // 2. 异步地调用状态移除，不阻塞后续的关闭操作
+        GlobalState.removeWorker(roomId);
+        await Utils.sleep(300);
+
+        // 3. 执行关闭
+        this.closeTab();
+    },
+
+    /**
+     * 统一的自毁程序
+     * 在关闭前，异步从全局状态中移除自己。
+     * @param {string} roomId - 要移除的房间ID。
      */
     async selfClose(roomId) {
         Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
@@ -499,6 +546,25 @@ export const WorkerPage = {
         }
     },
 
+    /**
+     * 检查并处理每日上限状态 - 仅在开发调试时使用
+     */
+    /*
+    async checkAndHandleDailyLimit(roomId) {
+        const limitState = GlobalState.getDailyLimit();
+        if (limitState?.reached) {
+            Utils.log(`[调试] 工作页 ${roomId} 收到上限检查指令，检测到已达上限，进入休眠模式。`);
+            if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
+                await this.enterDormantMode();
+            } else {
+                await this.selfClose(roomId);
+            }
+        } else {
+            Utils.log(`[调试] 工作页 ${roomId} 收到上限检查指令，当前未达上限，继续正常运行。`);
+        }
+    },
+    */
+
     startCommandListener(roomId) {
         this.commandChannel = new BroadcastChannel('douyu_qmx_commands');
         Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
@@ -510,9 +576,18 @@ export const WorkerPage = {
             if (target === roomId || target === '*') {
                 Utils.log(`接收到广播指令: ${action} for target ${target}`);
 
-                if (action === 'CLOSE' || action === 'CLOSE_ALL') {
-                    this.selfClose(roomId); // 执行关闭操作
+                if (action === 'CLOSE') {
+                    this.selfClose(roomId, false); // 单个关闭
+                } else if (action === 'CLOSE_ALL') {
+                    this.selfClose(roomId, true); // 批量关闭
                 }
+                // 调试指令处理 - 仅在开发时启用
+                /*
+                else if (action === 'CHECK_LIMIT') {
+                    // 检查每日上限状态，如果达到上限则进入休眠模式
+                    this.checkAndHandleDailyLimit(roomId);
+                }
+                */
                 // 未来可以扩展其他指令, 如 'PAUSE', 'REFRESH' 等
             }
         };

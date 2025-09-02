@@ -441,6 +441,30 @@ formatDateAsBeijing(date) {
 
             <!-- ==================== Tab 4: 关于 ==================== -->
             <div id="tab-about" class="tab-content">
+                <!-- 调试工具 - 仅在开发时启用
+                <h4>调试工具 <span style="color: #ff6b6b;">⚠️ 仅供测试使用</span></h4>
+                <div class="qmx-settings-grid">
+                    <div class="qmx-settings-item">
+                        <label>模拟达到每日上限</label>
+                        <button id="test-daily-limit-btn" class="qmx-modal-btn" style="background-color: #ff6b6b; color: white;">
+                            设置为已达上限
+                        </button>
+                        <small style="color: #888; display: block; margin-top: 5px;">
+                            点击后将模拟达到每日红包上限，触发休眠模式（如果启用）
+                        </small>
+                    </div>
+                    <div class="qmx-settings-item">
+                        <label>重置每日上限状态</label>
+                        <button id="reset-daily-limit-btn" class="qmx-modal-btn">
+                            重置上限状态
+                        </button>
+                        <small style="color: #888; display: block; margin-top: 5px;">
+                            清除上限标记，恢复正常运行模式
+                        </small>
+                    </div>
+                </div>
+                -->
+                
                 <h4>关于脚本 <span class="version-tag">v2.0.6</span></h4>
                 <h4>致谢</h4>
                 <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
@@ -530,6 +554,10 @@ updateWorker(roomId, status, statusText, options = {}) {
       if (status === "DISCONNECTED" && oldTabData.status === "SWITCHING") {
         Utils.log(`[状态管理] 检测到正在切换的标签页已断开连接，判定为成功关闭，立即清理。`);
         this.removeWorker(roomId);
+        return;
+      }
+      if (Object.keys(state.tabs).length === 0 && status === "SWITCHING") {
+        Utils.log(`[状态管理] 检测到全局状态已清空，忽略残留的SWITCHING状态更新 (房间: ${roomId})`);
         return;
       }
       const updates = {
@@ -819,7 +847,8 @@ bindPanelEvents(modal) {
         });
       }
     }
-  };
+
+};
   const FirstTimeNotice = {
 showCalibrationNotice() {
       const NOTICE_SHOWN_KEY = "douyu_qmx_calibration_notice_shown";
@@ -827,11 +856,11 @@ showCalibrationNotice() {
       if (!hasShownNotice) {
         const noticeHTML = `
                 <div class="qmx-modal-header">
-                    <h3>倒计时精准度提示</h3>
+                    <h3>星推荐助手提示</h3>
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <p>注意：如果同时使用了DouyuEx插件"阻止P2P上传"功能，可能会导致倒计时不准确。</p>
+                    <p>注意：如果同时使用了DouyuEx插件"阻止P2P上传"功能，可能会导致后台星推荐红包倒计时不准确。</p>
                     <p>为了获得更精确的倒计时，您可以：</p>
                     <ul>
                         <li>关闭DouyuEx中的"阻止P2P上传"功能</li>
@@ -985,20 +1014,31 @@ bindEvents() {
       document.getElementById(
         "qmx-modal-settings-btn"
       ).onclick = () => SettingsPanel.show();
-      document.getElementById("qmx-modal-close-all-btn").onclick = () => {
+      document.getElementById("qmx-modal-close-all-btn").onclick = async () => {
         if (confirm("确定要关闭所有工作标签页吗？")) {
           Utils.log("用户请求关闭所有标签页。");
           Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
           this.commandChannel.postMessage(
             { action: "CLOSE_ALL", target: "*" }
           );
+          await new Promise((resolve) => setTimeout(resolve, 500));
           Utils.log("强制清空全局状态中的标签页列表...");
-          const state = GlobalState.get();
+          let state = GlobalState.get();
           if (Object.keys(state.tabs).length > 0) {
+            Utils.log(`清理前还有 ${Object.keys(state.tabs).length} 个标签页残留`);
             state.tabs = {};
             GlobalState.set(state);
           }
           this.renderDashboard();
+          setTimeout(() => {
+            state = GlobalState.get();
+            if (Object.keys(state.tabs).length > 0) {
+              Utils.log("检测到残留标签页，执行二次清理...");
+              state.tabs = {};
+              GlobalState.set(state);
+              this.renderDashboard();
+            }
+          }, 1e3);
         }
       };
       document.getElementById("qmx-tab-list").addEventListener("click", (e) => {
@@ -1484,6 +1524,16 @@ async init() {
         this.healthCheckTimeoutId = null;
       }
       this.stallLevel = 0;
+      const limitState = GlobalState.getDailyLimit();
+      if (limitState?.reached) {
+        Utils.log(`[上限检查] 房间 ${roomId} 检测到已达每日上限。`);
+        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
+          await this.enterDormantMode();
+        } else {
+          await this.selfClose(roomId);
+        }
+        return;
+      }
       if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
       const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
       if (!redEnvelopeDiv) {
@@ -1712,6 +1762,24 @@ async enterDormantMode() {
       Utils.log(`将在 ${Math.round(msUntilMidnight / 1e3 / 60)} 分钟后自动刷新页面 (基于北京时间)。`);
       setTimeout(() => window.location.reload(), msUntilMidnight);
     },
+async selfClose(roomId, fromCloseAll = false) {
+      Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
+      if (this.pauseSentinelInterval) {
+        clearInterval(this.pauseSentinelInterval);
+      }
+      if (fromCloseAll) {
+        Utils.log(`[关闭所有] 跳过状态更新，直接关闭标签页 (房间: ${roomId})`);
+        GlobalState.removeWorker(roomId);
+        await Utils.sleep(100);
+        this.closeTab();
+        return;
+      }
+      GlobalState.updateWorker(roomId, "SWITCHING", "任务结束，关闭中...");
+      await Utils.sleep(100);
+      GlobalState.removeWorker(roomId);
+      await Utils.sleep(300);
+      this.closeTab();
+    },
 async selfClose(roomId) {
       Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
       if (this.pauseSentinelInterval) {
@@ -1731,15 +1799,18 @@ closeTab() {
         Utils.log(`关闭失败，故障为: ${e.message}`);
       }
     },
-    startCommandListener(roomId) {
+
+startCommandListener(roomId) {
       this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
       Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
       this.commandChannel.onmessage = (event) => {
         const { action, target } = event.data;
         if (target === roomId || target === "*") {
           Utils.log(`接收到广播指令: ${action} for target ${target}`);
-          if (action === "CLOSE" || action === "CLOSE_ALL") {
-            this.selfClose(roomId);
+          if (action === "CLOSE") {
+            this.selfClose(roomId, false);
+          } else if (action === "CLOSE_ALL") {
+            this.selfClose(roomId, true);
           }
         }
       };

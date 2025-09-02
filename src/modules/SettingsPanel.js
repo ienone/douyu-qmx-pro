@@ -9,6 +9,7 @@ import { activateRangeSlider } from '../ui/components/RangeSlider';
 import { activateToolTips } from '../ui/components/ToolTips';
 import { SETTINGS, SettingsManager } from './SettingsManager';
 import { ThemeManager } from './ThemeManager';
+// import { GlobalState } from './GlobalState'; // 仅在开发调试时需要
 
 /**
  * 设置面板的UI、提示文本和部分交互逻辑
@@ -165,7 +166,43 @@ export const SettingsPanel = {
                 ThemeManager.applyTheme(newTheme);
             });
         }
+
+        // 绑定调试按钮事件 - 仅在开发时启用
+        // this.bindDebugButtons(modal);
     },
+
+    /**
+     * 绑定调试按钮的事件处理器 - 仅在开发时使用
+     */
+    /*
+    bindDebugButtons(modal) {
+        // 模拟达到每日上限按钮
+        const testLimitBtn = modal.querySelector('#test-daily-limit-btn');
+        if (testLimitBtn) {
+            testLimitBtn.onclick = () => {
+                if (confirm('确定要模拟达到每日上限吗？这将触发所有工作页面进入休眠模式。')) {
+                    GlobalState.setDailyLimit(true);
+                    alert('已设置为达到每日上限！现有工作页面将进入休眠模式。');
+                    // 通知所有工作页面检查上限状态
+                    const channel = new BroadcastChannel('douyu_qmx_commands');
+                    channel.postMessage({action: 'CHECK_LIMIT', target: '*'});
+                    channel.close();
+                }
+            };
+        }
+
+        // 重置每日上限按钮
+        const resetLimitBtn = modal.querySelector('#reset-daily-limit-btn');
+        if (resetLimitBtn) {
+            resetLimitBtn.onclick = () => {
+                if (confirm('确定要重置每日上限状态吗？这将允许继续领取红包。')) {
+                    GlobalState.setDailyLimit(false);
+                    alert('已重置每日上限状态！可以继续领取红包。');
+                }
+            };
+        }
+    },
+    */
 
 
 };

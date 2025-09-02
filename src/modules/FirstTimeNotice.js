@@ -20,11 +20,11 @@ export const FirstTimeNotice = {
         if (!hasShownNotice) {
             const noticeHTML = `
                 <div class="qmx-modal-header">
-                    <h3>倒计时精准度提示</h3>
+                    <h3>星推荐助手提示</h3>
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <p>注意：如果同时使用了DouyuEx插件"阻止P2P上传"功能，可能会导致倒计时不准确。</p>
+                    <p>注意：如果同时使用了DouyuEx插件"阻止P2P上传"功能，可能会导致后台星推荐红包倒计时不准确。</p>
                     <p>为了获得更精确的倒计时，您可以：</p>
                     <ul>
                         <li>关闭DouyuEx中的"阻止P2P上传"功能</li>

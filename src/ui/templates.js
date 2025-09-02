@@ -213,6 +213,30 @@ export const settingsPanelTemplate = (SETTINGS) => {
 
             <!-- ==================== Tab 4: 关于 ==================== -->
             <div id="tab-about" class="tab-content">
+                <!-- 调试工具 - 仅在开发时启用
+                <h4>调试工具 <span style="color: #ff6b6b;">⚠️ 仅供测试使用</span></h4>
+                <div class="qmx-settings-grid">
+                    <div class="qmx-settings-item">
+                        <label>模拟达到每日上限</label>
+                        <button id="test-daily-limit-btn" class="qmx-modal-btn" style="background-color: #ff6b6b; color: white;">
+                            设置为已达上限
+                        </button>
+                        <small style="color: #888; display: block; margin-top: 5px;">
+                            点击后将模拟达到每日红包上限，触发休眠模式（如果启用）
+                        </small>
+                    </div>
+                    <div class="qmx-settings-item">
+                        <label>重置每日上限状态</label>
+                        <button id="reset-daily-limit-btn" class="qmx-modal-btn">
+                            重置上限状态
+                        </button>
+                        <small style="color: #888; display: block; margin-top: 5px;">
+                            清除上限标记，恢复正常运行模式
+                        </small>
+                    </div>
+                </div>
+                -->
+                
                 <h4>关于脚本 <span class="version-tag">v2.0.6</span></h4>
                 <h4>致谢</h4>
                 <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>

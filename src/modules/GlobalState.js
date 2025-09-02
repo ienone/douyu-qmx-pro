@@ -73,6 +73,14 @@ export const GlobalState = {
             return; // 任务完成，提前退出
         }
 
+        // --- 防止在"关闭所有"操作后重新添加标签页 ---
+        // 如果当前状态中没有任何标签页，且这是一个SWITCHING状态的更新，
+        // 很可能是在"关闭所有"操作后的残留更新，应该忽略
+        if (Object.keys(state.tabs).length === 0 && status === 'SWITCHING') {
+            Utils.log(`[状态管理] 检测到全局状态已清空，忽略残留的SWITCHING状态更新 (房间: ${roomId})`);
+            return;
+        }
+
         // 1. 创建一个包含所有新数据的临时对象
         const updates = {
             status,
