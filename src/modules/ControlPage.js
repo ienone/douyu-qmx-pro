@@ -51,6 +51,9 @@ export const ControlPage = {
                 this.commandChannel.close();
             }
         });
+        window.addEventListener('resize', () => {
+            this.correctButtonPosition();
+        });
     },
 
     createHTML() {
@@ -463,7 +466,7 @@ export const ControlPage = {
     },
 
     /**
-     * 设置拖拽功能 (v3: 使用 CSS 变量解耦，解决动画问题)
+     * 设置拖拽功能 (v4: 使用比例定位)
      * @param {HTMLElement} element - 要拖拽的元素。
      * @param {string} storageKey - 用于存储位置的键。
      * @param {Function | null} onClick - 当发生有效点击时要执行的回调函数。
@@ -480,15 +483,38 @@ export const ControlPage = {
             element.style.setProperty('--ty', `${y}px`);
         };
 
+        // --- 位置加载与转换逻辑 ---
         const savedPos = GM_getValue(storageKey);
-        if (savedPos && typeof savedPos.x === 'number' && typeof savedPos.y ===
-            'number') {
-            setPosition(savedPos.x, savedPos.y);
+        let currentRatio = null;
+
+        if (savedPos) {
+            // 1. 如果是新的比例格式
+            if (typeof savedPos.ratioX === 'number' && typeof savedPos.ratioY === 'number') {
+                currentRatio = savedPos;
+            }
+            // 2. 如果是旧的像素格式，并且启用了转换
+            else if (SETTINGS.CONVERT_LEGACY_POSITION && typeof savedPos.x === 'number' && typeof savedPos.y === 'number') {
+                Utils.log(`[位置迁移] 发现旧的像素位置，正在转换为比例位置...`);
+                const movableWidth = window.innerWidth - element.offsetWidth;
+                const movableHeight = window.innerHeight - element.offsetHeight;
+                currentRatio = {
+                    ratioX: Math.max(0, Math.min(1, savedPos.x / movableWidth)),
+                    ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight))
+                };
+                GM_setValue(storageKey, currentRatio); // 保存新格式
+            }
+        }
+
+        if (currentRatio) {
+            // 根据比例计算当前位置
+            const newX = currentRatio.ratioX * (window.innerWidth - element.offsetWidth);
+            const newY = currentRatio.ratioY * (window.innerHeight - element.offsetHeight);
+            setPosition(newX, newY);
         } else {
+            // --- 默认位置 ---
             if (element.id === SETTINGS.DRAGGABLE_BUTTON_ID) {
                 const padding = SETTINGS.DRAG_BUTTON_DEFAULT_PADDING;
-                const defaultX = window.innerWidth - element.offsetWidth -
-                    padding;
+                const defaultX = window.innerWidth - element.offsetWidth - padding;
                 const defaultY = padding;
                 setPosition(defaultX, defaultY);
             } else {
@@ -497,6 +523,7 @@ export const ControlPage = {
                 setPosition(defaultX, defaultY);
             }
         }
+
 
         const onMouseDown = (e) => {
             if (e.button !== 0) return;
@@ -510,7 +537,7 @@ export const ControlPage = {
             initialX = rect.left;
             initialY = rect.top;
 
-            element.classList.add('is-dragging'); // 拖动开始时，立即禁用动画
+            element.classList.add('is-dragging');
             handle.style.cursor = 'grabbing';
 
             document.addEventListener('mousemove', onMouseMove);
@@ -547,14 +574,18 @@ export const ControlPage = {
             handle.style.cursor = 'grab';
 
             if (hasDragged) {
-                // 拖拽结束：保存位置
+                // --- 拖拽结束：保存比例位置 ---
                 const finalRect = element.getBoundingClientRect();
-                GM_setValue(storageKey, {x: finalRect.left, y: finalRect.top});
-            } else {
-                // 未拖拽：执行点击
-                if (onClick && typeof onClick === 'function') {
-                    onClick();
-                }
+                const movableWidth = window.innerWidth - element.offsetWidth;
+                const movableHeight = window.innerHeight - element.offsetHeight;
+                
+                const ratioX = movableWidth > 0 ? Math.max(0, Math.min(1, finalRect.left / movableWidth)) : 0;
+                const ratioY = movableHeight > 0 ? Math.max(0, Math.min(1, finalRect.top / movableHeight)) : 0;
+
+                GM_setValue(storageKey, { ratioX, ratioY });
+
+            } else if (onClick && typeof onClick === 'function') {
+                onClick();
             }
         };
 
@@ -689,5 +720,23 @@ export const ControlPage = {
         modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
         modalContainer.classList.add(`mode-${mode}`);
     },
+
+    /**
+     * 校正悬浮按钮位置，确保在屏幕可见区域
+     */
+    correctButtonPosition() {
+        const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+        const storageKey = SETTINGS.BUTTON_POS_STORAGE_KEY;
+        if (!mainButton) return;
+
+        const savedPos = GM_getValue(storageKey);
+        if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
+            const newX = savedPos.ratioX * (window.innerWidth - mainButton.offsetWidth);
+            const newY = savedPos.ratioY * (window.innerHeight - mainButton.offsetHeight);
+            
+            mainButton.style.setProperty('--tx', `${newX}px`);
+            mainButton.style.setProperty('--ty', `${newY}px`);
+        }
+    },  
 
 };
