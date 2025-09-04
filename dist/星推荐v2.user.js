@@ -65,6 +65,7 @@ INJECT_TARGET_INTERVAL: 500,
 API_ROOM_FETCH_COUNT: 10,
 UI_FEEDBACK_DELAY: 2e3,
 DRAG_BUTTON_DEFAULT_PADDING: 20,
+CONVERT_LEGACY_POSITION: true,
 
 
 SELECTORS: {
@@ -488,6 +489,7 @@ formatDateAsBeijing(date) {
                         </ul>
                     </li>
                     <li>【修复】修复达到每日上限后，点击“关闭所有”功能时 UI 界面残留的问题</b></li>
+                    <li>【修复】修复缩放/改变屏幕分辨率的情况下，🎁图标可能消失的问题</b></li>
                     <li>【优化】优化返回旧版UI逻辑，修复无法跳转空白页 by @Truthss</b></li>
                     <li>【修复】尝试修复红包倒计时卡死 by @Truthss </b></li>
                     <li>【重构】使用Vite对项目进行解耦重构 by @Truthss | @ienone </b></li>
@@ -853,7 +855,7 @@ showCalibrationNotice() {
                         <li>进入设置 → 性能与延迟 → 开启"校准模式"</li>
                         <li>刷新页面</li>
                     </ul>
-                    <p class="qmx-warning-text"><strong>⚠️ 注意："校准模式"和DouyuEx插件"阻止P2P上传"功能不可并存</strong></p>
+                    <p class="qmx-warning-text"><strong> 注意："校准模式"和DouyuEx插件"阻止P2P上传"功能不可并存</strong></p>
                     <h4> 项目地址<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer">douyu-qmx-pro</a>，求个star🌟~~</h4>
                 </div>
                 <div class="qmx-modal-footer">
@@ -908,6 +910,9 @@ init() {
         if (this.commandChannel) {
           this.commandChannel.close();
         }
+      });
+      window.addEventListener("resize", () => {
+        this.correctButtonPosition();
       });
     },
     createHTML() {
@@ -1242,8 +1247,25 @@ setupDrag(element, storageKey, onClick, handle = element) {
         element.style.setProperty("--ty", `${y}px`);
       };
       const savedPos = GM_getValue(storageKey);
-      if (savedPos && typeof savedPos.x === "number" && typeof savedPos.y === "number") {
-        setPosition(savedPos.x, savedPos.y);
+      let currentRatio = null;
+      if (savedPos) {
+        if (typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
+          currentRatio = savedPos;
+        } else if (SETTINGS.CONVERT_LEGACY_POSITION && typeof savedPos.x === "number" && typeof savedPos.y === "number") {
+          Utils.log(`[位置迁移] 发现旧的像素位置，正在转换为比例位置...`);
+          const movableWidth = window.innerWidth - element.offsetWidth;
+          const movableHeight = window.innerHeight - element.offsetHeight;
+          currentRatio = {
+            ratioX: Math.max(0, Math.min(1, savedPos.x / movableWidth)),
+            ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight))
+          };
+          GM_setValue(storageKey, currentRatio);
+        }
+      }
+      if (currentRatio) {
+        const newX = currentRatio.ratioX * (window.innerWidth - element.offsetWidth);
+        const newY = currentRatio.ratioY * (window.innerHeight - element.offsetHeight);
+        setPosition(newX, newY);
       } else {
         if (element.id === SETTINGS.DRAGGABLE_BUTTON_ID) {
           const padding = SETTINGS.DRAG_BUTTON_DEFAULT_PADDING;
@@ -1293,11 +1315,13 @@ setupDrag(element, storageKey, onClick, handle = element) {
         handle.style.cursor = "grab";
         if (hasDragged) {
           const finalRect = element.getBoundingClientRect();
-          GM_setValue(storageKey, { x: finalRect.left, y: finalRect.top });
-        } else {
-          if (onClick && typeof onClick === "function") {
-            onClick();
-          }
+          const movableWidth = window.innerWidth - element.offsetWidth;
+          const movableHeight = window.innerHeight - element.offsetHeight;
+          const ratioX = movableWidth > 0 ? Math.max(0, Math.min(1, finalRect.left / movableWidth)) : 0;
+          const ratioY = movableHeight > 0 ? Math.max(0, Math.min(1, finalRect.top / movableHeight)) : 0;
+          GM_setValue(storageKey, { ratioX, ratioY });
+        } else if (onClick && typeof onClick === "function") {
+          onClick();
         }
       };
       handle.addEventListener("mousedown", onMouseDown);
@@ -1400,6 +1424,18 @@ applyModalMode() {
       this.isPanelInjected = false;
       modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
       modalContainer.classList.add(`mode-${mode}`);
+    },
+correctButtonPosition() {
+      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+      const storageKey = SETTINGS.BUTTON_POS_STORAGE_KEY;
+      if (!mainButton) return;
+      const savedPos = GM_getValue(storageKey);
+      if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
+        const newX = savedPos.ratioX * (window.innerWidth - mainButton.offsetWidth);
+        const newY = savedPos.ratioY * (window.innerHeight - mainButton.offsetHeight);
+        mainButton.style.setProperty("--tx", `${newX}px`);
+        mainButton.style.setProperty("--ty", `${newY}px`);
+      }
     }
   };
   const DOM = {

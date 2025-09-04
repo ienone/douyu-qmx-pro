@@ -54,6 +54,7 @@ export const CONFIG = {
     API_ROOM_FETCH_COUNT: 10, // 单次调用API时，期望获取的直播间数量建议值。
     UI_FEEDBACK_DELAY: 2000, // UI上临时反馈信息（如“无新房间”）的显示时长。
     DRAG_BUTTON_DEFAULT_PADDING: 20, // 主悬浮按钮距离屏幕边缘的默认像素间距。
+    CONVERT_LEGACY_POSITION: true, // 是否自动将旧的像素位置转换为新的比例位置，仅执行一次。
 
     // --- 选择器 ---
     // 存储所有脚本需要操作的页面元素的CSS选择器，便于统一管理和修改。

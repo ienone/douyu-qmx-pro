@@ -260,6 +260,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         </ul>
                     </li>
                     <li>【修复】修复达到每日上限后，点击“关闭所有”功能时 UI 界面残留的问题</b></li>
+                    <li>【修复】修复缩放/改变屏幕分辨率的情况下，🎁图标可能消失的问题</b></li>
                     <li>【优化】优化返回旧版UI逻辑，修复无法跳转空白页 by @Truthss</b></li>
                     <li>【修复】尝试修复红包倒计时卡死 by @Truthss </b></li>
                     <li>【重构】使用Vite对项目进行解耦重构 by @Truthss | @ienone </b></li>
