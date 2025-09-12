@@ -3,8 +3,8 @@
  * @description 负责管理页面的全局状态，包括标签页状态信息等。
  */
 
-import { Utils } from "../utils/utils";
-import { SETTINGS } from "./SettingsManager";
+import { Utils } from '../utils/utils';
+import { SETTINGS } from './SettingsManager';
 
 /**
  * =================================================================================
@@ -33,11 +33,11 @@ export const GlobalState = {
      * @param {object} state - 要保存的状态。
      */
     set(state) {
-        const lockKey = "douyu_qmx_state_lock";
+        const lockKey = 'douyu_qmx_state_lock';
         if (!Utils.lockChecker(lockKey, () => this.set(), state)) {
             return;
         }
-        Utils.setLocalValueWithLock(lockKey, SETTINGS.STATE_STORAGE_KEY, state, "更新全局状态");
+        Utils.setLocalValueWithLock(lockKey, SETTINGS.STATE_STORAGE_KEY, state, '更新全局状态');
     },
 
     /**
@@ -54,7 +54,7 @@ export const GlobalState = {
         const oldTabData = state.tabs[roomId] || {};
 
         // --- 状态流转逻辑补丁 ---
-        if (status === "DISCONNECTED" && oldTabData.status === "SWITCHING") {
+        if (status === 'DISCONNECTED' && oldTabData.status === 'SWITCHING') {
             Utils.log(`[状态管理] 检测到正在切换的标签页已断开连接，判定为成功关闭，立即清理。`);
             this.removeWorker(roomId); // 直接调用清理函数
             return; // 任务完成，提前退出
@@ -63,7 +63,7 @@ export const GlobalState = {
         // --- 防止在"关闭所有"操作后重新添加标签页 ---
         // 如果当前状态中没有任何标签页，且这是一个SWITCHING状态的更新，
         // 很可能是在"关闭所有"操作后的残留更新，应该忽略
-        if (Object.keys(state.tabs).length === 0 && status === "SWITCHING") {
+        if (Object.keys(state.tabs).length === 0 && status === 'SWITCHING') {
             Utils.log(`[状态管理] 检测到全局状态已清空，忽略残留的SWITCHING状态更新 (房间: ${roomId})`);
             return;
         }

@@ -1,4 +1,4 @@
-import { SETTINGS } from "../modules/SettingsManager";
+import { SETTINGS } from '../modules/SettingsManager';
 
 /**
  * =================================================================================
@@ -44,7 +44,7 @@ export const Utils = {
      */
     getCurrentRoomId() {
         const match = window.location.href.match(/douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/);
-        return match ? match[1] || new URLSearchParams(window.location.search).get("rid") : null;
+        return match ? match[1] || new URLSearchParams(window.location.search).get('rid') : null;
     },
 
     /**
@@ -55,8 +55,8 @@ export const Utils = {
     formatTime(totalSeconds) {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = Math.floor(totalSeconds % 60);
-        const paddedMinutes = String(minutes).padStart(2, "0");
-        const paddedSeconds = String(seconds).padStart(2, "0");
+        const paddedMinutes = String(minutes).padStart(2, '0');
+        const paddedSeconds = String(seconds).padStart(2, '0');
         return `${paddedMinutes}:${paddedSeconds}`;
     },
 
@@ -79,11 +79,10 @@ export const Utils = {
     formatDateAsBeijing(date) {
         // 先将传入的任何时区的date对象转为北京时间的date对象
         const beijingDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
-
         // 然后从这个新的date对象中，按UTC标准提取年月日
         const year = beijingDate.getUTCFullYear();
-        const month = String(beijingDate.getUTCMonth() + 1).padStart(2, "0");
-        const day = String(beijingDate.getUTCDate()).padStart(2, "0");
+        const month = String(beijingDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(beijingDate.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     },
 
@@ -102,6 +101,7 @@ export const Utils = {
         }
         return true;
     },
+
     /**
      * 安全地使用锁写入本地存储
      * @param {string} lockKey - 锁定键
