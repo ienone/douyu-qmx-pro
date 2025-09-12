@@ -1,4 +1,4 @@
-import { SETTINGS } from "../modules/SettingsManager";
+import { SETTINGS } from '../modules/SettingsManager';
 
 /**
  * =================================================================================
@@ -44,7 +44,7 @@ export const Utils = {
      */
     getCurrentRoomId() {
         const match = window.location.href.match(/douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/);
-        return match ? match[1] || new URLSearchParams(window.location.search).get("rid") : null;
+        return match ? match[1] || new URLSearchParams(window.location.search).get('rid') : null;
     },
 
     /**
@@ -55,8 +55,8 @@ export const Utils = {
     formatTime(totalSeconds) {
         const minutes = Math.floor(totalSeconds / 60);
         const seconds = Math.floor(totalSeconds % 60);
-        const paddedMinutes = String(minutes).padStart(2, "0");
-        const paddedSeconds = String(seconds).padStart(2, "0");
+        const paddedMinutes = String(minutes).padStart(2, '0');
+        const paddedSeconds = String(seconds).padStart(2, '0');
         return `${paddedMinutes}:${paddedSeconds}`;
     },
 
@@ -82,13 +82,13 @@ export const Utils = {
 
         // 然后从这个新的date对象中，按UTC标准提取年月日
         const year = beijingDate.getUTCFullYear();
-        const month = String(beijingDate.getUTCMonth() + 1).padStart(2, "0");
-        const day = String(beijingDate.getUTCDate()).padStart(2, "0");
+        const month = String(beijingDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(beijingDate.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     },
 
     /**
-     * 防冲突锁机制
+     * 防冲突锁检测
      * @param {string} lockKey - 在油猴中本地保存的键 key
      * @param {function} callback - 回调函数发现有锁时延迟回调
      * @param args - 回调函数的参数
