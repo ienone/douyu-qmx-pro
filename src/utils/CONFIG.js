@@ -33,6 +33,7 @@ export const CONFIG = {
 
     // --- API 相关 ---
     API_URL: 'https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/square/list', // 获取可领取红包直播间列表的官方API地址。
+    COIN_LIST_URL: 'https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/coin/record/list', // 获取金币历史的API地址
     API_RETRY_COUNT: 3, // API请求失败时的最大重试次数。
     API_RETRY_DELAY: 5000, // 每次API请求重试之间的等待时间。
 
@@ -46,6 +47,7 @@ export const CONFIG = {
     // --- 存储键名 ---
     STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state', // 用于在油猴存储中记录脚本核心状态（如所有工作标签页信息）的键名。
     DAILY_LIMIT_REACHED_KEY: 'douyu_qmx_daily_limit_reached', // 用于在油猴存储中记录“每日上限”状态的键名。
+    STATS_INFO_STORAGE_KEY: 'douyu_qmx_stats', // 存储统计信息的键名
 
     // --- UI 与 API ---
     DEFAULT_THEME: 'dark',

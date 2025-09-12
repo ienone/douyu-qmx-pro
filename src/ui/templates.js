@@ -14,6 +14,10 @@ export const mainPanelTemplate = (maxTabs) =>`
         <span>控制中心</span>
         <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
     </div>
+    <div class="qmx-modal-stats-content">
+        <h3>统计面板</h3>
+        <div class="qmx-modal-stats"></div>
+    </div>
     <div class="qmx-modal-content">
         <h3>监控面板 (<span id="qmx-active-tabs-count">0</span>/${maxTabs})</h3>
         <div id="qmx-tab-list"></div>

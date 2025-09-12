@@ -7,6 +7,7 @@ import { GlobalState } from './GlobalState';
 import { DOM } from '../utils/DOM';
 import { SETTINGS, STATE } from './SettingsManager';
 import { DouyuAPI } from '../utils/DouyuAPI';
+import { StatsInfo } from './StatsInfo.js';
 
 /**
  * =================================================================================
@@ -365,6 +366,9 @@ export const WorkerPage = {
         }
 
         STATE.lastActionTime = Date.now();
+
+        // 更新统计信息
+        StatsInfo.update()
 
         // 核心：无论成功与否，等待后都回到起点，寻找下一个任务
         Utils.log('操作完成，2秒后在本房间内寻找下一个任务...');
