@@ -21,6 +21,9 @@ export const GlobalState = {
      */
     get() {
         const state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {} });
+        if (!state) {
+            const state = { tabs: {} };
+        }
         // 日志：记录每次读取操作，以及读取到了什么
         return state;
     },
@@ -30,27 +33,11 @@ export const GlobalState = {
      * @param {object} state - 要保存的状态。
      */
     set(state) {
-
-        // --- 防冲突锁机制 ---
         const lockKey = 'douyu_qmx_state_lock';
-        if (GM_getValue(lockKey, false)) {
-            // 如果发现有锁，则延迟50毫秒后重试，避免冲突
-            setTimeout(() => this.set(state), 50);
+        if (!Utils.lockChecker(lockKey, () => this.set(), state)) {
             return;
         }
-
-        try {
-            // 上锁
-            GM_setValue(lockKey, true);
-
-            // 执行写入操作
-            GM_setValue(SETTINGS.STATE_STORAGE_KEY, state);
-        } catch (e) {
-            Utils.log(`[全局状态-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
-        } finally {
-            // 无论成功与否，最后都要解锁
-            GM_setValue(lockKey, false);
-        }
+        Utils.setLocalValueWithLock(lockKey, SETTINGS.STATE_STORAGE_KEY, state, '更新全局状态');
     },
 
     /**
@@ -86,7 +73,7 @@ export const GlobalState = {
             status,
             statusText,
             lastUpdateTime: Date.now(),
-            ...options
+            ...options,
         };
 
         // 2. 将旧数据和新数据合并到一个全新的对象中
@@ -130,5 +117,5 @@ export const GlobalState = {
      */
     getDailyLimit() {
         return GM_getValue(SETTINGS.DAILY_LIMIT_REACHED_KEY);
-    }
+    },
 };

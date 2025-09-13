@@ -9,6 +9,9 @@ lerna-debug.log*
 
 node_modules
 *.local
+src/test/
 
 # IDE
 .idea/
+.vscode/
+.vs/
