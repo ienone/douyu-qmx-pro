@@ -993,22 +993,8 @@ showCalibrationNotice() {
         GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, dataObj);
       }
       this.updateTodayData();
-      await this.update();
-      const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY);
-      if (!allData) {
-        Utils.log("获取本地历史数据失败");
-      }
-      let newAllData = Object.keys(allData).filter((dateString) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const date = new Date(dateString);
-        const diff = today - date;
-        const dayDiff = diff / (1e3 * 60 * 60 * 24);
-        return dayDiff <= 1;
-      }).reduce((obj, key) => {
-        return Object.assign(obj, { [key]: allData[key] });
-      }, {});
-      GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
+      await this.getCoinListUpdate();
+      this.removeExpiredData();
     },
 initRender: function(name, nickname) {
       const newItem = document.createElement("div");
@@ -1081,7 +1067,7 @@ set: function(name, value) {
       Utils.setLocalValueWithLock(lockKey, SETTINGS.STATS_INFO_STORAGE_KEY, allData, "更新统计数据");
       this.refreshUI(todayData);
     },
-    update: async function() {
+getCoinListUpdate: async function() {
       const coinList = await DouyuAPI.getCoinRecord(1, 100, 3);
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
@@ -1101,6 +1087,24 @@ refreshUI: function(todayData) {
         let item = dataName.querySelector(".qmx-stat-item");
         item.textContent = todayData[todayDataKey];
       }
+    },
+removeExpiredData: function() {
+      const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY);
+      if (!allData) {
+        Utils.log("获取本地历史数据失败");
+      }
+      let newAllData = Object.keys(allData).filter((dateString) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const date = new Date(dateString);
+        const diff = today - date;
+        const dayDiff = diff / (1e3 * 60 * 60 * 24);
+        return dayDiff <= 1;
+      }).reduce((obj, key) => {
+        return Object.assign(obj, { [key]: allData[key] });
+      }, {});
+      GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
+      Utils.log("[数据统计]：已清理过期数据");
     }
   };
   const ControlPage = {
@@ -1164,17 +1168,13 @@ cleanupAndMonitorWorkers() {
           continue;
         }
         if (tab.status === "SWITCHING" && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
-          Utils.log(
-            `[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`
-          );
+          Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
           delete state.tabs[roomId];
           stateModified = true;
           continue;
         }
         if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== "UNRESPONSIVE") {
-          Utils.log(
-            `[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`
-          );
+          Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`);
           tab.status = "UNRESPONSIVE";
           tab.statusText = "心跳失联，请点击激活或关闭此标签页";
           stateModified = true;
@@ -1189,25 +1189,12 @@ bindEvents() {
       const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
       const modalContainer = document.getElementById("qmx-modal-container");
       const modalBackdrop = document.getElementById("qmx-modal-backdrop");
-      this.setupDrag(
-        mainButton,
-        SETTINGS.BUTTON_POS_STORAGE_KEY,
-        () => this.showPanel()
-      );
+      this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
       if (SETTINGS.MODAL_DISPLAY_MODE === "floating") {
-        const modalHeader = modalContainer.querySelector(
-          ".qmx-modal-header"
-        );
-        this.setupDrag(
-          modalContainer,
-          "douyu_qmx_modal_position",
-          null,
-          modalHeader
-        );
+        const modalHeader = modalContainer.querySelector(".qmx-modal-header");
+        this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
       }
-      document.getElementById(
-        "qmx-modal-close-btn"
-      ).onclick = () => this.hidePanel();
+      document.getElementById("qmx-modal-close-btn").onclick = () => this.hidePanel();
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && modalContainer.classList.contains("visible")) {
           this.hidePanel();
@@ -1216,19 +1203,13 @@ bindEvents() {
       if (SETTINGS.MODAL_DISPLAY_MODE !== "inject-rank-list") {
         modalBackdrop.onclick = () => this.hidePanel();
       }
-      document.getElementById(
-        "qmx-modal-open-btn"
-      ).onclick = () => this.openOneNewTab();
-      document.getElementById(
-        "qmx-modal-settings-btn"
-      ).onclick = () => SettingsPanel.show();
+      document.getElementById("qmx-modal-open-btn").onclick = () => this.openOneNewTab();
+      document.getElementById("qmx-modal-settings-btn").onclick = () => SettingsPanel.show();
       document.getElementById("qmx-modal-close-all-btn").onclick = async () => {
         if (confirm("确定要关闭所有工作标签页吗？")) {
           Utils.log("用户请求关闭所有标签页。");
           Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
-          this.commandChannel.postMessage(
-            { action: "CLOSE_ALL", target: "*" }
-          );
+          this.commandChannel.postMessage({ action: "CLOSE_ALL", target: "*" });
           await new Promise((resolve) => setTimeout(resolve, 500));
           Utils.log("强制清空全局状态中的标签页列表...");
           let state = GlobalState.get();
@@ -1259,12 +1240,8 @@ bindEvents() {
         const state = GlobalState.get();
         delete state.tabs[roomId];
         GlobalState.set(state);
-        Utils.log(
-          `通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`
-        );
-        this.commandChannel.postMessage(
-          { action: "CLOSE", target: roomId }
-        );
+        Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
+        this.commandChannel.postMessage({ action: "CLOSE", target: roomId });
         roomItem.style.opacity = "0";
         roomItem.style.transform = "scale(0.8)";
         roomItem.style.transition = "all 0.3s ease";
@@ -1276,9 +1253,7 @@ renderDashboard() {
       const tabList = document.getElementById("qmx-tab-list");
       if (!tabList) return;
       const tabIds = Object.keys(state.tabs);
-      document.getElementById(
-        "qmx-active-tabs-count"
-      ).textContent = tabIds.length;
+      document.getElementById("qmx-active-tabs-count").textContent = tabIds.length;
       const statusDisplayMap = {
         OPENING: "加载中",
         WAITING: "等待中",
@@ -1290,33 +1265,30 @@ renderDashboard() {
         DISCONNECTED: "已断开",
         STALLED: "UI节流"
       };
-      const existingRoomIds = new Set(Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean));
+      const existingRoomIds = new Set(
+        Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean)
+      );
       tabIds.forEach((roomId) => {
         const tabData = state.tabs[roomId];
-        let existingItem = tabList.querySelector(
-          `[data-room-id="${roomId}"]`
-        );
+        let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
         let currentStatusText = tabData.statusText;
         if (tabData.status === "WAITING" && tabData.countdown?.endTime && (!currentStatusText || currentStatusText.startsWith("倒计时") || currentStatusText === "寻找任务中...")) {
           const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1e3;
           if (remainingSeconds > 0) {
-            currentStatusText = `倒计时 ${Utils.formatTime(
-            remainingSeconds
-          )}`;
+            currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
           } else {
             currentStatusText = "等待开抢...";
           }
         }
+        {
+          if (currentStatusText.includes("领取到")) {
+            StatsInfo.getCoinListUpdate();
+          }
+        }
         if (existingItem) {
-          const nicknameEl = existingItem.querySelector(
-            ".qmx-tab-nickname"
-          );
-          const statusNameEl = existingItem.querySelector(
-            ".qmx-tab-status-name"
-          );
-          const statusTextEl = existingItem.querySelector(
-            ".qmx-tab-status-text"
-          );
+          const nicknameEl = existingItem.querySelector(".qmx-tab-nickname");
+          const statusNameEl = existingItem.querySelector(".qmx-tab-status-name");
+          const statusTextEl = existingItem.querySelector(".qmx-tab-status-text");
           const dotEl = existingItem.querySelector(".qmx-tab-status-dot");
           if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
             nicknameEl.textContent = tabData.nickname;
@@ -1330,31 +1302,19 @@ renderDashboard() {
             statusTextEl.textContent = currentStatusText;
           }
         } else {
-          const newItem = this.createTaskItem(
-            roomId,
-            tabData,
-            statusDisplayMap,
-            currentStatusText
-          );
+          const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
           tabList.appendChild(newItem);
           requestAnimationFrame(() => {
             newItem.classList.add("qmx-item-enter-active");
-            setTimeout(
-              () => newItem.classList.remove("qmx-item-enter"),
-              300
-            );
+            setTimeout(() => newItem.classList.remove("qmx-item-enter"), 300);
           });
         }
       });
       existingRoomIds.forEach((roomId) => {
         if (!state.tabs[roomId]) {
-          const itemToRemove = tabList.querySelector(
-            `[data-room-id="${roomId}"]`
-          );
+          const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
           if (itemToRemove && !itemToRemove.classList.contains("qmx-item-exit-active")) {
-            Utils.log(
-              `[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`
-            );
+            Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`);
             itemToRemove.classList.add("qmx-item-exit-active");
             setTimeout(() => itemToRemove.remove(), 300);
           }
@@ -1385,10 +1345,7 @@ renderLimitStatus() {
           limitMessageEl.id = "qmx-limit-message";
           limitMessageEl.style.cssText = "padding: 10px 24px; background-color: var(--status-color-error); color: white; font-weight: 500; text-align: center;";
           const header = document.querySelector(".qmx-modal-header");
-          header.parentNode.insertBefore(
-            limitMessageEl,
-            header.nextSibling
-          );
+          header.parentNode.insertBefore(limitMessageEl, header.nextSibling);
           document.querySelector(".qmx-modal-header").after(limitMessageEl);
         }
         if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
@@ -1419,9 +1376,7 @@ async openOneNewTab() {
       openBtn.textContent = "正在查找...";
       try {
         const openedRoomIds = new Set(Object.keys(state.tabs));
-        const apiRoomUrls = await DouyuAPI.getRooms(
-          SETTINGS.API_ROOM_FETCH_COUNT
-        );
+        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
         const newUrl = apiRoomUrls.find((url) => {
           const rid = url.match(/\/(\d+)/)?.[1];
           return rid && !openedRoomIds.has(rid);
@@ -1602,30 +1557,17 @@ applyModalMode() {
       Utils.log(`尝试应用模态框模式: ${mode}`);
       if (mode === "inject-rank-list") {
         const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
-          const target = document.querySelector(
-            SETTINGS.SELECTORS.rankListContainer
-          );
+          const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
           if (target) {
             Utils.log("注入目标已找到，开始注入...");
             this.injectionTarget = target;
             this.isPanelInjected = true;
-            target.parentNode.insertBefore(
-              modalContainer,
-              target.nextSibling
-            );
-            modalContainer.classList.add(
-              "mode-inject-rank-list",
-              "qmx-hidden"
-            );
+            target.parentNode.insertBefore(modalContainer, target.nextSibling);
+            modalContainer.classList.add("mode-inject-rank-list", "qmx-hidden");
           } else if (retries > 0) {
-            setTimeout(
-              () => waitForTarget(retries - 1, interval),
-              interval
-            );
+            setTimeout(() => waitForTarget(retries - 1, interval), interval);
           } else {
-            Utils.log(
-              `[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`
-            );
+            Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
             Utils.log("[降级] 自动切换到 'floating' 备用模式。");
             SETTINGS.MODAL_DISPLAY_MODE = "floating";
             this.applyModalMode();
@@ -1796,7 +1738,9 @@ async init() {
         this.lastHealthCheckTime = Date.now();
         this.lastPageCountdown = remainingSeconds;
         Utils.log(`发现新任务：倒计时 ${statusText}。`);
-        GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${statusText}`, { countdown: { endTime: this.currentTaskEndTime } });
+        GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${statusText}`, {
+          countdown: { endTime: this.currentTaskEndTime }
+        });
         const wakeUpDelay = Math.max(0, remainingSeconds * 1e3 - 1500);
         Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1e3)} 秒后唤醒执行任务。`);
         setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
@@ -1823,7 +1767,9 @@ startHealthChecks(roomId, redEnvelopeDiv) {
         const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
         const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
         const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
-        Utils.log(`[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`);
+        Utils.log(
+          `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
+        );
         Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? "开启" : "关闭"}`);
         if (SETTINGS.CALIBRATION_MODE_ENABLED) {
           if (deviation <= STALL_THRESHOLD) {
@@ -1833,14 +1779,20 @@ startHealthChecks(roomId, redEnvelopeDiv) {
               const direction = difference > 0 ? "慢" : "快";
               const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
               Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
-              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, { countdown: { endTime: this.currentTaskEndTime } });
+              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, {
+                countdown: { endTime: this.currentTaskEndTime }
+              });
               setTimeout(() => {
                 if (this.currentTaskEndTime > Date.now()) {
-                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, { countdown: { endTime: this.currentTaskEndTime } });
+                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
+                    countdown: { endTime: this.currentTaskEndTime }
+                  });
                 }
               }, 2500);
             } else {
-              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, { countdown: { endTime: this.currentTaskEndTime } });
+              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
+                countdown: { endTime: this.currentTaskEndTime }
+              });
             }
             this.consecutiveStallCount = 0;
             this.previousDeviation = 0;
@@ -1862,7 +1814,9 @@ startHealthChecks(roomId, redEnvelopeDiv) {
               return;
             }
             this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, { countdown: { endTime: this.currentTaskEndTime } });
+            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
           }
         } else {
           if (deviation > STALL_THRESHOLD) {
@@ -1870,13 +1824,17 @@ startHealthChecks(roomId, redEnvelopeDiv) {
               Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
             }
             this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, { countdown: { endTime: this.currentTaskEndTime } });
+            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
           } else {
             if (this.stallLevel > 0) {
               Utils.log("[哨兵] UI已从节流中恢复。");
               this.stallLevel = 0;
             }
-            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, { countdown: { endTime: this.currentTaskEndTime } });
+            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
           }
         }
         if (scriptRemainingSeconds > CHECK_INTERVAL / 1e3 + 1) {
@@ -1919,11 +1877,7 @@ async claimAndRecheck(roomId) {
           return;
         }
         await Utils.sleep(1500);
-        const successIndicator = await DOM.findElement(
-          SETTINGS.SELECTORS.rewardSuccessIndicator,
-          3e3,
-          popup
-        );
+        const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3e3, popup);
         const reward = successIndicator ? "领取成功 " : "空包或失败";
         Utils.log(`领取操作完成，结果: ${reward}`);
         GlobalState.updateWorker(roomId, "WAITING", `领取到: ${reward}`, { countdown: null });
@@ -1933,7 +1887,6 @@ async claimAndRecheck(roomId) {
         Utils.log("点击打开按钮失败。");
       }
       STATE.lastActionTime = Date.now();
-      StatsInfo.update();
       Utils.log("操作完成，2秒后在本房间内寻找下一个任务...");
       await Utils.sleep(2e3);
       this.findAndExecuteNextTask(roomId);
