@@ -8,6 +8,7 @@
 // @match            *://www.douyu.com/*
 // @connect          list-www.douyu.com
 // @grant            GM_addStyle
+// @grant            GM_cookie
 // @grant            GM_deleteValue
 // @grant            GM_getValue
 // @grant            GM_log
@@ -47,6 +48,7 @@ BUTTON_POS_STORAGE_KEY: "douyu_qmx_button_position",
 MODAL_DISPLAY_MODE: "floating",
 
 API_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/square/list",
+COIN_LIST_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/coin/record/list",
 API_RETRY_COUNT: 3,
 API_RETRY_DELAY: 5e3,
 
@@ -58,6 +60,7 @@ CALIBRATION_MODE_ENABLED: false,
 
 STATE_STORAGE_KEY: "douyu_qmx_dashboard_state",
 DAILY_LIMIT_REACHED_KEY: "douyu_qmx_daily_limit_reached",
+STATS_INFO_STORAGE_KEY: "douyu_qmx_stats",
 
 DEFAULT_THEME: "dark",
     INJECT_TARGET_RETRIES: 10,
@@ -267,12 +270,16 @@ setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
       console.log(logPrefix + "Initialisation failed - HTML5 Web Worker is not supported");
     }
   }
-  const ControlPanelRefactoredCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42;--primary-container: #4F378B;--on-primary-container: #EADDFF}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9;--primary-container: #EADDFF;--on-primary-container: #21005D}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}.is-dragging{transition:none!important}.qmx-flex-center{display:flex;align-items:center;justify-content:center}.qmx-flex-between{display:flex;align-items:center;justify-content:space-between}.qmx-flex-column{display:flex;flex-direction:column}.qmx-modal-base{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}.qmx-modal-base.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}.qmx-backdrop.visible{opacity:.5;visibility:visible}.qmx-btn{padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-btn--primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-btn--primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-btn--danger{border-color:#f44336;color:#f44336}.qmx-btn--danger:hover{background-color:#f443361a}.qmx-btn--icon{width:36px;height:36px;padding:0;border-radius:50%;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary)}.qmx-btn--icon:hover{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);transform:scale(1.05) rotate(180deg)}.qmx-styled-list{list-style:none;padding-left:0}.qmx-styled-list li{position:relative;padding-left:20px;margin-bottom:8px}.qmx-styled-list li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}.qmx-scrollbar::-webkit-scrollbar{width:10px}.qmx-scrollbar::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-scrollbar::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-scrollbar::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}.qmx-input{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:12px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-input:hover{border-color:var(--md-sys-color-primary)}.qmx-input:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-input[type=number]::-webkit-inner-spin-button,.qmx-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.qmx-input[type=number]{-moz-appearance:textfield;appearance:textfield}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:background-color .3s,border-color .3s}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}.qmx-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background-color:var(--md-sys-color-outline);color:var(--md-sys-color-surface-container);font-size:12px;font-weight:700;cursor:help;-webkit-user-select:none;user-select:none}#qmx-global-tooltip{position:fixed;background-color:var(--surface-container-highest);color:var(--md-sys-color-on-surface);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px #0003;font-size:12px;font-weight:400;line-height:1.5;z-index:10002;max-width:250px;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none}#qmx-global-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}.theme-switch{position:relative;display:block;width:60px;height:34px;cursor:pointer;transition:none}.theme-switch input{opacity:0;width:0;height:0}.slider-track{position:absolute;top:0;left:0;width:34px;height:34px;background-color:var(--surface-container-highest);border-radius:17px;box-shadow:inset 2px 2px 4px #0003,inset -2px -2px 4px #ffffff0d;transition:width .3s ease,left .3s ease,border-radius .3s ease,box-shadow .3s ease}.theme-switch:hover .slider-track{width:60px}.theme-switch input:checked+.slider-track{left:26px}.theme-switch:hover input:checked+.slider-track{left:0}.slider-dot{position:absolute;height:26px;width:26px;left:4px;top:4px;background-color:var(--md-sys-color-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 8px #0000004d;transition:transform .3s cubic-bezier(.4,0,.2,1),background-color .3s ease,box-shadow .3s ease}.theme-switch input:checked~.slider-dot{transform:translate(26px);background-color:var(--primary-container)}.slider-dot .icon{position:absolute;width:20px;height:20px;color:var(--md-sys-color-on-primary);transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.2,1)}.sun{opacity:1;transform:translateY(0) rotate(0)}.moon{opacity:0;transform:translateY(20px) rotate(-45deg)}.theme-switch input:checked~.slider-dot .sun{opacity:0;transform:translateY(-20px) rotate(45deg)}.theme-switch input:checked~.slider-dot .moon{opacity:1;transform:translateY(0) rotate(0);color:var(--md-sys-color-on-surface)}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:16px 24px;font-size:24px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:background-color .2s,transform .2s;position:relative;flex-shrink:0}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:var(--md-sys-color-primary);transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{flex-grow:1;overflow-y:auto;padding:0 24px}.qmx-modal-content h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease}.qmx-tab-list-item:hover{background-color:#ffffff0d}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-tab-header{display:flex;align-items:baseline;justify-content:space-between}.qmx-tab-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-room-id{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.7}.qmx-tab-details{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--md-sys-color-on-surface-variant)}.qmx-tab-status-name{font-weight:500}.qmx-tab-close-btn{flex-shrink:0;background:none;border:none;color:var(--md-sys-color-on-surface-variant);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;opacity:.6;transition:opacity .2s,color .2s,transform .2s}.qmx-tab-close-btn:hover{opacity:1;color:#f44336;transform:scale(1.1)}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}#qmx-settings-modal{width:500px;max-width:95vw}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:background-color .2s,color .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;overflow-x:hidden;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}.qmx-settings-item small{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.8}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}#tab-about{line-height:1.7;font-size:14px}#tab-about h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:20px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#tab-about h4:first-child{margin-top:0}#tab-about p{margin-bottom:10px;color:var(--md-sys-color-on-surface-variant)}#tab-about .version-tag{display:inline-block;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);padding:2px 8px;border-radius:12px;font-size:13px;font-weight:500;margin-left:8px}#tab-about a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#tab-about a:hover{color:#ffd6e1;text-decoration:underline}#qmx-notice-modal{width:450px;max-width:90vw}#qmx-notice-modal .qmx-modal-content{padding:16px 24px}#qmx-notice-modal .qmx-modal-content p{margin-bottom:12px;line-height:1.6;font-size:15px;color:var(--md-sys-color-on-surface-variant)}#qmx-notice-modal .qmx-modal-content ul{margin:12px 0;padding-left:20px}#qmx-notice-modal .qmx-modal-content li{margin-bottom:10px;position:relative;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-modal-content li:before{content:"◆";position:absolute;left:-18px;color:var(--md-sys-color-primary);font-size:12px}#qmx-notice-modal h3{font-size:20px;font-weight:500;margin:0}#qmx-notice-modal h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:16px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#qmx-notice-modal .qmx-warning-text{background-color:#ffc1071a;border-left:4px solid #FFC107;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-warning-text strong{color:#ff8f00}#qmx-notice-modal a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#qmx-notice-modal a:hover{color:#ffd6e1;text-decoration:underline}#qmx-modal-backdrop,#qmx-notice-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible,#qmx-notice-backdrop.visible{opacity:.5;visibility:visible}#qmx-settings-modal,#qmx-notice-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible,#qmx-notice-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-modal-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn.primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:#f443361a}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}';
+  const ControlPanelRefactoredCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42;--primary-container: #4F378B;--on-primary-container: #EADDFF}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9;--primary-container: #EADDFF;--on-primary-container: #21005D}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}.is-dragging{transition:none!important}.qmx-flex-center{display:flex;align-items:center;justify-content:center}.qmx-flex-between{display:flex;align-items:center;justify-content:space-between}.qmx-flex-column{display:flex;flex-direction:column}.qmx-modal-base{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}.qmx-modal-base.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}.qmx-backdrop.visible{opacity:.5;visibility:visible}.qmx-btn{padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-btn--primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-btn--primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-btn--danger{border-color:#f44336;color:#f44336}.qmx-btn--danger:hover{background-color:#f443361a}.qmx-btn--icon{width:36px;height:36px;padding:0;border-radius:50%;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary)}.qmx-btn--icon:hover{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);transform:scale(1.05) rotate(180deg)}.qmx-styled-list{list-style:none;padding-left:0}.qmx-styled-list li{position:relative;padding-left:20px;margin-bottom:8px}.qmx-styled-list li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}.qmx-scrollbar::-webkit-scrollbar{width:10px}.qmx-scrollbar::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-scrollbar::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-scrollbar::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}.qmx-input{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:12px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-input:hover{border-color:var(--md-sys-color-primary)}.qmx-input:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-input[type=number]::-webkit-inner-spin-button,.qmx-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.qmx-input[type=number]{-moz-appearance:textfield;appearance:textfield}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:background-color .3s,border-color .3s}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}.qmx-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background-color:var(--md-sys-color-outline);color:var(--md-sys-color-surface-container);font-size:12px;font-weight:700;cursor:help;-webkit-user-select:none;user-select:none}#qmx-global-tooltip{position:fixed;background-color:var(--surface-container-highest);color:var(--md-sys-color-on-surface);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px #0003;font-size:12px;font-weight:400;line-height:1.5;z-index:10002;max-width:250px;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none}#qmx-global-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}.theme-switch{position:relative;display:block;width:60px;height:34px;cursor:pointer;transition:none}.theme-switch input{opacity:0;width:0;height:0}.slider-track{position:absolute;top:0;left:0;width:34px;height:34px;background-color:var(--surface-container-highest);border-radius:17px;box-shadow:inset 2px 2px 4px #0003,inset -2px -2px 4px #ffffff0d;transition:width .3s ease,left .3s ease,border-radius .3s ease,box-shadow .3s ease}.theme-switch:hover .slider-track{width:60px}.theme-switch input:checked+.slider-track{left:26px}.theme-switch:hover input:checked+.slider-track{left:0}.slider-dot{position:absolute;height:26px;width:26px;left:4px;top:4px;background-color:var(--md-sys-color-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 8px #0000004d;transition:transform .3s cubic-bezier(.4,0,.2,1),background-color .3s ease,box-shadow .3s ease}.theme-switch input:checked~.slider-dot{transform:translate(26px);background-color:var(--primary-container)}.slider-dot .icon{position:absolute;width:20px;height:20px;color:var(--md-sys-color-on-primary);transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.2,1)}.sun{opacity:1;transform:translateY(0) rotate(0)}.moon{opacity:0;transform:translateY(20px) rotate(-45deg)}.theme-switch input:checked~.slider-dot .sun{opacity:0;transform:translateY(-20px) rotate(45deg)}.theme-switch input:checked~.slider-dot .moon{opacity:1;transform:translateY(0) rotate(0);color:var(--md-sys-color-on-surface)}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:16px 24px;font-size:24px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:background-color .2s,transform .2s;position:relative;flex-shrink:0}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:var(--md-sys-color-primary);transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{flex-grow:1;overflow-y:auto;padding:0 24px}.qmx-modal-content h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-modal-stats-content{flex-grow:1;padding:0 24px}.qmx-modal-stats-content h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-modal-stats{display:flex;gap:1px}.qmx-modal-stats-child{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease;width:88px;float:left;margin-left:2%}.qmx-stat-info-avg,.qmx-stat-info-total,.qmx-stat-info-receivedCount{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-stat-header{display:flex;align-items:baseline;justify-content:center}.qmx-stat-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-stat-details{display:flex;align-items:center;font-size:13px;color:var(--md-sys-color-on-surface-variant);justify-content:center}.qmx-stat-stats{font-weight:500}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease}.qmx-tab-list-item:hover{background-color:#ffffff0d}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-tab-header{display:flex;align-items:baseline;justify-content:space-between}.qmx-tab-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-room-id{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.7}.qmx-tab-details{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--md-sys-color-on-surface-variant)}.qmx-tab-status-name{font-weight:500}.qmx-tab-close-btn{flex-shrink:0;background:none;border:none;color:var(--md-sys-color-on-surface-variant);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;opacity:.6;transition:opacity .2s,color .2s,transform .2s}.qmx-tab-close-btn:hover{opacity:1;color:#f44336;transform:scale(1.1)}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}#qmx-settings-modal{width:500px;max-width:95vw}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:background-color .2s,color .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;overflow-x:hidden;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}.qmx-settings-item small{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.8}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}#tab-about{line-height:1.7;font-size:14px}#tab-about h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:20px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#tab-about h4:first-child{margin-top:0}#tab-about p{margin-bottom:10px;color:var(--md-sys-color-on-surface-variant)}#tab-about .version-tag{display:inline-block;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);padding:2px 8px;border-radius:12px;font-size:13px;font-weight:500;margin-left:8px}#tab-about a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#tab-about a:hover{color:#ffd6e1;text-decoration:underline}#qmx-notice-modal{width:450px;max-width:90vw}#qmx-notice-modal .qmx-modal-content{padding:16px 24px}#qmx-notice-modal .qmx-modal-content p{margin-bottom:12px;line-height:1.6;font-size:15px;color:var(--md-sys-color-on-surface-variant)}#qmx-notice-modal .qmx-modal-content ul{margin:12px 0;padding-left:20px}#qmx-notice-modal .qmx-modal-content li{margin-bottom:10px;position:relative;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-modal-content li:before{content:"◆";position:absolute;left:-18px;color:var(--md-sys-color-primary);font-size:12px}#qmx-notice-modal h3{font-size:20px;font-weight:500;margin:0}#qmx-notice-modal h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:16px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#qmx-notice-modal .qmx-warning-text{background-color:#ffc1071a;border-left:4px solid #FFC107;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-warning-text strong{color:#ff8f00}#qmx-notice-modal a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#qmx-notice-modal a:hover{color:#ffd6e1;text-decoration:underline}#qmx-modal-backdrop,#qmx-notice-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible,#qmx-notice-backdrop.visible{opacity:.5;visibility:visible}#qmx-settings-modal,#qmx-notice-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible,#qmx-notice-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-modal-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn.primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:#f443361a}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}';
   importCSS(ControlPanelRefactoredCss);
   const mainPanelTemplate = (maxTabs) => `
     <div class="qmx-modal-header">
         <span>控制中心</span>
         <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
+    </div>
+    <div class="qmx-modal-stats-content">
+        <h3>统计面板</h3>
+        <div class="qmx-modal-stats"></div>
     </div>
     <div class="qmx-modal-content">
         <h3>监控面板 (<span id="qmx-active-tabs-count">0</span>/${maxTabs})</h3>
@@ -592,7 +599,10 @@ getRooms(count, retries = SETTINGS.API_RETRY_COUNT) {
           GM_xmlhttpRequest({
             method: "GET",
             url: SETTINGS.API_URL,
-            headers: { "Referer": "https://www.douyu.com/", "User-Agent": navigator.userAgent },
+            headers: {
+              Referer: "https://www.douyu.com/",
+              "User-Agent": navigator.userAgent
+            },
             responseType: "json",
             timeout: 1e4,
             onload: (response) => {
@@ -600,6 +610,76 @@ getRooms(count, retries = SETTINGS.API_RETRY_COUNT) {
                 const rooms = response.response.data.redBagList.map((item) => item.rid).filter(Boolean).slice(0, count * 2).map((rid) => `https://www.douyu.com/${rid}`);
                 Utils.log(`API 成功返回 ${rooms.length} 个房间URL。`);
                 resolve(rooms);
+              } else {
+                const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || "未知错误"}`;
+                Utils.log(errorMsg);
+                if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+                else reject(new Error(errorMsg));
+              }
+            },
+            onerror: (error) => {
+              const errorMsg = `API 请求网络错误: ${error.statusText || "未知"}`;
+              Utils.log(errorMsg);
+              if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+              else reject(new Error(errorMsg));
+            },
+            ontimeout: () => {
+              const errorMsg = "API 请求超时";
+              Utils.log(errorMsg);
+              if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+              else reject(new Error(errorMsg));
+            }
+          });
+        };
+        const retry = (remainingTries, reason) => {
+          Utils.log(`${reason}，将在 ${SETTINGS.API_RETRY_DELAY / 1e3} 秒后重试...`);
+          setTimeout(() => attempt(remainingTries), SETTINGS.API_RETRY_DELAY);
+        };
+        attempt(retries);
+      });
+    },
+getCookie: function(cookieName) {
+      return new Promise((resolve, reject) => {
+        GM_cookie.list({ name: cookieName }, function(cookies, error) {
+          if (error) {
+            Utils.log(error);
+            reject(error);
+          } else if (cookies && cookies.length > 0) {
+            resolve(cookies[0]);
+          } else {
+            resolve(null);
+          }
+        });
+      });
+    },
+getCoinRecord: function(current, count, retries = SETTINGS.API_RETRY_COUNT) {
+      return new Promise(async (resolve, reject) => {
+        const acfCookie = await this.getCookie("acf_auth");
+        if (!acfCookie) {
+          Utils.log("获取cookie错误");
+          reject(new Error("获取cookie错误"));
+          return;
+        }
+        const fullUrl = SETTINGS.COIN_LIST_URL + "?current=" + current + "&pageSize=" + count;
+        const attempt = (remainingTries) => {
+          Utils.log(`开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`);
+          GM_xmlhttpRequest({
+            method: "GET",
+            url: fullUrl,
+            headers: {
+              Referer: "https://www.douyu.com/",
+              "User-Agent": navigator.userAgent
+            },
+            cookie: acfCookie["value"],
+            responseType: "json",
+            timeout: 1e4,
+            onload: (response) => {
+              if (response.status === 200 && response.response?.error === 0 && Array.isArray(response.response.data.list)) {
+                const coinListData = response.response.data.list.filter(
+                  (item) => item.opDirection === 1 && item.remark.includes("红包")
+                );
+                Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
+                resolve(coinListData);
               } else {
                 const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || "未知错误"}`;
                 Utils.log(errorMsg);
@@ -897,6 +977,136 @@ showCalibrationNotice() {
       }
     }
   };
+  const StatsInfo = {
+    init: async function() {
+      const stats = document.querySelector(".qmx-modal-stats");
+      [
+        ["receivedCount", "已领个数"],
+        ["total", "总金币"],
+        ["avg", "平均每个"]
+      ].forEach(([name, nickname]) => {
+        stats.appendChild(this.initRender(name, nickname));
+      });
+      const nowDate = Utils.formatDateAsBeijing( new Date());
+      let dataObj = this.createDataObj(nowDate);
+      if (!GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null)) {
+        GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, dataObj);
+      }
+      this.updateTodayData();
+      await this.getCoinListUpdate();
+      this.removeExpiredData();
+    },
+initRender: function(name, nickname) {
+      const newItem = document.createElement("div");
+      newItem.className = "qmx-modal-stats-child";
+      const className = "qmx-stat-info-" + name;
+      newItem.innerHTML = `
+                <div class=${className}>
+                    <div class="qmx-stat-header">
+                        <span class="qmx-stat-nickname">${nickname}</span>
+                    </div>
+                    <div class="qmx-stat-details">
+                        <span class="qmx-stat-item">0</span>
+                    </div>
+                </div>
+            `;
+      return newItem;
+    },
+createDataObj: function(date) {
+      return {
+        [date]: {
+          receivedCount: 0,
+          avg: 0,
+          total: 0
+        }
+      };
+    },
+updateTodayData: function() {
+      let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+      if (!allData) {
+        return;
+      }
+      const today = Utils.formatDateAsBeijing( new Date());
+      let todayData = allData?.[today];
+      if (!todayData) {
+        Object.assign(allData, this.createDataObj(today));
+        GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
+        this.updateTodayData();
+        return;
+      }
+      todayData["avg"] = todayData["total"] / todayData["receivedCount"] || 0;
+      todayData["avg"] = todayData["avg"].toFixed(2);
+      this.set("avg", todayData["avg"]);
+      this.refreshUI(todayData);
+    },
+validateAllData: function(data) {
+      if (!data) {
+        Utils.log("统计数据错误");
+        return false;
+      }
+      const today = Utils.formatDateAsBeijing( new Date());
+      let todayData = data?.[today];
+      if (!todayData) {
+        Utils.log("今日统计数据错误");
+        return false;
+      }
+      return true;
+    },
+set: function(name, value) {
+      const lockKey = "douyu_qmx_stats_lock";
+      if (!Utils.lockChecker(lockKey, () => this.set(), name, value)) {
+        return;
+      }
+      let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+      if (!this.validateAllData(allData)) {
+        return;
+      }
+      const today = Utils.formatDateAsBeijing( new Date());
+      let todayData = allData?.[today];
+      todayData[name] = value;
+      Utils.setLocalValueWithLock(lockKey, SETTINGS.STATS_INFO_STORAGE_KEY, allData, "更新统计数据");
+      this.refreshUI(todayData);
+    },
+getCoinListUpdate: async function() {
+      const coinList = await DouyuAPI.getCoinRecord(1, 100, 3);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const filteredData = coinList.filter((item) => item.createTime > startOfToday / 1e3);
+      const totalCoin = filteredData.reduce((sum, item) => sum + item.balanceDiff, 0);
+      [
+        ["receivedCount", filteredData.length],
+        ["total", totalCoin]
+      ].forEach(([name, value]) => {
+        this.set(name, value);
+      });
+      this.updateTodayData();
+    },
+refreshUI: function(todayData) {
+      for (let todayDataKey in todayData) {
+        let dataName = document.querySelector(`.qmx-stat-info-${todayDataKey}`);
+        let item = dataName.querySelector(".qmx-stat-item");
+        item.textContent = todayData[todayDataKey];
+      }
+    },
+removeExpiredData: function() {
+      const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY);
+      if (!allData) {
+        Utils.log("获取本地历史数据失败");
+      }
+      let newAllData = Object.keys(allData).filter((dateString) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const date = new Date(dateString);
+        const diff = today - date;
+        const dayDiff = diff / (1e3 * 60 * 60 * 24);
+        return dayDiff <= 1;
+      }).reduce((obj, key) => {
+        return Object.assign(obj, { [key]: allData[key] });
+      }, {});
+      GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
+      Utils.log("[数据统计]：已清理过期数据");
+    }
+  };
   const ControlPage = {
 injectionTarget: null,
 isPanelInjected: false,
@@ -906,6 +1116,7 @@ init() {
       this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
       ThemeManager.applyTheme(SETTINGS.THEME);
       this.createHTML();
+      StatsInfo.init();
       this.applyModalMode();
       this.bindEvents();
       setInterval(() => {
@@ -957,17 +1168,13 @@ cleanupAndMonitorWorkers() {
           continue;
         }
         if (tab.status === "SWITCHING" && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
-          Utils.log(
-            `[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`
-          );
+          Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
           delete state.tabs[roomId];
           stateModified = true;
           continue;
         }
         if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== "UNRESPONSIVE") {
-          Utils.log(
-            `[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`
-          );
+          Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`);
           tab.status = "UNRESPONSIVE";
           tab.statusText = "心跳失联，请点击激活或关闭此标签页";
           stateModified = true;
@@ -982,25 +1189,12 @@ bindEvents() {
       const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
       const modalContainer = document.getElementById("qmx-modal-container");
       const modalBackdrop = document.getElementById("qmx-modal-backdrop");
-      this.setupDrag(
-        mainButton,
-        SETTINGS.BUTTON_POS_STORAGE_KEY,
-        () => this.showPanel()
-      );
+      this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
       if (SETTINGS.MODAL_DISPLAY_MODE === "floating") {
-        const modalHeader = modalContainer.querySelector(
-          ".qmx-modal-header"
-        );
-        this.setupDrag(
-          modalContainer,
-          "douyu_qmx_modal_position",
-          null,
-          modalHeader
-        );
+        const modalHeader = modalContainer.querySelector(".qmx-modal-header");
+        this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
       }
-      document.getElementById(
-        "qmx-modal-close-btn"
-      ).onclick = () => this.hidePanel();
+      document.getElementById("qmx-modal-close-btn").onclick = () => this.hidePanel();
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && modalContainer.classList.contains("visible")) {
           this.hidePanel();
@@ -1009,19 +1203,13 @@ bindEvents() {
       if (SETTINGS.MODAL_DISPLAY_MODE !== "inject-rank-list") {
         modalBackdrop.onclick = () => this.hidePanel();
       }
-      document.getElementById(
-        "qmx-modal-open-btn"
-      ).onclick = () => this.openOneNewTab();
-      document.getElementById(
-        "qmx-modal-settings-btn"
-      ).onclick = () => SettingsPanel.show();
+      document.getElementById("qmx-modal-open-btn").onclick = () => this.openOneNewTab();
+      document.getElementById("qmx-modal-settings-btn").onclick = () => SettingsPanel.show();
       document.getElementById("qmx-modal-close-all-btn").onclick = async () => {
         if (confirm("确定要关闭所有工作标签页吗？")) {
           Utils.log("用户请求关闭所有标签页。");
           Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
-          this.commandChannel.postMessage(
-            { action: "CLOSE_ALL", target: "*" }
-          );
+          this.commandChannel.postMessage({ action: "CLOSE_ALL", target: "*" });
           await new Promise((resolve) => setTimeout(resolve, 500));
           Utils.log("强制清空全局状态中的标签页列表...");
           let state = GlobalState.get();
@@ -1052,12 +1240,8 @@ bindEvents() {
         const state = GlobalState.get();
         delete state.tabs[roomId];
         GlobalState.set(state);
-        Utils.log(
-          `通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`
-        );
-        this.commandChannel.postMessage(
-          { action: "CLOSE", target: roomId }
-        );
+        Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
+        this.commandChannel.postMessage({ action: "CLOSE", target: roomId });
         roomItem.style.opacity = "0";
         roomItem.style.transform = "scale(0.8)";
         roomItem.style.transition = "all 0.3s ease";
@@ -1069,9 +1253,7 @@ renderDashboard() {
       const tabList = document.getElementById("qmx-tab-list");
       if (!tabList) return;
       const tabIds = Object.keys(state.tabs);
-      document.getElementById(
-        "qmx-active-tabs-count"
-      ).textContent = tabIds.length;
+      document.getElementById("qmx-active-tabs-count").textContent = tabIds.length;
       const statusDisplayMap = {
         OPENING: "加载中",
         WAITING: "等待中",
@@ -1083,33 +1265,30 @@ renderDashboard() {
         DISCONNECTED: "已断开",
         STALLED: "UI节流"
       };
-      const existingRoomIds = new Set(Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean));
+      const existingRoomIds = new Set(
+        Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean)
+      );
       tabIds.forEach((roomId) => {
         const tabData = state.tabs[roomId];
-        let existingItem = tabList.querySelector(
-          `[data-room-id="${roomId}"]`
-        );
+        let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
         let currentStatusText = tabData.statusText;
         if (tabData.status === "WAITING" && tabData.countdown?.endTime && (!currentStatusText || currentStatusText.startsWith("倒计时") || currentStatusText === "寻找任务中...")) {
           const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1e3;
           if (remainingSeconds > 0) {
-            currentStatusText = `倒计时 ${Utils.formatTime(
-            remainingSeconds
-          )}`;
+            currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
           } else {
             currentStatusText = "等待开抢...";
           }
         }
+        {
+          if (currentStatusText.includes("领取到")) {
+            StatsInfo.getCoinListUpdate();
+          }
+        }
         if (existingItem) {
-          const nicknameEl = existingItem.querySelector(
-            ".qmx-tab-nickname"
-          );
-          const statusNameEl = existingItem.querySelector(
-            ".qmx-tab-status-name"
-          );
-          const statusTextEl = existingItem.querySelector(
-            ".qmx-tab-status-text"
-          );
+          const nicknameEl = existingItem.querySelector(".qmx-tab-nickname");
+          const statusNameEl = existingItem.querySelector(".qmx-tab-status-name");
+          const statusTextEl = existingItem.querySelector(".qmx-tab-status-text");
           const dotEl = existingItem.querySelector(".qmx-tab-status-dot");
           if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
             nicknameEl.textContent = tabData.nickname;
@@ -1123,31 +1302,19 @@ renderDashboard() {
             statusTextEl.textContent = currentStatusText;
           }
         } else {
-          const newItem = this.createTaskItem(
-            roomId,
-            tabData,
-            statusDisplayMap,
-            currentStatusText
-          );
+          const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
           tabList.appendChild(newItem);
           requestAnimationFrame(() => {
             newItem.classList.add("qmx-item-enter-active");
-            setTimeout(
-              () => newItem.classList.remove("qmx-item-enter"),
-              300
-            );
+            setTimeout(() => newItem.classList.remove("qmx-item-enter"), 300);
           });
         }
       });
       existingRoomIds.forEach((roomId) => {
         if (!state.tabs[roomId]) {
-          const itemToRemove = tabList.querySelector(
-            `[data-room-id="${roomId}"]`
-          );
+          const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
           if (itemToRemove && !itemToRemove.classList.contains("qmx-item-exit-active")) {
-            Utils.log(
-              `[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`
-            );
+            Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`);
             itemToRemove.classList.add("qmx-item-exit-active");
             setTimeout(() => itemToRemove.remove(), 300);
           }
@@ -1178,10 +1345,7 @@ renderLimitStatus() {
           limitMessageEl.id = "qmx-limit-message";
           limitMessageEl.style.cssText = "padding: 10px 24px; background-color: var(--status-color-error); color: white; font-weight: 500; text-align: center;";
           const header = document.querySelector(".qmx-modal-header");
-          header.parentNode.insertBefore(
-            limitMessageEl,
-            header.nextSibling
-          );
+          header.parentNode.insertBefore(limitMessageEl, header.nextSibling);
           document.querySelector(".qmx-modal-header").after(limitMessageEl);
         }
         if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
@@ -1212,9 +1376,7 @@ async openOneNewTab() {
       openBtn.textContent = "正在查找...";
       try {
         const openedRoomIds = new Set(Object.keys(state.tabs));
-        const apiRoomUrls = await DouyuAPI.getRooms(
-          SETTINGS.API_ROOM_FETCH_COUNT
-        );
+        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
         const newUrl = apiRoomUrls.find((url) => {
           const rid = url.match(/\/(\d+)/)?.[1];
           return rid && !openedRoomIds.has(rid);
@@ -1395,30 +1557,17 @@ applyModalMode() {
       Utils.log(`尝试应用模态框模式: ${mode}`);
       if (mode === "inject-rank-list") {
         const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
-          const target = document.querySelector(
-            SETTINGS.SELECTORS.rankListContainer
-          );
+          const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
           if (target) {
             Utils.log("注入目标已找到，开始注入...");
             this.injectionTarget = target;
             this.isPanelInjected = true;
-            target.parentNode.insertBefore(
-              modalContainer,
-              target.nextSibling
-            );
-            modalContainer.classList.add(
-              "mode-inject-rank-list",
-              "qmx-hidden"
-            );
+            target.parentNode.insertBefore(modalContainer, target.nextSibling);
+            modalContainer.classList.add("mode-inject-rank-list", "qmx-hidden");
           } else if (retries > 0) {
-            setTimeout(
-              () => waitForTarget(retries - 1, interval),
-              interval
-            );
+            setTimeout(() => waitForTarget(retries - 1, interval), interval);
           } else {
-            Utils.log(
-              `[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`
-            );
+            Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
             Utils.log("[降级] 自动切换到 'floating' 备用模式。");
             SETTINGS.MODAL_DISPLAY_MODE = "floating";
             this.applyModalMode();
@@ -1589,7 +1738,9 @@ async init() {
         this.lastHealthCheckTime = Date.now();
         this.lastPageCountdown = remainingSeconds;
         Utils.log(`发现新任务：倒计时 ${statusText}。`);
-        GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${statusText}`, { countdown: { endTime: this.currentTaskEndTime } });
+        GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${statusText}`, {
+          countdown: { endTime: this.currentTaskEndTime }
+        });
         const wakeUpDelay = Math.max(0, remainingSeconds * 1e3 - 1500);
         Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1e3)} 秒后唤醒执行任务。`);
         setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
@@ -1616,7 +1767,9 @@ startHealthChecks(roomId, redEnvelopeDiv) {
         const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
         const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
         const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
-        Utils.log(`[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`);
+        Utils.log(
+          `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
+        );
         Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? "开启" : "关闭"}`);
         if (SETTINGS.CALIBRATION_MODE_ENABLED) {
           if (deviation <= STALL_THRESHOLD) {
@@ -1626,14 +1779,20 @@ startHealthChecks(roomId, redEnvelopeDiv) {
               const direction = difference > 0 ? "慢" : "快";
               const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
               Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
-              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, { countdown: { endTime: this.currentTaskEndTime } });
+              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, {
+                countdown: { endTime: this.currentTaskEndTime }
+              });
               setTimeout(() => {
                 if (this.currentTaskEndTime > Date.now()) {
-                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, { countdown: { endTime: this.currentTaskEndTime } });
+                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
+                    countdown: { endTime: this.currentTaskEndTime }
+                  });
                 }
               }, 2500);
             } else {
-              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, { countdown: { endTime: this.currentTaskEndTime } });
+              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
+                countdown: { endTime: this.currentTaskEndTime }
+              });
             }
             this.consecutiveStallCount = 0;
             this.previousDeviation = 0;
@@ -1655,7 +1814,9 @@ startHealthChecks(roomId, redEnvelopeDiv) {
               return;
             }
             this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, { countdown: { endTime: this.currentTaskEndTime } });
+            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
           }
         } else {
           if (deviation > STALL_THRESHOLD) {
@@ -1663,13 +1824,17 @@ startHealthChecks(roomId, redEnvelopeDiv) {
               Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
             }
             this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, { countdown: { endTime: this.currentTaskEndTime } });
+            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
           } else {
             if (this.stallLevel > 0) {
               Utils.log("[哨兵] UI已从节流中恢复。");
               this.stallLevel = 0;
             }
-            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, { countdown: { endTime: this.currentTaskEndTime } });
+            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
           }
         }
         if (scriptRemainingSeconds > CHECK_INTERVAL / 1e3 + 1) {
@@ -1712,11 +1877,7 @@ async claimAndRecheck(roomId) {
           return;
         }
         await Utils.sleep(1500);
-        const successIndicator = await DOM.findElement(
-          SETTINGS.SELECTORS.rewardSuccessIndicator,
-          3e3,
-          popup
-        );
+        const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3e3, popup);
         const reward = successIndicator ? "领取成功 " : "空包或失败";
         Utils.log(`领取操作完成，结果: ${reward}`);
         GlobalState.updateWorker(roomId, "WAITING", `领取到: ${reward}`, { countdown: null });

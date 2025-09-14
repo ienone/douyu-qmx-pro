@@ -79,47 +79,11 @@ export const Utils = {
     formatDateAsBeijing(date) {
         // 先将传入的任何时区的date对象转为北京时间的date对象
         const beijingDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+
         // 然后从这个新的date对象中，按UTC标准提取年月日
         const year = beijingDate.getUTCFullYear();
         const month = String(beijingDate.getUTCMonth() + 1).padStart(2, '0');
         const day = String(beijingDate.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-    },
-
-    /**
-     * 防冲突锁机制
-     * @param {string} lockKey - 在油猴中本地保存的键 key
-     * @param {function} callback - 回调函数发现有锁时延迟回调
-     * @param args - 回调函数的参数
-     * @returns {boolean} - 返回值为true时继续执行
-     */
-    lockChecker: function (lockKey, callback, ...args) {
-        if (GM_getValue(lockKey, false)) {
-            // 如果发现有锁，则延迟50毫秒后重试
-            setTimeout(() => callback(...args), 50);
-            return false;
-        }
-        return true;
-    },
-
-    /**
-     * 安全地使用锁写入本地存储
-     * @param {string} lockKey - 锁定键
-     * @param {string} storageKey - 目标存储键
-     * @param {*} value - 要存储的值
-     * @param {string} nickname - 操作昵称，用于日志
-     */
-    setLocalValueWithLock: function (lockKey, storageKey, value, nickname) {
-        try {
-            // 上锁
-            GM_setValue(lockKey, true);
-            // 执行写入操作
-            GM_setValue(storageKey, value);
-        } catch (e) {
-            Utils.log(`[${nickname}-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
-        } finally {
-            // 无论成功与否，最后都要解锁
-            GM_setValue(lockKey, false);
-        }
     },
 };

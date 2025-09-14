@@ -7,6 +7,7 @@ import { GlobalState } from './GlobalState';
 import { DOM } from '../utils/DOM';
 import { SETTINGS, STATE } from './SettingsManager';
 import { DouyuAPI } from '../utils/DouyuAPI';
+import { StatsInfo } from './StatsInfo.js';
 
 /**
  * =================================================================================
@@ -16,7 +17,6 @@ import { DouyuAPI } from '../utils/DouyuAPI';
  * =================================================================================
  */
 export const WorkerPage = {
-
     // 新增属性，用于管理哨兵定时器
     healthCheckTimeoutId: null,
     currentTaskEndTime: null,
@@ -43,7 +43,7 @@ export const WorkerPage = {
             Utils.log('无法识别当前房间ID，脚本停止。');
             return;
         }
-        GlobalState.updateWorker(roomId, 'OPENING', '页面加载中...', {countdown: null, nickname: null});
+        GlobalState.updateWorker(roomId, 'OPENING', '页面加载中...', { countdown: null, nickname: null });
 
         await Utils.sleep(1000);
 
@@ -88,7 +88,7 @@ export const WorkerPage = {
         }
         const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
         const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
-        GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', {nickname, countdown: null});
+        GlobalState.updateWorker(roomId, 'WAITING', '寻找任务中...', { nickname, countdown: null });
 
         // 检查每日上限
         const limitState = GlobalState.getDailyLimit();
@@ -135,7 +135,7 @@ export const WorkerPage = {
         const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
 
         if (!redEnvelopeDiv) {
-            GlobalState.updateWorker(roomId, 'SWITCHING', '无活动, 切换中', {countdown: null});
+            GlobalState.updateWorker(roomId, 'SWITCHING', '无活动, 切换中', { countdown: null });
             await this.switchRoom();
             return;
         }
@@ -145,14 +145,14 @@ export const WorkerPage = {
 
         if (statusText.includes(':')) {
             const [minutes, seconds] = statusText.split(':').map(Number);
-            const remainingSeconds = (minutes * 60 + seconds);
+            const remainingSeconds = minutes * 60 + seconds;
             // 维护获得的剩余时间表
             const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
             this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
             //console.log(this.remainingTimeMap)
             // 判断是否卡死
-            if (Array.from(this.remainingTimeMap.values()).some(value => value > 3)) {
-                GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', {countdown: null});
+            if (Array.from(this.remainingTimeMap.values()).some((value) => value > 3)) {
+                GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', { countdown: null });
                 await this.switchRoom();
                 return;
             }
@@ -164,19 +164,20 @@ export const WorkerPage = {
             this.lastPageCountdown = remainingSeconds;
 
             Utils.log(`发现新任务：倒计时 ${statusText}。`);
-            GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, {countdown: {endTime: this.currentTaskEndTime}});
+            GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, {
+                countdown: { endTime: this.currentTaskEndTime },
+            });
 
-            const wakeUpDelay = Math.max(0, (remainingSeconds * 1000) - 1500);
+            const wakeUpDelay = Math.max(0, remainingSeconds * 1000 - 1500);
             Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1000)} 秒后唤醒执行任务。`);
             setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
 
             this.startHealthChecks(roomId, redEnvelopeDiv);
-
         } else if (statusText.includes('抢') || statusText.includes('领')) {
             GlobalState.updateWorker(roomId, 'CLAIMING', '立即领取中...');
             await this.claimAndRecheck(roomId);
         } else {
-            GlobalState.updateWorker(roomId, 'WAITING', `状态未知, 稍后重试`, {countdown: null});
+            GlobalState.updateWorker(roomId, 'WAITING', `状态未知, 稍后重试`, { countdown: null });
             setTimeout(() => this.findAndExecuteNextTask(roomId), 30000);
         }
     },
@@ -188,7 +189,7 @@ export const WorkerPage = {
      */
     startHealthChecks(roomId, redEnvelopeDiv) {
         const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
-        const STALL_THRESHOLD = 4;    // UI显示与脚本计时允许的最大偏差
+        const STALL_THRESHOLD = 4; // UI显示与脚本计时允许的最大偏差
 
         const check = () => {
             const currentPageStatus = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer)?.textContent.trim();
@@ -211,7 +212,9 @@ export const WorkerPage = {
             const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
 
             // 每次都打印脚本倒计时、UI显示倒计时和差值
-            Utils.log(`[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`);
+            Utils.log(
+                `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
+            );
             Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? '开启' : '关闭'}`);
 
             // 4. 根据是否开启校准模式，处理时间差异
@@ -221,7 +224,7 @@ export const WorkerPage = {
                     // 在合理范围内，校准脚本倒计时
                     const difference = scriptRemainingSeconds - pageRemainingSeconds;
                     this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1000;
-                    
+
                     // 只有在偏差大于0.1秒时才显示校准信息
                     if (deviation > 0.1) {
                         const direction = difference > 0 ? '慢' : '快';
@@ -229,31 +232,36 @@ export const WorkerPage = {
                         Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
 
                         // 发送临时信息，让ControlPage显示
-                        GlobalState.updateWorker(roomId, 'WAITING', calibrationMessage, {countdown: {endTime: this.currentTaskEndTime}});
+                        GlobalState.updateWorker(roomId, 'WAITING', calibrationMessage, {
+                            countdown: { endTime: this.currentTaskEndTime },
+                        });
 
                         // 2.5秒后，发送常规更新，让ControlPage恢复显示倒计时
                         setTimeout(() => {
                             // 检查任务是否还在，防止在延迟期间任务已结束
                             if (this.currentTaskEndTime > Date.now()) {
-                                GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {countdown: {endTime: this.currentTaskEndTime}});
+                                GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {
+                                    countdown: { endTime: this.currentTaskEndTime },
+                                });
                             }
                         }, 2500);
                     } else {
                         // 偏差很小，静默校准，直接更新为倒计时状态
-                        GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {countdown: {endTime: this.currentTaskEndTime}});
+                        GlobalState.updateWorker(roomId, 'WAITING', `倒计时...`, {
+                            countdown: { endTime: this.currentTaskEndTime },
+                        });
                     }
-                    
+
                     // 重置卡顿计数
                     this.consecutiveStallCount = 0;
                     this.previousDeviation = 0;
                     this.stallLevel = 0;
-                    
                 } else {
                     // 在合理范围外，判断是否卡顿加剧
                     const deviationIncreasing = deviation > this.previousDeviation;
 
                     this.previousDeviation = deviation;
-                    
+
                     if (deviationIncreasing) {
                         this.consecutiveStallCount++;
                         Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
@@ -261,40 +269,47 @@ export const WorkerPage = {
                         // 卡顿没有加剧，可能是暂时性的，重置计数
                         this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
                     }
-                    
+
                     if (this.consecutiveStallCount >= 3) {
                         // 连续三次检测到卡顿且差值增大，判定为卡死
                         Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
-                        GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', {countdown: null});
+                        GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', { countdown: null });
                         clearTimeout(this.healthCheckTimeoutId);
                         this.switchRoom();
                         return;
                     }
-                    
+
                     // 显示卡顿状态但继续监控
                     this.stallLevel = 1;
-                    GlobalState.updateWorker(roomId, 'ERROR', `UI卡顿 (${deviation.toFixed(1)}秒)`, {countdown: {endTime: this.currentTaskEndTime}});
+                    GlobalState.updateWorker(roomId, 'ERROR', `UI卡顿 (${deviation.toFixed(1)}秒)`, {
+                        countdown: { endTime: this.currentTaskEndTime },
+                    });
                 }
             } else {
                 // 原有逻辑
                 if (deviation > STALL_THRESHOLD) {
-                    if (this.stallLevel === 0) { // 只在第一次检测到卡顿时记录日志
+                    if (this.stallLevel === 0) {
+                        // 只在第一次检测到卡顿时记录日志
                         Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
                     }
                     this.stallLevel = 1;
                     // 只更新状态为STALLED
-                    GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, {countdown: {endTime: this.currentTaskEndTime}});
+                    GlobalState.updateWorker(roomId, 'STALLED', `UI节流中...`, {
+                        countdown: { endTime: this.currentTaskEndTime },
+                    });
                 } else {
                     if (this.stallLevel > 0) {
                         Utils.log('[哨兵] UI已从节流中恢复。');
                         this.stallLevel = 0;
                     }
-                    GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, {countdown: {endTime: this.currentTaskEndTime}});
+                    GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${currentFormattedTime}`, {
+                        countdown: { endTime: this.currentTaskEndTime },
+                    });
                 }
             }
 
             // 5. 只要我们的精确计时器没到终点，就继续观察
-            if (scriptRemainingSeconds > (CHECK_INTERVAL / 1000) + 1) {
+            if (scriptRemainingSeconds > CHECK_INTERVAL / 1000 + 1) {
                 this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
             }
         };
@@ -306,17 +321,16 @@ export const WorkerPage = {
      * 处理点击红包后的弹窗逻辑。
      */
     async claimAndRecheck(roomId) {
-
         if (this.healthCheckTimeoutId) {
             clearTimeout(this.healthCheckTimeoutId);
             this.healthCheckTimeoutId = null;
         }
 
         Utils.log('开始执行领取流程...');
-        GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...', {countdown: null});
+        GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...', { countdown: null });
 
         const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
-        if (!await DOM.safeClick(redEnvelopeDiv, '右下角红包区域')) {
+        if (!(await DOM.safeClick(redEnvelopeDiv, '右下角红包区域'))) {
             Utils.log('点击红包区域失败，重新寻找任务。');
             await Utils.sleep(2000);
             this.findAndExecuteNextTask(roomId);
@@ -347,17 +361,13 @@ export const WorkerPage = {
 
             await Utils.sleep(1500); // 等待奖励动画
             // 不再查找具体的奖励文本，而是查找代表“成功”的容器
-            const successIndicator = await DOM.findElement(
-                SETTINGS.SELECTORS.rewardSuccessIndicator,
-                3000,
-                popup,
-            );
+            const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3000, popup);
 
             // 根据是否找到成功标志来确定奖励信息
             const reward = successIndicator ? '领取成功 ' : '空包或失败';
             Utils.log(`领取操作完成，结果: ${reward}`);
 
-            GlobalState.updateWorker(roomId, 'WAITING', `领取到: ${reward}`, {countdown: null});
+            GlobalState.updateWorker(roomId, 'WAITING', `领取到: ${reward}`, { countdown: null });
             const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
             await DOM.safeClick(closeBtn, '领取结果弹窗的关闭按钮');
         } else {
@@ -398,7 +408,6 @@ export const WorkerPage = {
      * 切换到新的直播间。
      */
     async switchRoom() {
-
         if (this.healthCheckTimeoutId) {
             clearTimeout(this.healthCheckTimeoutId);
             this.healthCheckTimeoutId = null;
@@ -420,7 +429,7 @@ export const WorkerPage = {
             const openedRoomIds = new Set(Object.keys(currentState.tabs));
 
             // 3. 筛选出未被打开的新房间
-            const nextUrl = apiRoomUrls.find(url => {
+            const nextUrl = apiRoomUrls.find((url) => {
                 const rid = url.match(/\/(\d+)/)?.[1];
                 return rid && !openedRoomIds.has(rid);
             });
@@ -440,7 +449,7 @@ export const WorkerPage = {
                     // --- 找到了“/beta”，说明是新版UI ---
                     localStorage.setItem('newWebLive', 'A');
                 }
-                GM_openInTab(nextUrl, {active: false, setParent: true});
+                GM_openInTab(nextUrl, { active: false, setParent: true });
                 await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
                 await this.selfClose(currentRoomId); // 使用统一的"自毁程序"
             } else {
@@ -459,7 +468,7 @@ export const WorkerPage = {
     async enterDormantMode() {
         const roomId = Utils.getCurrentRoomId();
         Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
-        GlobalState.updateWorker(roomId, 'DORMANT', '休眠中 (等待北京时间0点)', {countdown: null});
+        GlobalState.updateWorker(roomId, 'DORMANT', '休眠中 (等待北京时间0点)', { countdown: null });
 
         const now = Utils.getBeijingTime();
         const tomorrow = new Date(now.getTime());
@@ -485,7 +494,7 @@ export const WorkerPage = {
         if (this.pauseSentinelInterval) {
             clearInterval(this.pauseSentinelInterval);
         }
-        
+
         // 如果是来自"关闭所有"指令，跳过状态更新，直接移除和关闭
         if (fromCloseAll) {
             Utils.log(`[关闭所有] 跳过状态更新，直接关闭标签页 (房间: ${roomId})`);
@@ -570,7 +579,7 @@ export const WorkerPage = {
         Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
 
         this.commandChannel.onmessage = (event) => {
-            const {action, target} = event.data;
+            const { action, target } = event.data;
 
             // 检查指令是否是给自己的
             if (target === roomId || target === '*') {
