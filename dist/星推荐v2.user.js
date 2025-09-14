@@ -1113,6 +1113,19 @@ removeExpiredData: function() {
       }, {});
       GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
       Utils.log("[数据统计]：已清理过期数据");
+    },
+    updateDataForDailyReset: function() {
+      const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+      if (!allData) {
+        Utils.log("更新每日数据时本地数据错误，跳过");
+        return;
+      }
+      const lastDate = Object.keys(allData).at(-1);
+      const nowDate = Utils.formatDateAsBeijing( new Date());
+      if (new Date(lastDate) !== new Date(nowDate)) {
+        this.updateTodayData();
+        this.removeExpiredData();
+      }
     }
   };
   const ControlPage = {
@@ -1341,6 +1354,7 @@ renderDashboard() {
         emptyMsg.remove();
       }
       this.renderLimitStatus();
+      StatsInfo.updateDataForDailyReset();
     },
 renderLimitStatus() {
       let limitState = GlobalState.getDailyLimit();
