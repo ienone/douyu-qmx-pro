@@ -57,6 +57,7 @@ DAILY_LIMIT_ACTION: "CONTINUE_DORMANT",
 AUTO_PAUSE_ENABLED: true,
 AUTO_PAUSE_DELAY_AFTER_ACTION: 5e3,
 CALIBRATION_MODE_ENABLED: false,
+SHOW_STATS_IN_PANEL: false,
 
 STATE_STORAGE_KEY: "douyu_qmx_dashboard_state",
 DAILY_LIMIT_REACHED_KEY: "douyu_qmx_daily_limit_reached",
@@ -151,23 +152,6 @@ formatDateAsBeijing(date) {
       const month = String(beijingDate.getUTCMonth() + 1).padStart(2, "0");
       const day = String(beijingDate.getUTCDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
-    },
-lockChecker: function(lockKey, callback, ...args) {
-      if (GM_getValue(lockKey, false)) {
-        setTimeout(() => callback(...args), 50);
-        return false;
-      }
-      return true;
-    },
-setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
-      try {
-        GM_setValue(lockKey, true);
-        GM_setValue(storageKey, value);
-      } catch (e) {
-        Utils.log(`[${nickname}-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
-      } finally {
-        GM_setValue(lockKey, false);
-      }
     }
   };
   function initHackTimer(workerScript) {
@@ -383,6 +367,14 @@ setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <div class="qmx-settings-item">
+                        <label>展示数据统计 <span class="qmx-tooltip-icon" data-tooltip-key="stats-info">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-stats-info" ${SETTINGS2.SHOW_STATS_IN_PANEL ? "checked" : ""}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
                         <label>达到上限后的行为</label>
                         <div class="qmx-select" data-target-id="setting-daily-limit-action">
@@ -839,7 +831,8 @@ show() {
         "api-retry-delay": "API请求失败后，等待多久再重试。",
         "healthcheck-interval": "哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。",
         "disconnected-grace-period": "刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。",
-        "calibration-mode": "启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能"
+        "calibration-mode": "启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能",
+        "stats-info": "此功能需要在油猴设置中将“允许脚本访问 Cookie”改为ALL！！在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。"
       };
       modal.innerHTML = settingsPanelTemplate(SETTINGS);
       activateToolTips(modal, allTooltips);
@@ -864,7 +857,7 @@ CONTROL_ROOM_ID: document.getElementById("setting-control-room-id").value,
         AUTO_PAUSE_ENABLED: document.getElementById("setting-auto-pause").checked,
         DAILY_LIMIT_ACTION: document.getElementById("setting-daily-limit-action").value,
         MODAL_DISPLAY_MODE: document.getElementById("setting-modal-mode").value,
-        THEME: document.getElementById("setting-theme-mode").checked ? "light" : "dark",
+        THEME: document.getElementById("setting-theme-mode").checked ? "dark" : "light",
 
 INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script-delay").value) * 1e3,
         AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat(document.getElementById("setting-auto-pause-delay").value) * 1e3,
@@ -873,6 +866,7 @@ INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script
         RED_ENVELOPE_LOAD_TIMEOUT: parseFloat(document.getElementById("setting-red-envelope-timeout").value) * 1e3,
         POPUP_WAIT_TIMEOUT: parseFloat(document.getElementById("setting-popup-wait-timeout").value) * 1e3,
         CALIBRATION_MODE_ENABLED: document.getElementById("setting-calibration-mode").checked,
+        SHOW_STATS_IN_PANEL: document.getElementById("setting-stats-info").checked,
         ELEMENT_WAIT_TIMEOUT: parseFloat(document.getElementById("setting-worker-loading-timeout").value) * 1e3,
         MIN_DELAY: parseFloat(document.getElementById("setting-min-delay").value) * 1e3,
         MAX_DELAY: parseFloat(document.getElementById("setting-max-delay").value) * 1e3,
@@ -884,14 +878,8 @@ MAX_WORKER_TABS: parseInt(document.getElementById("setting-max-tabs").value, 10)
         API_RETRY_COUNT: parseInt(document.getElementById("setting-api-retry-count").value, 10),
         API_RETRY_DELAY: parseFloat(document.getElementById("setting-api-retry-delay").value) * 1e3
       };
-      const existingUserSettings = GM_getValue(
-        SettingsManager.STORAGE_KEY,
-        {}
-      );
-      const finalSettingsToSave = Object.assign(
-        existingUserSettings,
-        newSettings
-      );
+      const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY, {});
+      const finalSettingsToSave = Object.assign(existingUserSettings, newSettings);
       delete finalSettingsToSave.OPEN_TAB_DELAY;
       SettingsManager.save(finalSettingsToSave);
       alert("设置已保存！页面将刷新以应用所有更改。");
@@ -1116,7 +1104,11 @@ init() {
       this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
       ThemeManager.applyTheme(SETTINGS.THEME);
       this.createHTML();
-      StatsInfo.init();
+      if (SETTINGS.SHOW_STATS_IN_PANEL) {
+        StatsInfo.init();
+      } else {
+        document.querySelector(".qmx-modal-stats-content").remove();
+      }
       this.applyModalMode();
       this.bindEvents();
       setInterval(() => {
@@ -1280,7 +1272,7 @@ renderDashboard() {
             currentStatusText = "等待开抢...";
           }
         }
-        {
+        if (SETTINGS.SHOW_STATS_IN_PANEL) {
           if (currentStatusText.includes("领取到")) {
             StatsInfo.getCoinListUpdate();
           }
