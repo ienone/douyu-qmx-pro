@@ -20,9 +20,9 @@ export const GlobalState = {
      * @returns {{tabs: object, rewards: Array, command: object|null}} - 共享状态。
      */
     get() {
-        const state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {} });
-        if (!state) {
-            const state = { tabs: {} };
+        let state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {} });
+        if (!state || typeof state !== 'object') {
+            state = { tabs: {} };
         }
         // 日志：记录每次读取操作，以及读取到了什么
         return state;

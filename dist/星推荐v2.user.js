@@ -549,7 +549,10 @@ applyTheme(theme) {
   };
   const GlobalState = {
 get() {
-      const state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {} });
+      let state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {} });
+      if (!state || typeof state !== "object") {
+        state = { tabs: {} };
+      }
       return state;
     },
 set(state) {
