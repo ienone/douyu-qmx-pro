@@ -126,9 +126,7 @@ getRandomDelay(min = SETTINGS.MIN_DELAY, max = SETTINGS.MAX_DELAY) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     },
 getCurrentRoomId() {
-      const match = window.location.href.match(
-        /douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/
-      );
+      const match = window.location.href.match(/douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/);
       return match ? match[1] || new URLSearchParams(window.location.search).get("rid") : null;
     },
 formatTime(totalSeconds) {
@@ -150,6 +148,23 @@ formatDateAsBeijing(date) {
       const month = String(beijingDate.getUTCMonth() + 1).padStart(2, "0");
       const day = String(beijingDate.getUTCDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
+    },
+lockChecker: function(lockKey, callback, ...args) {
+      if (GM_getValue(lockKey, false)) {
+        setTimeout(() => callback(...args), 50);
+        return false;
+      }
+      return true;
+    },
+setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
+      try {
+        GM_setValue(lockKey, true);
+        GM_setValue(storageKey, value);
+      } catch (e) {
+        Utils.log(`[${nickname}-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
+      } finally {
+        GM_setValue(lockKey, false);
+      }
     }
   };
   function initHackTimer(workerScript) {
@@ -523,18 +538,10 @@ get() {
     },
 set(state) {
       const lockKey = "douyu_qmx_state_lock";
-      if (GM_getValue(lockKey, false)) {
-        setTimeout(() => this.set(state), 50);
+      if (!Utils.lockChecker(lockKey, () => this.set(), state)) {
         return;
       }
-      try {
-        GM_setValue(lockKey, true);
-        GM_setValue(SETTINGS.STATE_STORAGE_KEY, state);
-      } catch (e) {
-        Utils.log(`[全局状态-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
-      } finally {
-        GM_setValue(lockKey, false);
-      }
+      Utils.setLocalValueWithLock(lockKey, SETTINGS.STATE_STORAGE_KEY, state, "更新全局状态");
     },
 updateWorker(roomId, status, statusText, options = {}) {
       if (!roomId) return;
