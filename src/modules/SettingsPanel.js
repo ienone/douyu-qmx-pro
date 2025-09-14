@@ -89,7 +89,7 @@ export const SettingsPanel = {
             AUTO_PAUSE_ENABLED: document.getElementById('setting-auto-pause').checked,
             DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
             MODAL_DISPLAY_MODE: document.getElementById('setting-modal-mode').value,
-            THEME: document.getElementById('setting-theme-mode').checked ? 'light' : 'dark', // 保存主题设置
+            THEME: document.getElementById('setting-theme-mode').checked ? 'dark' : 'light', // 保存主题设置
 
             // Tab 2: 性能与延迟 (单位转换：从 秒/分钟 转为 毫秒)
             INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById('setting-initial-script-delay').value) * 1000,
