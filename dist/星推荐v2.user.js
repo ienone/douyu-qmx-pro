@@ -152,6 +152,23 @@ formatDateAsBeijing(date) {
       const month = String(beijingDate.getUTCMonth() + 1).padStart(2, "0");
       const day = String(beijingDate.getUTCDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
+    },
+lockChecker: function(lockKey, callback, ...args) {
+      if (GM_getValue(lockKey, false)) {
+        setTimeout(() => callback(...args), 50);
+        return false;
+      }
+      return true;
+    },
+setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
+      try {
+        GM_setValue(lockKey, true);
+        GM_setValue(storageKey, value);
+      } catch (e) {
+        Utils.log(`[${nickname}-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
+      } finally {
+        GM_setValue(lockKey, false);
+      }
     }
   };
   function initHackTimer(workerScript) {
