@@ -35,7 +35,12 @@ export const ControlPage = {
         // this.injectCSS();
         ThemeManager.applyTheme(SETTINGS.THEME);
         this.createHTML();
-        StatsInfo.init();
+        // 启用统计信息面板
+        if (SETTINGS.SHOW_STATS_IN_PANEL) {
+            StatsInfo.init();
+        } else {
+            document.querySelector('.qmx-modal-stats-content').remove();
+        }
         // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
         this.applyModalMode();
         this.bindEvents();
@@ -280,7 +285,7 @@ export const ControlPage = {
             }
 
             // 判断是否更新统计数据
-            if (true) {
+            if (SETTINGS.SHOW_STATS_IN_PANEL) {
                 if (currentStatusText.includes('领取到')) {
                     StatsInfo.getCoinListUpdate();
                 }

@@ -2,14 +2,14 @@
  * @file    templates.js
  * @description 负责UI模板的定义和管理。
  */
-import { SETTINGS } from "../modules/SettingsManager";
+import { SETTINGS } from '../modules/SettingsManager';
 
 /**
  * 控制面板模板
  * @param {number} maxTabs - 最大标签页数量
  * @returns {string} - 控制面板的HTML模板
  */
-export const mainPanelTemplate = (maxTabs) =>`
+export const mainPanelTemplate = (maxTabs) => `
     <div class="qmx-modal-header">
         <span>控制中心</span>
         <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
@@ -42,7 +42,7 @@ const createUnitInput = (id, label, settingsMeta) => {
                 <div class="qmx-settings-item">
                     <label for="${id}">
                         ${label}
-                        <span class="qmx-tooltip-icon" data-tooltip-key="${id.replace( "setting-", "" )}">?</span>
+                        <span class="qmx-tooltip-icon" data-tooltip-key="${id.replace('setting-', '')}">?</span>
                     </label>
                     <fieldset class="qmx-fieldset-unit">
                         <legend>${meta.unit}</legend>
@@ -58,7 +58,6 @@ const createUnitInput = (id, label, settingsMeta) => {
  * @returns {string} - 生成的HTML字符串
  */
 export const settingsPanelTemplate = (SETTINGS) => {
-    
     const settingsMeta = {
         'setting-initial-script-delay': { value: SETTINGS.INITIAL_SCRIPT_DELAY / 1000, unit: '秒' },
         'setting-auto-pause-delay': { value: SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION / 1000, unit: '秒' },
@@ -73,7 +72,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
         'setting-disconnected-grace-period': { value: SETTINGS.DISCONNECTED_GRACE_PERIOD / 1000, unit: '秒' },
     };
 
-    return`
+    return `
         <div class="qmx-settings-header">
             <div class="qmx-settings-tabs">
                 <button class="tab-link active" data-tab="basic">基本设置</button>
@@ -132,18 +131,32 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     <div class="qmx-settings-item">
                         <label>启用校准模式 <span class="qmx-tooltip-icon" data-tooltip-key="calibration-mode">?</span></label>
                         <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-calibration-mode" ${SETTINGS.CALIBRATION_MODE_ENABLED ? 'checked' : ''}>
+                            <input type="checkbox" id="setting-calibration-mode" ${
+                                SETTINGS.CALIBRATION_MODE_ENABLED ? 'checked' : ''
+                            }>
                             <span class="slider"></span>
                         </label>
                     </div>
+                    <div class="qmx-settings-item">
+                        <label>展示数据统计 <span class="qmx-tooltip-icon" data-tooltip-key="stats-info">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-stats-info" ${SETTINGS.SHOW_STATS_IN_PANEL ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
                         <label>达到上限后的行为</label>
                         <div class="qmx-select" data-target-id="setting-daily-limit-action">
                             <div class="qmx-select-styled"></div>
                             <div class="qmx-select-options"></div>
                             <select id="setting-daily-limit-action" style="display: none;">
-                                <option value="STOP_ALL" ${SETTINGS.DAILY_LIMIT_ACTION === 'STOP_ALL' ? 'selected' : ''}>直接关停所有任务</option>
-                                <option value="CONTINUE_DORMANT" ${SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT' ? 'selected' : ''}>进入休眠模式，等待刷新</option>
+                                <option value="STOP_ALL" ${
+                                    SETTINGS.DAILY_LIMIT_ACTION === 'STOP_ALL' ? 'selected' : ''
+                                }>直接关停所有任务</option>
+                                <option value="CONTINUE_DORMANT" ${
+                                    SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT' ? 'selected' : ''
+                                }>进入休眠模式，等待刷新</option>
                             </select>
                         </div>
                     </div>
@@ -153,9 +166,15 @@ export const settingsPanelTemplate = (SETTINGS) => {
                             <div class="qmx-select-styled"></div>
                             <div class="qmx-select-options"></div>
                             <select id="setting-modal-mode" style="display: none;">
-                                <option value="floating" ${SETTINGS.MODAL_DISPLAY_MODE ===    'floating' ? 'selected' : ''}>浮动窗口</option>
-                                <option value="centered" ${SETTINGS.MODAL_DISPLAY_MODE ===    'centered' ? 'selected' : ''}>屏幕居中</option>
-                                <option value="inject-rank-list" ${SETTINGS.MODAL_DISPLAY_MODE ===    'inject-rank-list' ? 'selected' : ''}>替换排行榜显示</option>
+                                <option value="floating" ${
+                                    SETTINGS.MODAL_DISPLAY_MODE === 'floating' ? 'selected' : ''
+                                }>浮动窗口</option>
+                                <option value="centered" ${
+                                    SETTINGS.MODAL_DISPLAY_MODE === 'centered' ? 'selected' : ''
+                                }>屏幕居中</option>
+                                <option value="inject-rank-list" ${
+                                    SETTINGS.MODAL_DISPLAY_MODE === 'inject-rank-list' ? 'selected' : ''
+                                }>替换排行榜显示</option>
                             </select>
                         </div>
                     </div>
@@ -165,25 +184,29 @@ export const settingsPanelTemplate = (SETTINGS) => {
             <!-- ==================== Tab 2: 性能与延迟 ==================== -->
             <div id="tab-perf" class="tab-content">
                 <div class="qmx-settings-grid">
-                    ${createUnitInput('setting-initial-script-delay',      '脚本初始启动延迟', settingsMeta)}
-                    ${createUnitInput('setting-auto-pause-delay',          '领取后暂停延迟', settingsMeta)}
-                    ${createUnitInput('setting-unresponsive-timeout',      '工作页失联超时', settingsMeta)}
-                    ${createUnitInput('setting-red-envelope-timeout',      '红包活动加载超时', settingsMeta)}
-                    ${createUnitInput('setting-popup-wait-timeout',        '红包弹窗等待超时', settingsMeta)}
-                    ${createUnitInput('setting-worker-loading-timeout',    '播放器加载超时', settingsMeta)}
-                    ${createUnitInput('setting-close-tab-delay',           '关闭标签页延迟', settingsMeta)}
+                    ${createUnitInput('setting-initial-script-delay', '脚本初始启动延迟', settingsMeta)}
+                    ${createUnitInput('setting-auto-pause-delay', '领取后暂停延迟', settingsMeta)}
+                    ${createUnitInput('setting-unresponsive-timeout', '工作页失联超时', settingsMeta)}
+                    ${createUnitInput('setting-red-envelope-timeout', '红包活动加载超时', settingsMeta)}
+                    ${createUnitInput('setting-popup-wait-timeout', '红包弹窗等待超时', settingsMeta)}
+                    ${createUnitInput('setting-worker-loading-timeout', '播放器加载超时', settingsMeta)}
+                    ${createUnitInput('setting-close-tab-delay', '关闭标签页延迟', settingsMeta)}
                     ${createUnitInput('setting-switching-cleanup-timeout', '切换中状态兜底超时', settingsMeta)}
-                    ${createUnitInput('setting-healthcheck-interval',      '哨兵健康检查间隔', settingsMeta)}
+                    ${createUnitInput('setting-healthcheck-interval', '哨兵健康检查间隔', settingsMeta)}
                     ${createUnitInput('setting-disconnected-grace-period', '断开连接清理延迟', settingsMeta)}
-                    ${createUnitInput('setting-api-retry-delay',           'API重试延迟', settingsMeta)}
+                    ${createUnitInput('setting-api-retry-delay', 'API重试延迟', settingsMeta)}
                     
                     <div class="qmx-settings-item" style="grid-column: 1 / -1;">
                         <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>
                         <div class="qmx-range-slider-wrapper">
                             <div class="qmx-range-slider-container">
                                 <div class="qmx-range-slider-track-container"><div class="qmx-range-slider-progress"></div></div>
-                                <input type="range" id="setting-min-delay" min="0.1" max="5" step="0.1" value="${SETTINGS.MIN_DELAY / 1000}">
-                                <input type="range" id="setting-max-delay" min="0.1" max="5" step="0.1" value="${SETTINGS.MAX_DELAY / 1000}">
+                                <input type="range" id="setting-min-delay" min="0.1" max="5" step="0.1" value="${
+                                    SETTINGS.MIN_DELAY / 1000
+                                }">
+                                <input type="range" id="setting-max-delay" min="0.1" max="5" step="0.1" value="${
+                                    SETTINGS.MAX_DELAY / 1000
+                                }">
                             </div>
                             <div class="qmx-range-slider-values"></div>
                         </div>
@@ -200,7 +223,9 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     </div>
                     <div class="qmx-settings-item">
                         <label for="setting-api-fetch-count">单次API获取房间数 <span class="qmx-tooltip-icon" data-tooltip-key="api-room-fetch-count">?</span></label>
-                        <input type="number" class="qmx-input" id="setting-api-fetch-count" value="${SETTINGS.API_ROOM_FETCH_COUNT}">
+                        <input type="number" class="qmx-input" id="setting-api-fetch-count" value="${
+                            SETTINGS.API_ROOM_FETCH_COUNT
+                        }">
                     </div>
                     <div class="qmx-settings-item">
                         <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
@@ -283,4 +308,4 @@ export const settingsPanelTemplate = (SETTINGS) => {
             <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存并刷新</button>
         </div>
         `;
-    };
+};

@@ -15,7 +15,6 @@ import { ThemeManager } from './ThemeManager';
  * 设置面板的UI、提示文本和部分交互逻辑
  */
 export const SettingsPanel = {
-
     /**
      * 显示设置面板
      */
@@ -42,7 +41,8 @@ export const SettingsPanel = {
             'healthcheck-interval': '哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。',
             'disconnected-grace-period': '刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。',
             'calibration-mode': '启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能',
-
+            'stats-info':
+                '此功能需要在油猴设置中将“允许脚本访问 Cookie”改为ALL！！在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。',
         };
 
         // 2. 调用模版函数，传入SETTINGS填充默认值
@@ -60,7 +60,7 @@ export const SettingsPanel = {
         document.getElementById('qmx-modal-backdrop').classList.add('visible');
         modal.classList.add('visible');
         document.body.classList.add('qmx-modal-open-scroll-lock');
-    },   
+    },
 
     /**
      * 隐藏设置面板
@@ -70,13 +70,11 @@ export const SettingsPanel = {
         modal.classList.remove('visible');
         document.body.classList.remove('qmx-modal-open-scroll-lock');
         // 如果主面板不是居中模式，则背景遮罩也应该隐藏
-        if (SETTINGS.MODAL_DISPLAY_MODE !== 'centered' ||
-            !document.getElementById('qmx-modal-container').
-                classList.
-                contains('visible')) {
-            document.getElementById('qmx-modal-backdrop').
-                classList.
-                remove('visible');
+        if (
+            SETTINGS.MODAL_DISPLAY_MODE !== 'centered' ||
+            !document.getElementById('qmx-modal-container').classList.contains('visible')
+        ) {
+            document.getElementById('qmx-modal-backdrop').classList.remove('visible');
         }
     },
 
@@ -94,33 +92,32 @@ export const SettingsPanel = {
             THEME: document.getElementById('setting-theme-mode').checked ? 'light' : 'dark', // 保存主题设置
 
             // Tab 2: 性能与延迟 (单位转换：从 秒/分钟 转为 毫秒)
-            INITIAL_SCRIPT_DELAY: parseFloat( document.getElementById('setting-initial-script-delay').value) * 1000,
-            AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat( document.getElementById('setting-auto-pause-delay').value) * 1000,
-            SWITCHING_CLEANUP_TIMEOUT: parseFloat( document.getElementById('setting-switching-cleanup-timeout').value) * 1000,
-            UNRESPONSIVE_TIMEOUT: parseInt( document.getElementById('setting-unresponsive-timeout').value, 10) * 60000,
-            RED_ENVELOPE_LOAD_TIMEOUT: parseFloat( document.getElementById('setting-red-envelope-timeout').value) * 1000,
-            POPUP_WAIT_TIMEOUT: parseFloat( document.getElementById('setting-popup-wait-timeout').value) * 1000,
+            INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById('setting-initial-script-delay').value) * 1000,
+            AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat(document.getElementById('setting-auto-pause-delay').value) * 1000,
+            SWITCHING_CLEANUP_TIMEOUT: parseFloat(document.getElementById('setting-switching-cleanup-timeout').value) * 1000,
+            UNRESPONSIVE_TIMEOUT: parseInt(document.getElementById('setting-unresponsive-timeout').value, 10) * 60000,
+            RED_ENVELOPE_LOAD_TIMEOUT: parseFloat(document.getElementById('setting-red-envelope-timeout').value) * 1000,
+            POPUP_WAIT_TIMEOUT: parseFloat(document.getElementById('setting-popup-wait-timeout').value) * 1000,
             CALIBRATION_MODE_ENABLED: document.getElementById('setting-calibration-mode').checked,
-            ELEMENT_WAIT_TIMEOUT: parseFloat( document.getElementById('setting-worker-loading-timeout').value) * 1000,
-            MIN_DELAY: parseFloat( document.getElementById('setting-min-delay').value) * 1000,
-            MAX_DELAY: parseFloat( document.getElementById('setting-max-delay').value) * 1000,
-            CLOSE_TAB_DELAY: parseFloat( document.getElementById('setting-close-tab-delay').value) * 1000,
-            HEALTHCHECK_INTERVAL: parseFloat( document.getElementById('setting-healthcheck-interval').value) * 1000,
-            DISCONNECTED_GRACE_PERIOD: parseFloat( document.getElementById('setting-disconnected-grace-period').value) * 1000,
+            SHOW_STATS_IN_PANEL: document.getElementById('setting-stats-info').checked,
+            ELEMENT_WAIT_TIMEOUT: parseFloat(document.getElementById('setting-worker-loading-timeout').value) * 1000,
+            MIN_DELAY: parseFloat(document.getElementById('setting-min-delay').value) * 1000,
+            MAX_DELAY: parseFloat(document.getElementById('setting-max-delay').value) * 1000,
+            CLOSE_TAB_DELAY: parseFloat(document.getElementById('setting-close-tab-delay').value) * 1000,
+            HEALTHCHECK_INTERVAL: parseFloat(document.getElementById('setting-healthcheck-interval').value) * 1000,
+            DISCONNECTED_GRACE_PERIOD: parseFloat(document.getElementById('setting-disconnected-grace-period').value) * 1000,
 
             // Tab 3: 高级设置
-            MAX_WORKER_TABS: parseInt( document.getElementById('setting-max-tabs').value, 10),
-            API_ROOM_FETCH_COUNT: parseInt( document.getElementById('setting-api-fetch-count').value, 10),
-            API_RETRY_COUNT: parseInt( document.getElementById('setting-api-retry-count').value, 10),
-            API_RETRY_DELAY: parseFloat( document.getElementById('setting-api-retry-delay').value) * 1000,
+            MAX_WORKER_TABS: parseInt(document.getElementById('setting-max-tabs').value, 10),
+            API_ROOM_FETCH_COUNT: parseInt(document.getElementById('setting-api-fetch-count').value, 10),
+            API_RETRY_COUNT: parseInt(document.getElementById('setting-api-retry-count').value, 10),
+            API_RETRY_DELAY: parseFloat(document.getElementById('setting-api-retry-delay').value) * 1000,
         };
 
         // 获取所有已存在的用户设置，以保留那些未在UI中暴露的设置
-        const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY,
-            {});
+        const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY, {});
         // 将未在UI中暴露的旧设置与新设置合并
-        const finalSettingsToSave = Object.assign(existingUserSettings,
-            newSettings);
+        const finalSettingsToSave = Object.assign(existingUserSettings, newSettings);
 
         // 删除已废弃的 OPEN_TAB_DELAY，以防旧配置残留
         delete finalSettingsToSave.OPEN_TAB_DELAY;
@@ -130,7 +127,6 @@ export const SettingsPanel = {
         alert('设置已保存！页面将刷新以应用所有更改。');
         window.location.reload();
     },
-
 
     /**
      * 绑定设置面板内部的所有事件监听器。
@@ -148,7 +144,7 @@ export const SettingsPanel = {
         };
 
         // 绑定标签页切换事件
-        modal.querySelectorAll('.tab-link').forEach(button => {
+        modal.querySelectorAll('.tab-link').forEach((button) => {
             button.onclick = (e) => {
                 const tabId = e.target.dataset.tab;
                 modal.querySelector('.tab-link.active')?.classList.remove('active');
@@ -203,6 +199,4 @@ export const SettingsPanel = {
         }
     },
     */
-
-
 };
