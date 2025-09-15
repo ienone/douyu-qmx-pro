@@ -181,7 +181,12 @@ export const StatsInfo = {
      */
     getCoinListUpdate: async function () {
         // 获取金币历史数据
-        const coinList = await DouyuAPI.getCoinRecord(1, 100, 3);
+        const currentRoomId = Utils.getCurrentRoomId();
+        if (!currentRoomId) {
+            Utils.log('[统计] 无法获取当前房间ID，跳过金币记录更新。');
+            return;
+        }
+        const coinList = await DouyuAPI.getCoinRecord(1, 100, currentRoomId, 3);
         // 处理今日数据
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);

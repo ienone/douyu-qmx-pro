@@ -12,16 +12,17 @@ export const DouyuAPI = {
     /**
      * 通过 API 获取可领取红包的房间列表。
      * @param {number} count - 期望获取的房间数量。
+     * @param {string} rid - 当前房间的ID。
      * @param {number} [retries=SETTINGS.API_RETRY_COUNT] - 重试次数。
      * @returns {Promise<string[]>} - 房间链接数组。
      */
-    getRooms(count, retries = SETTINGS.API_RETRY_COUNT) {
+    getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
         return new Promise((resolve, reject) => {
             const attempt = (remainingTries) => {
                 Utils.log(`开始调用 API 获取房间列表... (剩余重试次数: ${remainingTries})`);
                 GM_xmlhttpRequest({
                     method: 'GET',
-                    url: SETTINGS.API_URL,
+                    url: `${SETTINGS.API_URL}?rid=${rid}`,
                     headers: {
                         Referer: 'https://www.douyu.com/',
                         'User-Agent': navigator.userAgent,
@@ -96,6 +97,7 @@ export const DouyuAPI = {
      * 返回用户的金币历史列表
      * @param current - 当前页码
      * @param count - 返回数量单次获取不超过100
+     * @param {string} rid - 当前房间的ID。
      * @param retries - 重试次数
      * @returns {Promise<Array<{
      *  balanceDiff: number,
@@ -104,7 +106,7 @@ export const DouyuAPI = {
      *  remark: string
      * }>>}
      */
-    getCoinRecord: function (current, count, retries = SETTINGS.API_RETRY_COUNT) {
+    getCoinRecord: function (current, count, rid, retries = SETTINGS.API_RETRY_COUNT) {
         return new Promise(async (resolve, reject) => {
             const acfCookie = await this.getCookie('acf_auth');
             if (!acfCookie) {
@@ -113,7 +115,7 @@ export const DouyuAPI = {
                 return;
             }
 
-            const fullUrl = SETTINGS.COIN_LIST_URL + '?current=' + current + '&pageSize=' + count;
+            const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
             const attempt = (remainingTries) => {
                 Utils.log(`开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`);
                 GM_xmlhttpRequest({

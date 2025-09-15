@@ -40,11 +40,21 @@ export const Utils = {
 
     /**
      * 获取当前页面的房间号。
-     * @returns {string|null} - 房间号或 null。
+     * @returns {string|null} - 房间ID或null。
      */
     getCurrentRoomId() {
-        const match = window.location.href.match(/douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/);
-        return match ? match[1] || new URLSearchParams(window.location.search).get('rid') : null;
+        const url = window.location.href;
+        // 优先匹配 /12345 这样的标准直播间
+        let match = url.match(/douyu\.com\/(?:beta\/)?(\d+)/);
+        if (match && match[1]) {
+            return match[1];
+        }
+        // 其次匹配 topic/xyz?rid=12345 这样的活动页
+        match = url.match(/rid=(\d+)/);
+        if (match && match[1]) {
+            return match[1];
+        }
+        return null;
     },
 
     /**
