@@ -35,11 +35,21 @@ export const ControlPage = {
         // this.injectCSS();
         ThemeManager.applyTheme(SETTINGS.THEME);
         this.createHTML();
-        // 启用统计信息面板
+        
+        const qmxModalHeader = document.querySelector('.qmx-modal-header');
         if (SETTINGS.SHOW_STATS_IN_PANEL) {
+            // 启用统计信息面板
+            if (qmxModalHeader) {
+                qmxModalHeader.style.padding = '12px 20px 0px 20px;';
+            }
             StatsInfo.init();
         } else {
-            document.querySelector('.qmx-modal-stats-content').remove();
+            // 恢复默认控制页面
+            const statsContent = document.querySelector('.qmx-stats-container');
+            if (statsContent && qmxModalHeader) {
+                statsContent.remove();
+                qmxModalHeader.style.padding = '16px 24px';
+            }
         }
         // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
         this.applyModalMode();
