@@ -212,7 +212,7 @@ export const StatsInfo = {
         // 检查最后一条数据的日期是否为今天
         const lastDate = Object.keys(allData).at(-1);
         const nowDate = Utils.formatDateAsBeijing(new Date());
-        if (new Date(lastDate) !== new Date(nowDate)) {
+        if (lastDate !== nowDate) {
             // 日期已过，更新数据
             this.updateTodayData();
             this.removeExpiredData();
