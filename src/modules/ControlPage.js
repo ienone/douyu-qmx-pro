@@ -433,7 +433,7 @@ export const ControlPage = {
 
         try {
             const openedRoomIds = new Set(Object.keys(state.tabs));
-            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
+            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
             const newUrl = apiRoomUrls.find((url) => {
                 const rid = url.match(/\/(\d+)/)?.[1];
                 return rid && !openedRoomIds.has(rid);

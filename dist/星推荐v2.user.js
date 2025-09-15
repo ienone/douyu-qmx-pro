@@ -130,8 +130,16 @@ getRandomDelay(min = SETTINGS.MIN_DELAY, max = SETTINGS.MAX_DELAY) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     },
 getCurrentRoomId() {
-      const match = window.location.href.match(/douyu\.com\/(?:beta\/)?(?:topic\/[^?]+\?rid=|(\d+))/);
-      return match ? match[1] || new URLSearchParams(window.location.search).get("rid") : null;
+      const url = window.location.href;
+      let match = url.match(/douyu\.com\/(?:beta\/)?(\d+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      match = url.match(/rid=(\d+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return null;
     },
 formatTime(totalSeconds) {
       const minutes = Math.floor(totalSeconds / 60);
@@ -607,13 +615,13 @@ getDailyLimit() {
     }
   };
   const DouyuAPI = {
-getRooms(count, retries = SETTINGS.API_RETRY_COUNT) {
+getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
       return new Promise((resolve, reject) => {
         const attempt = (remainingTries) => {
           Utils.log(`开始调用 API 获取房间列表... (剩余重试次数: ${remainingTries})`);
           GM_xmlhttpRequest({
             method: "GET",
-            url: SETTINGS.API_URL,
+            url: `${SETTINGS.API_URL}?rid=${rid}`,
             headers: {
               Referer: "https://www.douyu.com/",
               "User-Agent": navigator.userAgent
@@ -622,7 +630,7 @@ getRooms(count, retries = SETTINGS.API_RETRY_COUNT) {
             timeout: 1e4,
             onload: (response) => {
               if (response.status === 200 && response.response?.error === 0 && Array.isArray(response.response.data?.redBagList)) {
-                const rooms = response.response.data.redBagList.map((item) => item.rid).filter(Boolean).slice(0, count * 2).map((rid) => `https://www.douyu.com/${rid}`);
+                const rooms = response.response.data.redBagList.map((item) => item.rid).filter(Boolean).slice(0, count * 2).map((rid2) => `https://www.douyu.com/${rid2}`);
                 Utils.log(`API 成功返回 ${rooms.length} 个房间URL。`);
                 resolve(rooms);
               } else {
@@ -667,7 +675,7 @@ getCookie: function(cookieName) {
         });
       });
     },
-getCoinRecord: function(current, count, retries = SETTINGS.API_RETRY_COUNT) {
+getCoinRecord: function(current, count, rid, retries = SETTINGS.API_RETRY_COUNT) {
       return new Promise(async (resolve, reject) => {
         const acfCookie = await this.getCookie("acf_auth");
         if (!acfCookie) {
@@ -675,7 +683,7 @@ getCoinRecord: function(current, count, retries = SETTINGS.API_RETRY_COUNT) {
           reject(new Error("获取cookie错误"));
           return;
         }
-        const fullUrl = SETTINGS.COIN_LIST_URL + "?current=" + current + "&pageSize=" + count;
+        const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
         const attempt = (remainingTries) => {
           Utils.log(`开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`);
           GM_xmlhttpRequest({
@@ -1079,7 +1087,12 @@ set: function(name, value) {
       this.refreshUI(todayData);
     },
 getCoinListUpdate: async function() {
-      const coinList = await DouyuAPI.getCoinRecord(1, 100, 3);
+      const currentRoomId = Utils.getCurrentRoomId();
+      if (!currentRoomId) {
+        Utils.log("[统计] 无法获取当前房间ID，跳过金币记录更新。");
+        return;
+      }
+      const coinList = await DouyuAPI.getCoinRecord(1, 100, currentRoomId, 3);
       const startOfToday = new Date();
       startOfToday.setHours(0, 0, 0, 0);
       const filteredData = coinList.filter((item) => item.createTime > startOfToday / 1e3);
@@ -1419,7 +1432,7 @@ async openOneNewTab() {
       openBtn.textContent = "正在查找...";
       try {
         const openedRoomIds = new Set(Object.keys(state.tabs));
-        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
+        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
         const newUrl = apiRoomUrls.find((url) => {
           const rid = url.match(/\/(\d+)/)?.[1];
           return rid && !openedRoomIds.has(rid);
