@@ -290,6 +290,7 @@ setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
         <div class="qmx-stats-toggle" id="qmx-stats-toggle">
             <span class="qmx-stats-indicator">▼</span>
             <span class="qmx-stats-label">统计面板</span>
+            <span class="qmx-stats-refresh">⟳</span>
         </div>
         <div class="qmx-stats-content" id="qmx-stats-content">
             <div class="qmx-modal-stats" id="qmx-stats-panel"></div>
@@ -1007,6 +1008,25 @@ showCalibrationNotice() {
       this.updateTodayData();
       await this.getCoinListUpdate();
       this.removeExpiredData();
+      this.bindEvents();
+      setInterval(() => {
+        this.updateDataForDailyReset();
+      }, 60 * 1e3);
+    },
+    bindEvents: function() {
+      const refreshButton = document.querySelector(".qmx-stats-refresh");
+      if (!refreshButton) {
+        return;
+      }
+      refreshButton.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        void this.offsetWidth;
+        refreshButton.classList.add("rotating");
+        setTimeout(() => {
+          refreshButton.classList.remove("rotating");
+        }, 1e3);
+        await this.getCoinListUpdate();
+      });
     },
 initRender: function(name, nickname) {
       const newItem = document.createElement("div");
@@ -1076,7 +1096,12 @@ set: function(name, value) {
       const today = Utils.formatDateAsBeijing( new Date());
       let todayData = allData?.[today];
       todayData[name] = value;
-      Utils.setLocalValueWithLock(lockKey, SETTINGS.STATS_INFO_STORAGE_KEY, allData, "更新统计数据");
+      Utils.setLocalValueWithLock(
+        lockKey,
+        SETTINGS.STATS_INFO_STORAGE_KEY,
+        allData,
+        "更新统计数据"
+      );
       this.refreshUI(todayData);
     },
 getCoinListUpdate: async function() {
@@ -1131,7 +1156,7 @@ removeExpiredData: function() {
       }
       const lastDate = Object.keys(allData).at(-1);
       const nowDate = Utils.formatDateAsBeijing( new Date());
-      if (new Date(lastDate) !== new Date(nowDate)) {
+      if (lastDate !== nowDate) {
         this.updateTodayData();
         this.removeExpiredData();
       }
@@ -1146,10 +1171,19 @@ init() {
       this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
       ThemeManager.applyTheme(SETTINGS.THEME);
       this.createHTML();
+      const qmxModalHeader = document.querySelector(".qmx-modal-header");
       if (SETTINGS.SHOW_STATS_IN_PANEL) {
+        if (qmxModalHeader) {
+          qmxModalHeader.style.padding = "12px 20px 0px 20px;";
+        }
         StatsInfo.init();
       } else {
-        document.querySelector(".qmx-stats-container").remove();
+        const statsContent = document.querySelector(".qmx-stats-container");
+        if (statsContent && qmxModalHeader) {
+          statsContent.remove();
+          qmxModalHeader.style.padding = "16px 24px";
+        }
+
       }
       this.applyModalMode();
       this.bindEvents();
@@ -1377,7 +1411,6 @@ renderDashboard() {
         emptyMsg.remove();
       }
       this.renderLimitStatus();
-      StatsInfo.updateDataForDailyReset();
     },
 renderLimitStatus() {
       let limitState = GlobalState.getDailyLimit();

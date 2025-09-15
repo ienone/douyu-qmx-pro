@@ -32,6 +32,33 @@ export const StatsInfo = {
 
         // 去除过期数据
         this.removeExpiredData();
+
+        this.bindEvents();
+
+        // 每日0点更新数据
+        setInterval(() => {
+            this.updateDataForDailyReset();
+        }, 60 * 1000);
+    },
+
+    bindEvents: function () {
+        // 绑定刷新按钮事件
+        const refreshButton = document.querySelector('.qmx-stats-refresh');
+        if (!refreshButton) {
+            return;
+        }
+        refreshButton.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            
+            // 旋转动画
+            void this.offsetWidth; // 触发重绘以重新应用动画
+            refreshButton.classList.add('rotating');
+            setTimeout(() => {
+                refreshButton.classList.remove('rotating');
+            }, 1000);
+
+            await this.getCoinListUpdate();
+        });
     },
 
     /**
@@ -140,7 +167,12 @@ export const StatsInfo = {
         const today = Utils.formatDateAsBeijing(new Date());
         let todayData = allData?.[today];
         todayData[name] = value;
-        Utils.setLocalValueWithLock(lockKey, SETTINGS.STATS_INFO_STORAGE_KEY, allData, '更新统计数据');
+        Utils.setLocalValueWithLock(
+            lockKey,
+            SETTINGS.STATS_INFO_STORAGE_KEY,
+            allData,
+            '更新统计数据'
+        );
         this.refreshUI(todayData);
     },
 
@@ -217,7 +249,7 @@ export const StatsInfo = {
         // 检查最后一条数据的日期是否为今天
         const lastDate = Object.keys(allData).at(-1);
         const nowDate = Utils.formatDateAsBeijing(new Date());
-        if (new Date(lastDate) !== new Date(nowDate)) {
+        if (lastDate !== nowDate) {
             // 日期已过，更新数据
             this.updateTodayData();
             this.removeExpiredData();

@@ -18,6 +18,7 @@ export const mainPanelTemplate = (maxTabs) => `
         <div class="qmx-stats-toggle" id="qmx-stats-toggle">
             <span class="qmx-stats-indicator">▼</span>
             <span class="qmx-stats-label">统计面板</span>
+            <span class="qmx-stats-refresh">⟳</span>
         </div>
         <div class="qmx-stats-content" id="qmx-stats-content">
             <div class="qmx-modal-stats" id="qmx-stats-panel"></div>
