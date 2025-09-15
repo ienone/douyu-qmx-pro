@@ -156,11 +156,7 @@
     margin: 0 0 8px 0;
 }
 
-/* 统计面板 */
-.qmx-modal-stats-content {
-    flex-grow: 1;
-    padding: 0 24px;
-}
+
 
 .qmx-stats-header {
     display: flex;
@@ -199,7 +195,6 @@
     overflow: hidden;
     padding: 0;
 }
-
 /* 统计面板切换器 */
 .qmx-stats-toggle {
     position: relative;

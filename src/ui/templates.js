@@ -270,7 +270,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 </div>
                 -->
                 
-                <h4>关于脚本 <span class="version-tag">v2.0.7</span></h4>
+                <h4>关于脚本 <span class="version-tag">v2.0.8</span></h4>
                 <h4>致谢</h4>
                 <ul class="qmx-styled-list">
                     <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
@@ -284,19 +284,12 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     <li>后台标签页有时会在还剩几秒时卡死在红包弹窗界面(标签页倒计时不动了)，然后就死循环了。目前已部分修复此问题</li>
                     <li>脚本还是bug不少，随缘修了＞︿＜</li>
                     <li>DouyuEx 的“阻止P2P上传”功能位置：点击精灵球->从左往右第四个🛠️样貌的选项->右侧菜单顶部 </li>
+                    <li>启用统计功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！',
                 </ul>
-                <h4>脚本更新日志 (v2.0.7)</h4>
+                <h4>脚本更新日志 (v2.0.8)</h4>
                 <ul class="qmx-styled-list">
-                    <li>【新增】“校准模式”提高计时精度</b>
-                        <ul class = "qmx-style-list">
-                            <li><b>注意：启用校准模式前要先关闭 DouyuEx 的“阻止P2P上传”功能！</b></li>
-                        </ul>
-                    </li>
-                    <li>【修复】修复达到每日上限后，点击“关闭所有”功能时 UI 界面残留的问题</b></li>
-                    <li>【修复】修复缩放/改变屏幕分辨率的情况下，🎁图标可能消失的问题</b></li>
-                    <li>【优化】优化返回旧版UI逻辑，修复无法跳转空白页 by @Truthss</b></li>
-                    <li>【修复】尝试修复红包倒计时卡死 by @Truthss </b></li>
-                    <li>【重构】使用Vite对项目进行解耦重构 by @Truthss | @ienone </b></li>
+                    <li>【修复】适配斗鱼星推荐API变动</li>
+                    <li>【新增】在控制面板中显示统计信息，记录每日领取的红包数量和金币总额。</li>
                 </ul>
                 <h4>源码与社区</h4>
                 <ul class="qmx-styled-list">
