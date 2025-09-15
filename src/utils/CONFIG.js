@@ -72,7 +72,7 @@ export const CONFIG = {
         playButton: 'div.play-8dbf03:not(.removed-9d4c42)', // 播放器上的播放按钮。
         rewardSuccessIndicator: '.LiveNewAnchorSupportT-singleBagOpened', // 成功状态的弹窗
         limitReachedPopup: 'div.dy-Message-custom-content.dy-Message-info', // 斗鱼官方弹出的“今日已达上限”的提示信息元素。
-        rankListContainer: '.layout-Player-aside', // 注入模式下，脚本面板要替换的目标容器。
+        rankListContainer: '#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank', // 注入模式下，脚本面板要替换的目标容器。
         anchorName: 'div.Title-anchorName > h2.Title-anchorNameH2', // 直播间页面中显示主播昵称的元素。
     },
 };
