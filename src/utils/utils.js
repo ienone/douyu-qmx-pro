@@ -79,6 +79,7 @@ export const Utils = {
     formatDateAsBeijing(date) {
         // 先将传入的任何时区的date对象转为北京时间的date对象
         const beijingDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+
         // 然后从这个新的date对象中，按UTC标准提取年月日
         const year = beijingDate.getUTCFullYear();
         const month = String(beijingDate.getUTCMonth() + 1).padStart(2, '0');

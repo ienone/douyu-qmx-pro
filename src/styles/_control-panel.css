@@ -13,7 +13,7 @@
     height: 56px;
     border-radius: 16px;
     cursor: grab;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -48,7 +48,7 @@
     max-width: 90vw;
     max-height: 80vh;
     border-radius: 28px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s, visibility 0.3s, transform 0.2s ease-out;
@@ -155,6 +155,74 @@
     margin: 8px 0;
 }
 
+/* --- 统计面板 --- */
+.qmx-modal-stats-content {
+    flex-grow: 1;
+    padding: 0 24px;
+}
+
+.qmx-modal-stats-content h3 {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
+    margin: 8px 0;
+}
+
+.qmx-modal-stats {
+    display: flex;
+    gap: 1px;
+}
+
+.qmx-modal-stats-child {
+    background-color: var(--md-sys-color-surface-bright);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s, transform 0.3s ease, opacity 0.3s ease;
+    width: 88px;
+    float: left;
+    margin-left: 2%;
+}
+
+.qmx-stat-info-avg, .qmx-stat-info-total, .qmx-stat-info-receivedCount {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 4px;
+    font-size: 14px;
+    overflow: hidden;
+}
+
+.qmx-stat-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+}
+
+.qmx-stat-nickname {
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qmx-stat-details {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: var(--md-sys-color-on-surface-variant);
+    justify-content: center;
+}
+
+.qmx-stat-stats {
+    font-weight: 500;
+}
+
+
 /* --- Tab 列表项 --- */
 .qmx-tab-list-item {
     background-color: var(--md-sys-color-surface-bright);
@@ -168,7 +236,7 @@
 }
 
 .qmx-tab-list-item:hover {
-    background-color: rgba(255,255,255,0.05);
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .qmx-item-enter {

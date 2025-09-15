@@ -4,14 +4,15 @@
  */
 
 import '../styles/ControlPanel-refactored.css';
-import { mainPanelTemplate } from '../ui/templates.js'; 
+import { mainPanelTemplate } from '../ui/templates.js';
 import { Utils } from '../utils/utils';
-import { SETTINGS } from './SettingsManager'; 
+import { SETTINGS } from './SettingsManager';
 import { ThemeManager } from './ThemeManager';
 import { GlobalState } from './GlobalState';
 import { DouyuAPI } from '../utils/DouyuAPI';
-import { SettingsPanel } from './SettingsPanel.js'; 
+import { SettingsPanel } from './SettingsPanel.js';
 import { FirstTimeNotice } from './FirstTimeNotice.js';
+import { StatsInfo } from './StatsInfo.js';
 
 /**
  * =================================================================================
@@ -22,8 +23,8 @@ import { FirstTimeNotice } from './FirstTimeNotice.js';
  */
 export const ControlPage = {
     // --- 模块内部状态 ---
-    injectionTarget: null,    // 存储被注入的DOM元素引用
-    isPanelInjected: false,   // 标记是否成功进入注入模式
+    injectionTarget: null, // 存储被注入的DOM元素引用
+    isPanelInjected: false, // 标记是否成功进入注入模式
     commandChannel: null,
     /**
      * 控制页面的总入口和初始化函数。
@@ -34,6 +35,12 @@ export const ControlPage = {
         // this.injectCSS();
         ThemeManager.applyTheme(SETTINGS.THEME);
         this.createHTML();
+        // 启用统计信息面板
+        if (SETTINGS.SHOW_STATS_IN_PANEL) {
+            StatsInfo.init();
+        } else {
+            document.querySelector('.qmx-modal-stats-content').remove();
+        }
         // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
         this.applyModalMode();
         this.bindEvents();
@@ -41,7 +48,7 @@ export const ControlPage = {
             this.renderDashboard();
             this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
         }, 1000);
-        
+
         // 显示首次使用提示
         FirstTimeNotice.showCalibrationNotice();
 
@@ -94,33 +101,26 @@ export const ControlPage = {
 
             // 如果一个标签页标记为“断开连接”且超过了宽限期，就清理它。
             // 准确地处理手动关闭的标签页，同时给刷新的标签页重连的机会。
-            if (tab.status === 'DISCONNECTED' && timeSinceLastUpdate >
-                SETTINGS.DISCONNECTED_GRACE_PERIOD) {
+            if (tab.status === 'DISCONNECTED' && timeSinceLastUpdate > SETTINGS.DISCONNECTED_GRACE_PERIOD) {
                 Utils.log(
-                    `[监控] 任务 ${roomId} (已断开) 超过 ${SETTINGS.DISCONNECTED_GRACE_PERIOD /
-                    1000} 秒未重连，执行清理。`);
+                    `[监控] 任务 ${roomId} (已断开) 超过 ${SETTINGS.DISCONNECTED_GRACE_PERIOD / 1000} 秒未重连，执行清理。`
+                );
                 delete state.tabs[roomId];
                 stateModified = true;
                 continue; // 处理完这个就检查下一个
             }
 
             // 规则: 如果一个标签页处于“切换中”状态超过30秒，我们就认为它已经关闭
-            if (tab.status === 'SWITCHING' && timeSinceLastUpdate >
-                SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
-                Utils.log(
-                    `[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
+            if (tab.status === 'SWITCHING' && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
+                Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
                 delete state.tabs[roomId];
                 stateModified = true;
                 continue; // 处理完这个就检查下一个
             }
 
             // 规则：如果一个标签页（无论何种状态）长时间没有任何通信，则判定为失联
-            if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT &&
-                tab.status !==
-                'UNRESPONSIVE') {
-                Utils.log(
-                    `[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT /
-                    60000} 分钟，标记为无响应。`);
+            if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== 'UNRESPONSIVE') {
+                Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 60000} 分钟，标记为无响应。`);
                 tab.status = 'UNRESPONSIVE';
                 tab.statusText = '心跳失联，请点击激活或关闭此标签页';
                 stateModified = true;
@@ -143,24 +143,19 @@ export const ControlPage = {
         const modalBackdrop = document.getElementById('qmx-modal-backdrop');
 
         // --- 核心交互：主按钮的点击与拖拽 ---
-        this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY,
-            () => this.showPanel());
+        this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
 
         // 仅在浮动模式下，插件面板本身才可拖动
         if (SETTINGS.MODAL_DISPLAY_MODE === 'floating') {
-            const modalHeader = modalContainer.querySelector(
-                '.qmx-modal-header');
+            const modalHeader = modalContainer.querySelector('.qmx-modal-header');
             // 面板拖拽不需要点击行为，所以第三个参数留空或不传
-            this.setupDrag(modalContainer, 'douyu_qmx_modal_position', null,
-                modalHeader);
+            this.setupDrag(modalContainer, 'douyu_qmx_modal_position', null, modalHeader);
         }
 
         // --- 关闭事件 ---
-        document.getElementById(
-            'qmx-modal-close-btn').onclick = () => this.hidePanel();
+        document.getElementById('qmx-modal-close-btn').onclick = () => this.hidePanel();
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' &&
-                modalContainer.classList.contains('visible')) {
+            if (e.key === 'Escape' && modalContainer.classList.contains('visible')) {
                 this.hidePanel();
             }
         });
@@ -170,21 +165,18 @@ export const ControlPage = {
             modalBackdrop.onclick = () => this.hidePanel();
         }
 
-        document.getElementById(
-            'qmx-modal-open-btn').onclick = () => this.openOneNewTab();
-        document.getElementById(
-            'qmx-modal-settings-btn').onclick = () => SettingsPanel.show();
+        document.getElementById('qmx-modal-open-btn').onclick = () => this.openOneNewTab();
+        document.getElementById('qmx-modal-settings-btn').onclick = () => SettingsPanel.show();
         document.getElementById('qmx-modal-close-all-btn').onclick = async () => {
             if (confirm('确定要关闭所有工作标签页吗？')) {
                 Utils.log('用户请求关闭所有标签页。');
 
                 // 1: 向所有工作页广播关闭指令
                 Utils.log('通过 BroadcastChannel 发出 CLOSE_ALL 指令...');
-                this.commandChannel.postMessage(
-                    {action: 'CLOSE_ALL', target: '*'});
+                this.commandChannel.postMessage({ action: 'CLOSE_ALL', target: '*' });
 
                 // 2: 等待一段时间让工作页面有机会响应
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise((resolve) => setTimeout(resolve, 500));
 
                 // 3: 强制清空全局状态中的所有标签页，无论工作页是否收到指令
                 Utils.log('强制清空全局状态中的标签页列表...');
@@ -197,7 +189,7 @@ export const ControlPage = {
 
                 // 4: 重新渲染UI，面板变空
                 this.renderDashboard();
-                
+
                 // 5: 额外的清理检查，确保UI彻底清空
                 setTimeout(() => {
                     state = GlobalState.get();
@@ -210,34 +202,31 @@ export const ControlPage = {
                 }, 1000);
             }
         };
-        document.getElementById('qmx-tab-list').
-            addEventListener('click', (e) => {
-                const closeButton = e.target.closest('.qmx-tab-close-btn');
-                if (!closeButton) return;
+        document.getElementById('qmx-tab-list').addEventListener('click', (e) => {
+            const closeButton = e.target.closest('.qmx-tab-close-btn');
+            if (!closeButton) return;
 
-                const roomItem = e.target.closest('[data-room-id]');
-                const roomId = roomItem?.dataset.roomId;
-                if (!roomId) return;
+            const roomItem = e.target.closest('[data-room-id]');
+            const roomId = roomItem?.dataset.roomId;
+            if (!roomId) return;
 
-                Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
+            Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
 
-                // 1. 立即更新UI和状态 (这部分保留)
-                const state = GlobalState.get();
-                delete state.tabs[roomId];
-                GlobalState.set(state); // 仍然需要更新 tabs 列表
+            // 1. 立即更新UI和状态 (这部分保留)
+            const state = GlobalState.get();
+            delete state.tabs[roomId];
+            GlobalState.set(state); // 仍然需要更新 tabs 列表
 
-                // 2. 发送关闭指令
-                Utils.log(
-                    `通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
-                this.commandChannel.postMessage(
-                    {action: 'CLOSE', target: roomId}); // 通过广播发送单点指令
+            // 2. 发送关闭指令
+            Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
+            this.commandChannel.postMessage({ action: 'CLOSE', target: roomId }); // 通过广播发送单点指令
 
-                // 3. 立即在UI上模拟移除，而不是等待下一次renderDashboard
-                roomItem.style.opacity = '0';
-                roomItem.style.transform = 'scale(0.8)';
-                roomItem.style.transition = 'all 0.3s ease';
-                setTimeout(() => roomItem.remove(), 300);
-            });
+            // 3. 立即在UI上模拟移除，而不是等待下一次renderDashboard
+            roomItem.style.opacity = '0';
+            roomItem.style.transform = 'scale(0.8)';
+            roomItem.style.transition = 'all 0.3s ease';
+            setTimeout(() => roomItem.remove(), 300);
+        });
     },
 
     /**
@@ -251,8 +240,7 @@ export const ControlPage = {
         const tabIds = Object.keys(state.tabs);
         //Utils.log(`[Render] 开始渲染，检测到 ${tabIds.length} 个活动标签页。IDs: [${tabIds.join(', ')}]`); // 新增日志
 
-        document.getElementById(
-            'qmx-active-tabs-count').textContent = tabIds.length;
+        document.getElementById('qmx-active-tabs-count').textContent = tabIds.length;
 
         const statusDisplayMap = {
             OPENING: '加载中',
@@ -266,53 +254,56 @@ export const ControlPage = {
             STALLED: 'UI节流',
         };
 
-        const existingRoomIds = new Set(Array.from(tabList.children).
-            map(node => node.dataset.roomId).
-            filter(Boolean));
+        const existingRoomIds = new Set(
+            Array.from(tabList.children)
+                .map((node) => node.dataset.roomId)
+                .filter(Boolean)
+        );
         //Utils.log(`[Render] 当前UI上显示的IDs: [${Array.from(existingRoomIds).join(', ')}]`); // 新增日志
 
         // --- 核心更新/创建循环 ---
-        tabIds.forEach(roomId => {
+        tabIds.forEach((roomId) => {
             const tabData = state.tabs[roomId];
-            let existingItem = tabList.querySelector(
-                `[data-room-id="${roomId}"]`);
+            let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
 
             let currentStatusText = tabData.statusText;
 
             // 使用 endTime 来计算剩余时间
             // 允许显示自定义文本(如校准)，但如果文本是默认或已经是倒计时格式，则由控制中心接管实时计算
-            if (tabData.status === 'WAITING' && tabData.countdown?.endTime && 
-                (!currentStatusText || currentStatusText.startsWith('倒计时') || currentStatusText === '寻找任务中...')) {
-                const remainingSeconds = (tabData.countdown.endTime -
-                        Date.now()) /
-                    1000;
+            if (
+                tabData.status === 'WAITING' &&
+                tabData.countdown?.endTime &&
+                (!currentStatusText || currentStatusText.startsWith('倒计时') || currentStatusText === '寻找任务中...')
+            ) {
+                const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1000;
 
                 if (remainingSeconds > 0) {
-                    currentStatusText = `倒计时 ${Utils.formatTime(
-                        remainingSeconds)}`;
+                    currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
                 } else {
                     currentStatusText = '等待开抢...';
+                }
+            }
+
+            // 判断是否更新统计数据
+            if (SETTINGS.SHOW_STATS_IN_PANEL) {
+                if (currentStatusText.includes('领取到')) {
+                    StatsInfo.getCoinListUpdate();
                 }
             }
 
             if (existingItem) {
                 // --- A. 如果条目已存在，则只更新内容 (UPDATE path) ---
                 //Utils.log(`[Render] 房间 ${roomId}: UI条目已存在，准备更新。状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
-                const nicknameEl = existingItem.querySelector(
-                    '.qmx-tab-nickname');
-                const statusNameEl = existingItem.querySelector(
-                    '.qmx-tab-status-name');
-                const statusTextEl = existingItem.querySelector(
-                    '.qmx-tab-status-text');
+                const nicknameEl = existingItem.querySelector('.qmx-tab-nickname');
+                const statusNameEl = existingItem.querySelector('.qmx-tab-status-name');
+                const statusTextEl = existingItem.querySelector('.qmx-tab-status-text');
                 const dotEl = existingItem.querySelector('.qmx-tab-status-dot');
 
-                if (tabData.nickname && nicknameEl.textContent !==
-                    tabData.nickname) {
+                if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
                     nicknameEl.textContent = tabData.nickname;
                 }
 
-                const newStatusName = `[${statusDisplayMap[tabData.status] ||
-                tabData.status}]`;
+                const newStatusName = `[${statusDisplayMap[tabData.status] || tabData.status}]`;
                 if (statusNameEl.textContent !== newStatusName) {
                     statusNameEl.textContent = newStatusName;
                     dotEl.style.backgroundColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
@@ -323,27 +314,21 @@ export const ControlPage = {
             } else {
                 // --- B. 如果条目不存在，则创建并添加 (CREATE path) ---
                 //Utils.log(`[Render] 房间 ${roomId}: UI条目不存在，执行创建！状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
-                const newItem = this.createTaskItem(roomId, tabData,
-                    statusDisplayMap,
-                    currentStatusText);
+                const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
                 tabList.appendChild(newItem);
                 requestAnimationFrame(() => {
                     newItem.classList.add('qmx-item-enter-active');
-                    setTimeout(() => newItem.classList.remove('qmx-item-enter'),
-                        300);
+                    setTimeout(() => newItem.classList.remove('qmx-item-enter'), 300);
                 });
             }
         });
 
         // --- 处理删除 (DELETE path) ---
-        existingRoomIds.forEach(roomId => {
+        existingRoomIds.forEach((roomId) => {
             if (!state.tabs[roomId]) {
-                const itemToRemove = tabList.querySelector(
-                    `[data-room-id="${roomId}"]`);
-                if (itemToRemove &&
-                    !itemToRemove.classList.contains('qmx-item-exit-active')) {
-                    Utils.log(
-                        `[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`); // 新增日志
+                const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
+                if (itemToRemove && !itemToRemove.classList.contains('qmx-item-exit-active')) {
+                    Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`); // 新增日志
                     itemToRemove.classList.add('qmx-item-exit-active');
                     setTimeout(() => itemToRemove.remove(), 300);
                 }
@@ -360,6 +345,8 @@ export const ControlPage = {
             emptyMsg.remove();
         }
         this.renderLimitStatus();
+        // 检测是否为新的一天并更新统计数据
+        StatsInfo.updateDataForDailyReset();
     },
 
     /**
@@ -371,9 +358,10 @@ export const ControlPage = {
         const openBtn = document.getElementById('qmx-modal-open-btn');
 
         // 新的一天，自动重置上限状态
-        if (limitState?.reached &&
-            Utils.formatDateAsBeijing(new Date(limitState.timestamp)) !==
-            Utils.formatDateAsBeijing(new Date())) {
+        if (
+            limitState?.reached &&
+            Utils.formatDateAsBeijing(new Date(limitState.timestamp)) !== Utils.formatDateAsBeijing(new Date())
+        ) {
             Utils.log('[控制中心] 新的一天，重置每日上限旗标。');
             GlobalState.setDailyLimit(false);
             limitState = null; // 重置后立即生效
@@ -383,12 +371,11 @@ export const ControlPage = {
             if (!limitMessageEl) {
                 limitMessageEl = document.createElement('div');
                 limitMessageEl.id = 'qmx-limit-message';
-                limitMessageEl.style.cssText = 'padding: 10px 24px; background-color: var(--status-color-error); color: white; font-weight: 500; text-align: center;';
+                limitMessageEl.style.cssText =
+                    'padding: 10px 24px; background-color: var(--status-color-error); color: white; font-weight: 500; text-align: center;';
                 const header = document.querySelector('.qmx-modal-header');
-                header.parentNode.insertBefore(limitMessageEl,
-                    header.nextSibling); // 确保在标题下方插入
-                document.querySelector('.qmx-modal-header').
-                    after(limitMessageEl);
+                header.parentNode.insertBefore(limitMessageEl, header.nextSibling); // 确保在标题下方插入
+                document.querySelector('.qmx-modal-header').after(limitMessageEl);
             }
 
             if (SETTINGS.DAILY_LIMIT_ACTION === 'CONTINUE_DORMANT') {
@@ -426,9 +413,8 @@ export const ControlPage = {
 
         try {
             const openedRoomIds = new Set(Object.keys(state.tabs));
-            const apiRoomUrls = await DouyuAPI.getRooms(
-                SETTINGS.API_ROOM_FETCH_COUNT);
-            const newUrl = apiRoomUrls.find(url => {
+            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
+            const newUrl = apiRoomUrls.find((url) => {
                 const rid = url.match(/\/(\d+)/)?.[1];
                 return rid && !openedRoomIds.has(rid);
             });
@@ -443,12 +429,11 @@ export const ControlPage = {
 
                 GlobalState.updateWorker(newRoomId, 'OPENING', '正在打开...');
                 // 保证使用旧版UI
-                if (window.location.href.includes('/beta') ||
-                    localStorage.getItem('newWebLive') !== 'A') {
+                if (window.location.href.includes('/beta') || localStorage.getItem('newWebLive') !== 'A') {
                     // --- 找到了“/beta”，说明是新版UI ---
                     localStorage.setItem('newWebLive', 'A');
                 }
-                GM_openInTab(newUrl, {active: false, setParent: true});
+                GM_openInTab(newUrl, { active: false, setParent: true });
                 Utils.log(`打开指令已发送: ${newUrl}`);
             } else {
                 Utils.log('未能找到新的、未打开的房间。');
@@ -499,7 +484,7 @@ export const ControlPage = {
                 const movableHeight = window.innerHeight - element.offsetHeight;
                 currentRatio = {
                     ratioX: Math.max(0, Math.min(1, savedPos.x / movableWidth)),
-                    ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight))
+                    ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight)),
                 };
                 GM_setValue(storageKey, currentRatio); // 保存新格式
             }
@@ -524,7 +509,6 @@ export const ControlPage = {
             }
         }
 
-
         const onMouseDown = (e) => {
             if (e.button !== 0) return;
 
@@ -541,7 +525,7 @@ export const ControlPage = {
             handle.style.cursor = 'grabbing';
 
             document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, {once: true});
+            document.addEventListener('mouseup', onMouseUp, { once: true });
         };
 
         const onMouseMove = (e) => {
@@ -578,12 +562,11 @@ export const ControlPage = {
                 const finalRect = element.getBoundingClientRect();
                 const movableWidth = window.innerWidth - element.offsetWidth;
                 const movableHeight = window.innerHeight - element.offsetHeight;
-                
+
                 const ratioX = movableWidth > 0 ? Math.max(0, Math.min(1, finalRect.left / movableWidth)) : 0;
                 const ratioY = movableHeight > 0 ? Math.max(0, Math.min(1, finalRect.top / movableHeight)) : 0;
 
                 GM_setValue(storageKey, { ratioX, ratioY });
-
             } else if (onClick && typeof onClick === 'function') {
                 onClick();
             }
@@ -610,9 +593,7 @@ export const ControlPage = {
             modalContainer.classList.add('visible');
             // 仅在居中模式下显示背景遮罩
             if (SETTINGS.MODAL_DISPLAY_MODE === 'centered') {
-                document.getElementById('qmx-modal-backdrop').
-                    classList.
-                    add('visible');
+                document.getElementById('qmx-modal-backdrop').classList.add('visible');
             }
         }
         Utils.log('控制面板已显示。');
@@ -638,9 +619,7 @@ export const ControlPage = {
             modalContainer.classList.remove('visible');
             // 仅在居中模式下隐藏背景遮罩
             if (SETTINGS.MODAL_DISPLAY_MODE === 'centered') {
-                document.getElementById('qmx-modal-backdrop').
-                    classList.
-                    remove('visible');
+                document.getElementById('qmx-modal-backdrop').classList.remove('visible');
             }
         }
         Utils.log('控制面板已隐藏。');
@@ -686,26 +665,19 @@ export const ControlPage = {
         Utils.log(`尝试应用模态框模式: ${mode}`);
 
         if (mode === 'inject-rank-list') {
-            const waitForTarget = (
-                retries = SETTINGS.INJECT_TARGET_RETRIES,
-                interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
-                const target = document.querySelector(
-                    SETTINGS.SELECTORS.rankListContainer);
+            const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
+                const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
                 if (target) {
                     Utils.log('注入目标已找到，开始注入...');
                     this.injectionTarget = target;
                     this.isPanelInjected = true;
-                    target.parentNode.insertBefore(modalContainer,
-                        target.nextSibling);
-                    modalContainer.classList.add('mode-inject-rank-list',
-                        'qmx-hidden');
+                    target.parentNode.insertBefore(modalContainer, target.nextSibling);
+                    modalContainer.classList.add('mode-inject-rank-list', 'qmx-hidden');
                 } else if (retries > 0) {
-                    setTimeout(() => waitForTarget(retries - 1, interval),
-                        interval);
+                    setTimeout(() => waitForTarget(retries - 1, interval), interval);
                 } else {
-                    Utils.log(
-                        `[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
-                    Utils.log('[降级] 自动切换到 \'floating\' 备用模式。');
+                    Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
+                    Utils.log("[降级] 自动切换到 'floating' 备用模式。");
                     SETTINGS.MODAL_DISPLAY_MODE = 'floating';
                     this.applyModalMode();
                     SETTINGS.MODAL_DISPLAY_MODE = 'inject-rank-list';
@@ -730,13 +702,12 @@ export const ControlPage = {
         if (!mainButton) return;
 
         const savedPos = GM_getValue(storageKey);
-        if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
+        if (savedPos && typeof savedPos.ratioX === 'number' && typeof savedPos.ratioY === 'number') {
             const newX = savedPos.ratioX * (window.innerWidth - mainButton.offsetWidth);
             const newY = savedPos.ratioY * (window.innerHeight - mainButton.offsetHeight);
-            
+
             mainButton.style.setProperty('--tx', `${newX}px`);
             mainButton.style.setProperty('--ty', `${newY}px`);
         }
-    },  
-
+    },
 };
