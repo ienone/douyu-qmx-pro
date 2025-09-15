@@ -18,7 +18,8 @@
     align-items: center;
     justify-content: center;
     transform: translate3d(var(--tx, 0px), var(--ty, 0px), 0) scale(1);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     will-change: transform, opacity;
 }
 
@@ -152,7 +153,7 @@
     font-size: 16px;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
-    margin:0 0 8px 0;
+    margin: 0 0 8px 0;
 }
 
 /* 统计面板 */
@@ -213,10 +214,6 @@
     border-radius: 10px;
 }
 
-.qmx-stats-toggle:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
 /* 下拉指示器 */
 .qmx-stats-indicator {
     font-size: 10px;
@@ -239,8 +236,13 @@
 }
 
 /* 悬浮状态 */
+.qmx-stats-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    margin: 4px 24px 15px;
+}
+
 .qmx-stats-toggle:hover .qmx-stats-indicator {
-    transform: translateY(3px);
+    transform: translateY(110%);
 }
 
 .qmx-stats-toggle:hover .qmx-stats-label {
@@ -251,7 +253,6 @@
 /* 展开状态 */
 .qmx-stats-toggle.expanded {
     height: 28px;
-    justify-content: flex-start;
     padding: 0 12px;
     margin: 6px 20px;
 }
@@ -276,9 +277,9 @@
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
-                opacity 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s, 
-                padding 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        opacity 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s,
+        padding 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     padding: 0 24px;
 }
 
@@ -442,7 +443,7 @@
 
 .qmx-tab-close-btn:hover {
     opacity: 1;
-    color: #F44336;
+    color: #f44336;
     transform: scale(1.1);
 }
 
