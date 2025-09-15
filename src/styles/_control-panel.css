@@ -216,7 +216,7 @@
 
 /* 下拉指示器 */
 .qmx-stats-indicator {
-    font-size: 10px;
+    font-size: 15px;
     color: var(--md-sys-color-on-surface-variant);
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     position: absolute;
@@ -225,7 +225,7 @@
 
 /* 统计面板标签 */
 .qmx-stats-label {
-    font-size: 11px;
+    font-size: 12px;
     color: var(--md-sys-color-on-surface-variant);
     opacity: 0;
     transform: scale(0.95);
@@ -235,10 +235,31 @@
     white-space: nowrap;
 }
 
+/* 刷新按钮 */
+.qmx-stats-refresh {
+    opacity: 0;
+    font-size: 15px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+}
+
+.qmx-stats-refresh.rotating {
+    animation: rotate360 1s linear;
+}
+
+@keyframes rotate360 {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 悬浮状态 */
 .qmx-stats-toggle:hover {
     background-color: rgba(255, 255, 255, 0.05);
-    margin: 4px 24px 15px;
+    margin: 4px 24px 21px;
 }
 
 .qmx-stats-toggle:hover .qmx-stats-indicator {
@@ -260,7 +281,7 @@
 .qmx-stats-toggle.expanded .qmx-stats-indicator {
     transform: rotate(180deg) scale(1.05);
     position: relative;
-    margin-right: 8px;
+    margin: 9px;
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-label {
@@ -270,6 +291,11 @@
     font-weight: 500;
     position: relative;
     color: var(--md-sys-color-on-surface);
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-refresh {
+    opacity: 1;
+    margin: 8px;
 }
 
 /* 统计面板内容区 */

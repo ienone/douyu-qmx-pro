@@ -375,8 +375,6 @@ export const ControlPage = {
             emptyMsg.remove();
         }
         this.renderLimitStatus();
-        // 检测是否为新的一天并更新统计数据
-        StatsInfo.updateDataForDailyReset();
     },
 
     /**
