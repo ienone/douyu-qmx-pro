@@ -156,7 +156,7 @@
 }
 
 /* 统计面板 */
-.qmx-modal-stats-content {
+.qmx-stats-container{
     flex-grow: 1;
     padding: 0 24px;
 }

@@ -39,7 +39,7 @@ export const ControlPage = {
         if (SETTINGS.SHOW_STATS_IN_PANEL) {
             StatsInfo.init();
         } else {
-            document.querySelector('.qmx-modal-stats-content').remove();
+            document.querySelector('.qmx-stats-container').remove();
         }
         // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
         this.applyModalMode();
