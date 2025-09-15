@@ -14,9 +14,14 @@ export const mainPanelTemplate = (maxTabs) => `
         <span>控制中心</span>
         <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
     </div>
-    <div class="qmx-modal-stats-content">
-        <h3>统计面板</h3>
-        <div class="qmx-modal-stats"></div>
+    <div class="qmx-stats-container">
+        <div class="qmx-stats-toggle" id="qmx-stats-toggle">
+            <span class="qmx-stats-indicator">▼</span>
+            <span class="qmx-stats-label">统计面板</span>
+        </div>
+        <div class="qmx-stats-content" id="qmx-stats-content">
+            <div class="qmx-modal-stats" id="qmx-stats-panel"></div>
+        </div>
     </div>
     <div class="qmx-modal-content">
         <h3>监控面板 (<span id="qmx-active-tabs-count">0</span>/${maxTabs})</h3>
@@ -120,11 +125,17 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
                         <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
                     </div>
-                    <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
                         <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                         <label class="qmx-toggle">
                             <input type="checkbox" id="setting-auto-pause" ${SETTINGS.AUTO_PAUSE_ENABLED ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item">
+                        <label>展示数据统计 <span class="qmx-tooltip-icon" data-tooltip-key="stats-info">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-stats-info" ${SETTINGS.SHOW_STATS_IN_PANEL ? 'checked' : ''}>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -137,14 +148,6 @@ export const settingsPanelTemplate = (SETTINGS) => {
                             <span class="slider"></span>
                         </label>
                     </div>
-                    <div class="qmx-settings-item">
-                        <label>展示数据统计 <span class="qmx-tooltip-icon" data-tooltip-key="stats-info">?</span></label>
-                        <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-stats-info" ${SETTINGS.SHOW_STATS_IN_PANEL ? 'checked' : ''}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
                         <label>达到上限后的行为</label>
                         <div class="qmx-select" data-target-id="setting-daily-limit-action">

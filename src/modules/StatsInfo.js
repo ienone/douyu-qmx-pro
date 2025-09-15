@@ -10,7 +10,7 @@ import { DouyuAPI } from '../utils/DouyuAPI.js';
 export const StatsInfo = {
     init: async function () {
         // 初始化组件
-        const stats = document.querySelector('.qmx-modal-stats');
+        const stats = document.getElementById('qmx-stats-panel');
         [
             ['receivedCount', '已领个数'],
             ['total', '总金币'],

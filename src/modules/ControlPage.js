@@ -142,6 +142,26 @@ export const ControlPage = {
         const modalContainer = document.getElementById('qmx-modal-container');
         const modalBackdrop = document.getElementById('qmx-modal-backdrop');
 
+        // --- 统计面板折叠事件 ---
+        const statsToggle = document.getElementById('qmx-stats-toggle');
+        const statsContent = document.getElementById('qmx-stats-content');
+        
+        if (statsToggle && statsContent) {
+            statsToggle.addEventListener('click', () => {
+                const isExpanded = statsToggle.classList.contains('expanded');
+                
+                if (isExpanded) {
+                    // 收起
+                    statsToggle.classList.remove('expanded');
+                    statsContent.classList.remove('expanded');
+                } else {
+                    // 展开
+                    statsToggle.classList.add('expanded');
+                    statsContent.classList.add('expanded');
+                }
+            });
+        }
+
         // --- 核心交互：主按钮的点击与拖拽 ---
         this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
 

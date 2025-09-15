@@ -1,6 +1,6 @@
 /* 主控制面板组件样式 */
 
-/* --- 启动按钮 --- */
+/* 启动按钮 */
 #douyu-qmx-starter-button {
     position: fixed;
     top: 0;
@@ -32,7 +32,7 @@
     pointer-events: none;
 }
 
-/* --- 主控制面板容器 --- */
+/* 主控制面板容器 */
 #qmx-modal-container {
     background-color: var(--md-sys-color-surface-container);
     color: var(--md-sys-color-on-surface);
@@ -86,11 +86,11 @@
     transform: none !important;
 }
 
-/* --- 控制面板头部 --- */
+/* 控制面板头部 */
 .qmx-modal-header {
     position: relative;
-    padding: 16px 24px;
-    font-size: 24px;
+    padding: 12px 20px 0px 20px;
+    font-size: 22px;
     font-weight: 400;
     color: var(--md-sys-color-on-surface);
     user-select: none;
@@ -141,7 +141,7 @@
     transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-/* --- 控制面板内容区 --- */
+/* 控制面板内容区 */
 .qmx-modal-content {
     flex-grow: 1;
     overflow-y: auto;
@@ -152,20 +152,140 @@
     font-size: 16px;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
-    margin: 8px 0;
+    margin:0 0 8px 0;
 }
 
-/* --- 统计面板 --- */
+/* 统计面板 */
 .qmx-modal-stats-content {
     flex-grow: 1;
     padding: 0 24px;
 }
 
-.qmx-modal-stats-content h3 {
+.qmx-stats-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 4px 0;
+    user-select: none;
+    transition: background-color 0.2s;
+    border-radius: 8px;
+}
+
+.qmx-stats-header:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.qmx-stats-header h3 {
     font-size: 16px;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
     margin: 8px 0;
+}
+
+.qmx-stats-arrow {
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    transition: transform 0.3s ease;
+}
+
+.qmx-stats-header.expanded .qmx-stats-arrow {
+    transform: rotate(180deg);
+}
+
+.qmx-stats-container {
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* 统计面板切换器 */
+.qmx-stats-toggle {
+    position: relative;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    margin: 4px 24px;
+    border-radius: 10px;
+}
+
+.qmx-stats-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 下拉指示器 */
+.qmx-stats-indicator {
+    font-size: 10px;
+    color: var(--md-sys-color-on-surface-variant);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: absolute;
+    z-index: 2;
+}
+
+/* 统计面板标签 */
+.qmx-stats-label {
+    font-size: 11px;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: absolute;
+    z-index: 1;
+    white-space: nowrap;
+}
+
+/* 悬浮状态 */
+.qmx-stats-toggle:hover .qmx-stats-indicator {
+    transform: translateY(3px);
+}
+
+.qmx-stats-toggle:hover .qmx-stats-label {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* 展开状态 */
+.qmx-stats-toggle.expanded {
+    height: 28px;
+    justify-content: flex-start;
+    padding: 0 12px;
+    margin: 6px 20px;
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-indicator {
+    transform: rotate(180deg) scale(1.05);
+    position: relative;
+    margin-right: 8px;
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-label {
+    opacity: 1;
+    transform: scale(1.05);
+    font-size: 12px;
+    font-weight: 500;
+    position: relative;
+    color: var(--md-sys-color-on-surface);
+}
+
+/* 统计面板内容区 */
+.qmx-stats-content {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                opacity 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.1s, 
+                padding 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    padding: 0 24px;
+}
+
+.qmx-stats-content.expanded {
+    max-height: 120px;
+    opacity: 1;
+    padding: 8px 24px 16px 24px;
 }
 
 .qmx-modal-stats {
@@ -187,7 +307,9 @@
     margin-left: 2%;
 }
 
-.qmx-stat-info-avg, .qmx-stat-info-total, .qmx-stat-info-receivedCount {
+.qmx-stat-info-avg,
+.qmx-stat-info-total,
+.qmx-stat-info-receivedCount {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
@@ -222,8 +344,7 @@
     font-weight: 500;
 }
 
-
-/* --- Tab 列表项 --- */
+/* 任务列表项 */
 .qmx-tab-list-item {
     background-color: var(--md-sys-color-surface-bright);
     border-radius: 12px;
@@ -325,7 +446,7 @@
     transform: scale(1.1);
 }
 
-/* --- 控制面板底部 --- */
+/* 控制面板底部 */
 .qmx-modal-footer {
     padding: 16px 24px;
     display: flex;
