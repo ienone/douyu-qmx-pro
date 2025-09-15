@@ -1010,6 +1010,9 @@ showCalibrationNotice() {
       this.removeExpiredData();
       this.bindEvents();
       setInterval(() => {
+        this.checkUpdate();
+      }, 3e3);
+      setInterval(() => {
         this.updateDataForDailyReset();
       }, 60 * 1e3);
     },
@@ -1160,6 +1163,21 @@ removeExpiredData: function() {
         this.updateTodayData();
         this.removeExpiredData();
       }
+    },
+    checkUpdate: function() {
+      const state = GlobalState.get();
+      const tabList = document.getElementById("qmx-tab-list");
+      if (!tabList) return;
+      const tabIds = Object.keys(state.tabs);
+      tabIds.forEach((roomId) => {
+        const tabData = state.tabs[roomId];
+        let currentStatusText = tabData.statusText;
+        if (SETTINGS.SHOW_STATS_IN_PANEL) {
+          if (currentStatusText.includes("领取到")) {
+            StatsInfo.getCoinListUpdate();
+          }
+        }
+      });
     }
   };
   const ControlPage = {
@@ -1359,11 +1377,6 @@ renderDashboard() {
             currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
           } else {
             currentStatusText = "等待开抢...";
-          }
-        }
-        if (SETTINGS.SHOW_STATS_IN_PANEL) {
-          if (currentStatusText.includes("领取到")) {
-            StatsInfo.getCoinListUpdate();
           }
         }
         if (existingItem) {

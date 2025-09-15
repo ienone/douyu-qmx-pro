@@ -6,6 +6,7 @@ import '../styles/ControlPanel-refactored.css';
 import { SETTINGS } from './SettingsManager.js';
 import { Utils } from '../utils/utils.js';
 import { DouyuAPI } from '../utils/DouyuAPI.js';
+import { GlobalState } from './GlobalState.js';
 
 export const StatsInfo = {
     init: async function () {
@@ -35,6 +36,11 @@ export const StatsInfo = {
 
         this.bindEvents();
 
+        // 每3秒检查更新
+        setInterval(() => {
+            this.checkUpdate();
+        }, 3000);
+
         // 每日0点更新数据
         setInterval(() => {
             this.updateDataForDailyReset();
@@ -49,7 +55,7 @@ export const StatsInfo = {
         }
         refreshButton.addEventListener('click', async (e) => {
             e.stopPropagation();
-            
+
             // 旋转动画
             void this.offsetWidth; // 触发重绘以重新应用动画
             refreshButton.classList.add('rotating');
@@ -254,5 +260,23 @@ export const StatsInfo = {
             this.updateTodayData();
             this.removeExpiredData();
         }
+    },
+
+    checkUpdate: function () {
+        // 检查是否需要更新统计数据
+        const state = GlobalState.get();
+        const tabList = document.getElementById('qmx-tab-list');
+        if (!tabList) return;
+        const tabIds = Object.keys(state.tabs);
+        tabIds.forEach((roomId) => {
+            const tabData = state.tabs[roomId];
+            let currentStatusText = tabData.statusText;
+            // 判断是否更新统计数据
+            if (SETTINGS.SHOW_STATS_IN_PANEL) {
+                if (currentStatusText.includes('领取到')) {
+                    StatsInfo.getCoinListUpdate();
+                }
+            }
+        });
     },
 };

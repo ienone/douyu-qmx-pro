@@ -36,6 +36,7 @@ export const ControlPage = {
         ThemeManager.applyTheme(SETTINGS.THEME);
         this.createHTML();
         
+        // 根据设置决定是否显示统计信息面板
         const qmxModalHeader = document.querySelector('.qmx-modal-header');
         if (SETTINGS.SHOW_STATS_IN_PANEL) {
             // 启用统计信息面板
@@ -311,13 +312,6 @@ export const ControlPage = {
                     currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
                 } else {
                     currentStatusText = '等待开抢...';
-                }
-            }
-
-            // 判断是否更新统计数据
-            if (SETTINGS.SHOW_STATS_IN_PANEL) {
-                if (currentStatusText.includes('领取到')) {
-                    StatsInfo.getCoinListUpdate();
                 }
             }
 
