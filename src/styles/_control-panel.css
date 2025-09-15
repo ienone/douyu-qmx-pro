@@ -295,6 +295,7 @@
 
 .qmx-stats-toggle.expanded .qmx-stats-refresh {
     opacity: 1;
+    transform: scale(1.05);
     margin: 8px;
 }
 
