@@ -144,12 +144,17 @@
 
 /* 控制面板内容区 */
 .qmx-modal-content {
-    flex-grow: 1;
-    overflow-y: auto;
     padding: 0 24px;
+    /* 核心改动：让内容区占据所有剩余空间 */
+    flex: 1;
+    /* 核心改动：确保内容区可以收缩，并允许内部滚动 */
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .qmx-modal-content h3 {
+    flex-shrink: 0;
     font-size: 16px;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
@@ -364,6 +369,14 @@
 
 .qmx-stat-stats {
     font-weight: 500;
+}
+
+#qmx-tab-list {
+    /* 核心改动：允许任务列表本身滚动 */
+    overflow-y: auto;
+    flex-grow: 1; /* 确保它填满 .qmx-modal-content 的剩余空间 */
+    padding-right: 4px; /* 为滚动条留出一点空间，防止内容紧贴边缘 */
+    margin-right: -4px; /* 抵消padding，保持整体布局不变 */
 }
 
 /* 任务列表项 */

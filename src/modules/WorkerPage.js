@@ -424,7 +424,7 @@ export const WorkerPage = {
 
         try {
             // 2. 获取 API 房间列表和当前已打开的房间列表
-            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT);
+            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
             const currentState = GlobalState.get();
             const openedRoomIds = new Set(Object.keys(currentState.tabs));
 
