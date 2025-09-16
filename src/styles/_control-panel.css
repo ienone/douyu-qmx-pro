@@ -263,7 +263,7 @@
 }
 
 .qmx-stats-toggle:hover .qmx-stats-indicator {
-    transform: translateY(110%);
+    transform: translateY(85%);
 }
 
 .qmx-stats-toggle:hover .qmx-stats-label {
@@ -295,6 +295,7 @@
 
 .qmx-stats-toggle.expanded .qmx-stats-refresh {
     opacity: 1;
+    transform: scale(1.05);
     margin: 8px;
 }
 

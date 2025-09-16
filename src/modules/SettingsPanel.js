@@ -43,6 +43,7 @@ export const SettingsPanel = {
             'calibration-mode': '启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能',
             'stats-info':
                 '此功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！ 在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。',
+            'stats-update-interval': '统计信息面板中数据更新的频率，值越小更新越及时，但会增加API使用次数。',
         };
 
         // 2. 调用模版函数，传入SETTINGS填充默认值
@@ -106,6 +107,7 @@ export const SettingsPanel = {
             CLOSE_TAB_DELAY: parseFloat(document.getElementById('setting-close-tab-delay').value) * 1000,
             HEALTHCHECK_INTERVAL: parseFloat(document.getElementById('setting-healthcheck-interval').value) * 1000,
             DISCONNECTED_GRACE_PERIOD: parseFloat(document.getElementById('setting-disconnected-grace-period').value) * 1000,
+            STATS_UPDATE_INTERVAL: parseFloat(document.getElementById('setting-stats-update-interval').value) * 1000,
 
             // Tab 3: 高级设置
             MAX_WORKER_TABS: parseInt(document.getElementById('setting-max-tabs').value, 10),

@@ -25,6 +25,7 @@ export const CONFIG = {
     SWITCHING_CLEANUP_TIMEOUT: 30000, // 处于“切换中”状态的标签页，超过此时间后将被自动清理，防止卡死。
     HEALTHCHECK_INTERVAL: 10000, // 工作页中，哨兵检查UI倒计时的时间间隔。
     DISCONNECTED_GRACE_PERIOD: 10000, // 已断开的标签页在被清理前，等待其重连的宽限时间。
+    STATS_UPDATE_INTERVAL: 4000, // 统计信息更新的时间间隔，单位为毫秒。
 
     // --- UI 与交互 ---
     DRAGGABLE_BUTTON_ID: 'douyu-qmx-starter-button', // 主悬浮按钮的HTML ID。

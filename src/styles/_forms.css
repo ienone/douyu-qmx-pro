@@ -30,6 +30,8 @@
 }
 
 .qmx-input[type="number"] {
+    margin-left: 5px;
+    margin-bottom: 9px;
     -moz-appearance: textfield;
     appearance: textfield;
 }
