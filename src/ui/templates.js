@@ -76,6 +76,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
         'setting-switching-cleanup-timeout': { value: SETTINGS.SWITCHING_CLEANUP_TIMEOUT / 1000, unit: '秒' },
         'setting-healthcheck-interval': { value: SETTINGS.HEALTHCHECK_INTERVAL / 1000, unit: '秒' },
         'setting-disconnected-grace-period': { value: SETTINGS.DISCONNECTED_GRACE_PERIOD / 1000, unit: '秒' },
+        'setting-stats-update-interval': { value: SETTINGS.STATS_UPDATE_INTERVAL / 1000, unit: '秒' },
     };
 
     return `
@@ -199,6 +200,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     ${createUnitInput('setting-healthcheck-interval', '哨兵健康检查间隔', settingsMeta)}
                     ${createUnitInput('setting-disconnected-grace-period', '断开连接清理延迟', settingsMeta)}
                     ${createUnitInput('setting-api-retry-delay', 'API重试延迟', settingsMeta)}
+                    ${createUnitInput('setting-stats-update-interval', '统计信息更新间隔', settingsMeta)}
                     
                     <div class="qmx-settings-item" style="grid-column: 1 / -1;">
                         <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>

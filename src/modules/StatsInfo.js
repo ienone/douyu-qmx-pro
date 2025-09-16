@@ -36,10 +36,10 @@ export const StatsInfo = {
 
         this.bindEvents();
 
-        // 每3秒检查更新
+        // 检查数据更新
         setInterval(() => {
             this.checkUpdate();
-        }, 3000);
+        }, SETTINGS.STATS_UPDATE_INTERVAL);
 
         // 每日0点更新数据
         setInterval(() => {

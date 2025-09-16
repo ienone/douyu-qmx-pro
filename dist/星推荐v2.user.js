@@ -42,6 +42,7 @@ UNRESPONSIVE_TIMEOUT: 15 * 60 * 1e3,
 SWITCHING_CLEANUP_TIMEOUT: 3e4,
 HEALTHCHECK_INTERVAL: 1e4,
 DISCONNECTED_GRACE_PERIOD: 1e4,
+STATS_UPDATE_INTERVAL: 4e3,
 
 DRAGGABLE_BUTTON_ID: "douyu-qmx-starter-button",
 BUTTON_POS_STORAGE_KEY: "douyu_qmx_button_position",
@@ -333,7 +334,8 @@ setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
       "setting-api-retry-delay": { value: SETTINGS2.API_RETRY_DELAY / 1e3, unit: "秒" },
       "setting-switching-cleanup-timeout": { value: SETTINGS2.SWITCHING_CLEANUP_TIMEOUT / 1e3, unit: "秒" },
       "setting-healthcheck-interval": { value: SETTINGS2.HEALTHCHECK_INTERVAL / 1e3, unit: "秒" },
-      "setting-disconnected-grace-period": { value: SETTINGS2.DISCONNECTED_GRACE_PERIOD / 1e3, unit: "秒" }
+      "setting-disconnected-grace-period": { value: SETTINGS2.DISCONNECTED_GRACE_PERIOD / 1e3, unit: "秒" },
+      "setting-stats-update-interval": { value: SETTINGS2.STATS_UPDATE_INTERVAL / 1e3, unit: "秒" }
     };
     return `
         <div class="qmx-settings-header">
@@ -444,6 +446,7 @@ setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
                     ${createUnitInput("setting-healthcheck-interval", "哨兵健康检查间隔", settingsMeta)}
                     ${createUnitInput("setting-disconnected-grace-period", "断开连接清理延迟", settingsMeta)}
                     ${createUnitInput("setting-api-retry-delay", "API重试延迟", settingsMeta)}
+                    ${createUnitInput("setting-stats-update-interval", "统计信息更新间隔", settingsMeta)}
                     
                     <div class="qmx-settings-item" style="grid-column: 1 / -1;">
                         <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>
@@ -857,7 +860,8 @@ show() {
         "healthcheck-interval": "哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。",
         "disconnected-grace-period": "刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。",
         "calibration-mode": "启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能",
-        "stats-info": '此功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！ 在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。'
+        "stats-info": '此功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！ 在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。',
+        "stats-update-interval": "统计信息面板中数据更新的频率，值越小更新越及时，但会增加API使用次数。"
       };
       modal.innerHTML = settingsPanelTemplate(SETTINGS);
       activateToolTips(modal, allTooltips);
@@ -898,6 +902,7 @@ INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script
         CLOSE_TAB_DELAY: parseFloat(document.getElementById("setting-close-tab-delay").value) * 1e3,
         HEALTHCHECK_INTERVAL: parseFloat(document.getElementById("setting-healthcheck-interval").value) * 1e3,
         DISCONNECTED_GRACE_PERIOD: parseFloat(document.getElementById("setting-disconnected-grace-period").value) * 1e3,
+        STATS_UPDATE_INTERVAL: parseFloat(document.getElementById("setting-stats-update-interval").value) * 1e3,
 MAX_WORKER_TABS: parseInt(document.getElementById("setting-max-tabs").value, 10),
         API_ROOM_FETCH_COUNT: parseInt(document.getElementById("setting-api-fetch-count").value, 10),
         API_RETRY_COUNT: parseInt(document.getElementById("setting-api-retry-count").value, 10),
@@ -1011,7 +1016,7 @@ showCalibrationNotice() {
       this.bindEvents();
       setInterval(() => {
         this.checkUpdate();
-      }, 3e3);
+      }, SETTINGS.STATS_UPDATE_INTERVAL);
       setInterval(() => {
         this.updateDataForDailyReset();
       }, 60 * 1e3);
