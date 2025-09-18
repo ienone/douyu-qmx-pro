@@ -445,18 +445,10 @@ export const UIManager = {
             if (!candidateList.classList.contains('multi-row')) {
                 this.scrollCapsuleIntoView(candidateList, newCapsule);
                 
-                // 根据是否为循环导航调整等待时间
-                const capsuleIndex = parseInt(newCapsule.dataset.index) || 0;
-                const isCircularNavigation = (capsuleIndex === 0 && candidateList.scrollLeft > candidateList.offsetWidth) || 
-                                           (capsuleIndex === this.currentSuggestions.length - 1 && candidateList.scrollLeft === 0);
-                const delay = isCircularNavigation ? 50 : 150; // 循环导航用更短的延迟
-                
-                Utils.log(`等待滚动完成，延迟: ${delay}ms (循环导航: ${isCircularNavigation})`);
-                
                 // 等待滚动完成后再显示预览框
                 setTimeout(() => {
                     this.showPreviewForCapsule(newCapsule, newIndex);
-                }, delay);
+                }, 400 );
             } else {
                 newCapsule.scrollIntoView({ 
                     behavior: 'smooth', 
