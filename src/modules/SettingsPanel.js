@@ -89,8 +89,10 @@ export const SettingsPanel = {
             // Tab 1: 基本设置
             CONTROL_ROOM_ID: document.getElementById('setting-control-room-id').value,
             AUTO_PAUSE_ENABLED: document.getElementById('setting-auto-pause').checked,
+            ENABLE_DANMU_PRO: document.getElementById('setting-danmupro-mode').checked,
             DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
             MODAL_DISPLAY_MODE: document.getElementById('setting-modal-mode').value,
+            SHOW_STATS_IN_PANEL: document.getElementById('setting-stats-info').checked,
             THEME: document.getElementById('setting-theme-mode').checked ? 'dark' : 'light', // 保存主题设置
 
             // Tab 2: 性能与延迟 (单位转换：从 秒/分钟 转为 毫秒)
@@ -101,7 +103,6 @@ export const SettingsPanel = {
             RED_ENVELOPE_LOAD_TIMEOUT: parseFloat(document.getElementById('setting-red-envelope-timeout').value) * 1000,
             POPUP_WAIT_TIMEOUT: parseFloat(document.getElementById('setting-popup-wait-timeout').value) * 1000,
             CALIBRATION_MODE_ENABLED: document.getElementById('setting-calibration-mode').checked,
-            SHOW_STATS_IN_PANEL: document.getElementById('setting-stats-info').checked,
             ELEMENT_WAIT_TIMEOUT: parseFloat(document.getElementById('setting-worker-loading-timeout').value) * 1000,
             MIN_DELAY: parseFloat(document.getElementById('setting-min-delay').value) * 1000,
             MAX_DELAY: parseFloat(document.getElementById('setting-max-delay').value) * 1000,
