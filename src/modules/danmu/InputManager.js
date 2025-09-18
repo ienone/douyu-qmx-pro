@@ -119,7 +119,7 @@ export const InputManager = {
     
     /**
      * 处理输入框移除
-     * @param {HTMLEldement} input - 输入框元素
+     * @param {HTMLElement} input - 输入框元素
      * @param {string} type - 输入框类型
      */
     handleInputRemoved(input, type) {

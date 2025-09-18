@@ -11,8 +11,8 @@ import { InputManager } from './InputManager.js';
 import { KeyboardController } from './KeyboardController.js';
 
 // 导入弹幕助手所需的样式
-import '../../styles/danmuku-popup.css'; // 注意路径调整
-import '../../styles/candidate-capsules.css';
+import '../../styles/_danmuku-popup.css'; // 注意路径调整
+import '../../styles/_candidate-capsules.css';
 
 /**
  * 斗鱼弹幕助手主模块

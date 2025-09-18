@@ -10,7 +10,7 @@
 @import './_variables.css';
 
 /* 组件样式 */
-@import './danmuku-popup.css';
-@import './candidate-capsules.css';
-@import './settings-panel.css';
-
+@import './_danmuku-popup.css';
+@import './_candidate-capsules.css';
+@import './_settings-panel.css';
+@import './_chat.css';
