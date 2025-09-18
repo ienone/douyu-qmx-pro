@@ -4,6 +4,7 @@ import { SETTINGS } from './modules/SettingsManager'
 import { ControlPage } from './modules/ControlPage';
 import { GlobalState } from './modules/GlobalState';
 import { WorkerPage } from './modules/WorkerPage';
+import { DanmuPro} from './modules/danmu/DanmuPro';
 
 (function() {
     'use strict';
@@ -23,6 +24,9 @@ import { WorkerPage } from './modules/WorkerPage';
 
         if (isControlRoom) {
             ControlPage.init();
+            if (SETTINGS.ENABLE_DANMU_PRO) {
+                DanmuPro.init();
+            }
             return; // 控制页逻辑独立，直接返回
         }
 

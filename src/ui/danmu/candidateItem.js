@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../modules/SettingsManager';
+import { SETTINGS } from '../../modules/SettingsManager';
 
 /**
  * 候选项组件

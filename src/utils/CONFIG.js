@@ -50,6 +50,7 @@ export const CONFIG = {
     AUTO_PAUSE_DELAY_AFTER_ACTION: 5000, // 在执行领取等操作后，需要等待多久才能再次尝试自动暂停视频。
     CALIBRATION_MODE_ENABLED: false, // 是否启用校准模式，提高倒计时精准度，尤其适用于禁用P2P的环境。
     SHOW_STATS_IN_PANEL: false, // 是否在控制面板中显示统计信息标签页。
+    ENABLE_DANMU_PRO: true,
 
     // --- 存储键名 ---
     STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state', // 用于在油猴存储中记录脚本核心状态（如所有工作标签页信息）的键名。
@@ -92,7 +93,7 @@ export const CONFIG = {
     SCRIPT_PREFIX: '[斗鱼弹幕助手]',
     
     // 数据库配置
-    DB_NAME: 'DouyuDanmukuAssistant',
+    DB_NAME: 'DouyuDanmukuPro',
     DB_VERSION: 2,
     DB_STORE_NAME: 'danmuku_templates',
     

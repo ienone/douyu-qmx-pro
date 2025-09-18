@@ -6,8 +6,8 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../modules/SettingsManager';
-import { Utils } from '../utils/utils.js';
+import { SETTINGS } from '../../modules/SettingsManager';
+import { Utils } from '../../utils/utils.js';
 // 引入 FlexSearch 用于高性能全文搜索
 // 注意: 需要先安装 flexsearch: npm install flexsearch
 import { Index } from 'flexsearch';

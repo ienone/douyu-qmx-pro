@@ -6,13 +6,13 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../modules/SettingsManager';
-import { Utils } from '../utils/utils.js';
-import { CandidatePanel } from '../ui/candidatePanel.js';
-import { InputInteraction } from '../ui/inputInteraction.js';
-import { CandidatePanelState } from '../ui/candidatePanelState.js';
-import { CapsulePreview } from '../ui/capsulePreview.js';
-import { SelectionMode } from '../ui/candidateType.js';
+import { SETTINGS } from '../../modules/SettingsManager';
+import { Utils } from '../../utils/utils.js';
+import { CandidatePanel } from '../../ui/danmu/candidatePanel.js';
+import { InputInteraction } from '../../ui/danmu/inputInteraction.js';
+import { CandidatePanelState } from '../../ui/danmu/candidatePanelState.js';
+import { CapsulePreview } from '../../ui/danmu/capsulePreview.js';
+
 
 /**
  * UI管理器

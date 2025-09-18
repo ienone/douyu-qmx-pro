@@ -6,12 +6,13 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../../modules/SettingsManager';
-import { Utils } from '../../utils/utils.js';
+import { CONFIG } from '../utils/CONFIG.js';
+import { Utils } from '../utils/utils.js';
 import { DanmukuDB } from './DanmukuDB.js';
 import { UIManager } from './UIManager.js';
 import { InputDetector, INPUT_TYPES } from './InputDetector.js';
-import { NativeSetter } from '../../utils/nativeSetter.js';
+import { NativeSetter } from '../utils/nativeSetter.js';
+import { SettingsManager } from './SettingsManager.js';
 
 /**
  * 应用状态枚举
@@ -119,7 +120,7 @@ export const InputManager = {
     
     /**
      * 处理输入框移除
-     * @param {HTMLEldement} input - 输入框元素
+     * @param {HTMLElement} input - 输入框元素
      * @param {string} type - 输入框类型
      */
     handleInputRemoved(input, type) {
@@ -256,8 +257,6 @@ export const InputManager = {
         if (event.target !== this.currentInput) return;
         
         const inputValue = event.target.value;
-
-        Utils.log('输入事件，当前值:', inputValue);
         
         // 如果输入为空，立即隐藏候选项
         if (inputValue.length === 0) {
@@ -283,9 +282,11 @@ export const InputManager = {
             clearTimeout(this.debounceTimer);
         }
         
+        // 设置新的定时器
+        const settings = SettingsManager.getSettings();
         this.debounceTimer = setTimeout(() => {
             this.processInput(inputValue);
-        }, SETTINGS.debounceDelay);
+        }, settings.debounceDelay);
     },
     
     /**
@@ -295,6 +296,7 @@ export const InputManager = {
         if (event.target !== this.currentInput) return;
         
         const key = event.key;
+        const settings = SettingsManager.getSettings();
         
         // 检查是否有候选项可见
         const hasVisibleCandidates = UIManager.isPopupVisible();
@@ -302,32 +304,32 @@ export const InputManager = {
         if (hasVisibleCandidates) {
             if (this.isInSelectionMode) {
                 // 选择模式下的按键处理
-                if (key === SETTINGS.KEYBOARD.ARROW_UP) {
+                if (key === CONFIG.KEYBOARD.ARROW_UP) {
                     event.preventDefault();
                     this.navigateUp();
-                } else if (key === SETTINGS.KEYBOARD.ARROW_DOWN) {
+                } else if (key === CONFIG.KEYBOARD.ARROW_DOWN) {
                     // 按下键退出选择模式，返回输入模式
                     event.preventDefault();
                     this.exitSelectionMode();
-                } else if (key === SETTINGS.KEYBOARD.ARROW_LEFT) {
+                } else if (key === CONFIG.KEYBOARD.ARROW_LEFT) {
                     event.preventDefault();
                     this.navigateLeft();
-                } else if (key === SETTINGS.KEYBOARD.ARROW_RIGHT) {
+                } else if (key === CONFIG.KEYBOARD.ARROW_RIGHT) {
                     event.preventDefault();
                     this.navigateRight();
-                } else if (key === SETTINGS.KEYBOARD.ENTER && !event.shiftKey) {
+                } else if (key === CONFIG.KEYBOARD.ENTER && !event.shiftKey) {
                     event.preventDefault();
                     event.stopPropagation();
                     this.selectActiveCandidate();
                     this.exitSelectionMode();
-                } else if (key === SETTINGS.KEYBOARD.ESCAPE) {
+                } else if (key === CONFIG.KEYBOARD.ESCAPE) {
                     event.preventDefault();
                     this.exitSelectionMode();
                     this.hidePopup();
                 }
             } else {
                 // 输入模式下有候选项可见时的按键处理
-                if (key === SETTINGS.KEYBOARD.ARROW_UP) {
+                if (key === CONFIG.KEYBOARD.ARROW_UP) {
                     event.preventDefault();
                     event.stopPropagation();
                     this.enterSelectionMode();
@@ -459,8 +461,9 @@ export const InputManager = {
      * 处理输入内容
      */
     async processInput(inputValue) {
+        const settings = SettingsManager.getSettings();
         
-        if (inputValue.length < SETTINGS.minSearchLength) {
+        if (inputValue.length < settings.minSearchLength) {
             this.setState(APP_STATES.IDLE);
             this.isInSelectionMode = false;
             this.activeIndex = -1;

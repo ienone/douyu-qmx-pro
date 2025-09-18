@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../modules/SettingsManager';
+import { SETTINGS } from '../../modules/SettingsManager';
 import { APP_STATES } from './InputManager.js';
 import { UIManager } from './UIManager.js';
 

@@ -6,8 +6,7 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../modules/SettingsManager';
-import { PanelState } from './candidateType.js';
+import { SETTINGS } from '../../modules/SettingsManager';
 import { CandidateItem } from './candidateItem.js';
 
 /**

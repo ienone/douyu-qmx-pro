@@ -6,8 +6,8 @@
  * =================================================================================
  */
 
-import { SETTINGS } from '../modules/SettingsManager';
-import { Utils } from '../utils/utils.js';
+import { SETTINGS } from '../../modules/SettingsManager';
+import { Utils } from '../../utils/utils.js';
 
 /**
  * 胶囊悬浮框预览组件
@@ -110,6 +110,7 @@ export const CapsulePreview = {
         this.previewElement.style.display = 'none';
         
         document.body.appendChild(this.previewElement);
+        Utils.log('预览框 DOM 元素已创建'); // 确认 DOM 创建日志
     },
     
     /**
@@ -120,6 +121,9 @@ export const CapsulePreview = {
      * @param {string} triggerSource - 触发源：'keyboard' 或 'mouse'
      */
     showPreview(capsule, text, isActive = false, triggerSource = 'mouse') {
+
+        Utils.log(`调用 showPreview: 触发源=${triggerSource}, 文本=${text}`); // 确认调用日志
+
         if (!this.initialized || !text || text.length <= 15) {
             // 短文本不显示预览
             return;
@@ -176,6 +180,9 @@ export const CapsulePreview = {
      * @param {string} triggerSource - 触发源：'keyboard' 或 'mouse'
      */
     hidePreview(delay = null, triggerSource = 'mouse') {
+       
+        // Utils.log(`调用 hidePreview: 触发源=${triggerSource}`);
+
         if (!this.initialized) return;
         
         // 如果当前是键盘触发的预览，只有键盘事件才能隐藏
@@ -193,7 +200,7 @@ export const CapsulePreview = {
         const config = SETTINGS.capsule.preview;
         const hideDelay = delay !== null ? delay : config.hideDelay;
         
-        Utils.log(`隐藏预览框: 触发源=${triggerSource}, 延迟=${hideDelay}ms`);
+        // Utils.log(`隐藏预览框: 触发源=${triggerSource}, 延迟=${hideDelay}ms`);
         
         this.hideTimer = setTimeout(() => {
             this.previewElement.classList.remove('show');
@@ -300,6 +307,8 @@ export const CapsulePreview = {
      */
     bindCapsuleEvents(capsule, text) {
         if (!capsule || !text) return;
+
+        Utils.log(`绑定预览事件: ${text}`); // 确认事件绑定日志
         
         // 鼠标悬停显示
         capsule.addEventListener('mouseenter', () => {

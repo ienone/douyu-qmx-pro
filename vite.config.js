@@ -14,10 +14,23 @@ export default defineConfig({
                 match: [
                     '*://www.douyu.com/*',
                 ],
-                connect: ['list-www.douyu.com'],
+                connect: [
+                    'list-www.douyu.com',   
+                    'data.ienone.top',  // 弹幕数据源域名
+                    'localhost:*'       // 开发环境                
+                ],
                 'run-at': 'document-idle',
                 license: 'MIT',
                 noframes: true,
+                grant: [
+                    'GM_addStyle',
+                    'GM_getValue',
+                    'GM_setValue',
+                    'GM_deleteValue',
+                    'GM_listValues',
+                    'GM_xmlhttpRequest',
+                    'GM_notification'
+                ],
                 $extra: [['original-author', 'ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)']],
             },
             build: {
