@@ -17,6 +17,7 @@ export default defineConfig({
                 connect: ['list-www.douyu.com'],
                 'run-at': 'document-idle',
                 license: 'MIT',
+                noframes: true,
                 $extra: [['original-author', 'ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)']],
             },
             build: {

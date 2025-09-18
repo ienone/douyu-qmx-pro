@@ -17,6 +17,7 @@
 // @grant            GM_xmlhttpRequest
 // @grant            window.close
 // @run-at           document-idle
+// @noframes
 // @original-author  ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
 // ==/UserScript==
 
