@@ -469,7 +469,7 @@ export const InputManager = {
         }
         
         // 从数据库搜索匹配的弹幕模板
-        let suggestions = await DanmukuDB.search(inputValue);
+        let suggestions = await DanmukuDB.search(inputValue, SETTINGS.maxSuggestions, SETTINGS.sortBy);
         
         this.currentSuggestions = suggestions;
         

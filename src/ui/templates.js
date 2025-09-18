@@ -85,6 +85,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 <button class="tab-link active" data-tab="basic">基本设置</button>
                 <button class="tab-link" data-tab="perf">性能与延迟</button>
                 <button class="tab-link" data-tab="advanced">高级设置</button>
+                <button class="tab-link" data-tab="danmupro">弹幕助手</button>
                 <button class="tab-link" data-tab="about">关于</button>
                 <!-- 主题模式切换开关 -->
                 <div class="qmx-settings-item">
@@ -127,6 +128,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
                         <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
                     </div>
+                    <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item">
                         <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                         <label class="qmx-toggle">
@@ -144,9 +146,14 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     <div class="qmx-settings-item">
                         <label>启用校准模式 <span class="qmx-tooltip-icon" data-tooltip-key="calibration-mode">?</span></label>
                         <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-calibration-mode" ${
-                                SETTINGS.CALIBRATION_MODE_ENABLED ? 'checked' : ''
-                            }>
+                            <input type="checkbox" id="setting-calibration-mode" ${SETTINGS.CALIBRATION_MODE_ENABLED ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item">
+                        <label>启用弹幕助手😋<span class="qmx-tooltip-icon" data-tooltip-key="danmupro-mode">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-danmupro-mode" ${SETTINGS.ENABLE_DANMU_PRO ? 'checked' : ''}>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -246,7 +253,27 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 </div>
             </div>
 
-            <!-- ==================== Tab 4: 关于 ==================== -->
+            <!-- ==================== Tab 4: 弹幕助手 ==================== -->
+            <div id="tab-danmupro" class="tab-content">
+                <h4>关于斗鱼弹幕助手功能</h4>
+                <ul class="qmx-styled-list">
+                    <li>启用后，可以在弹幕输入框中使用自动弹幕推荐等功能。</li>
+                    <li>弹幕智能补全：在聊天输入框输入时，根据关键字自动匹配并显示相关的弹幕模板。</li>
+                    <li>全键盘操作：
+                        <ul>
+                            <li>1. 正常输入模式：打出关键字如‘niko’‘三楼’</li>
+                            <li>2. 如果弹幕库中有匹配到的话，会在输入框上方显示几个候选项</li>
+                            <li>3. 点击 <code>↑</code> 键进入选择模式</li>
+                            <li>4. 点击 <code>←</code> / <code>→</code> 在候选项之间导航</li>
+                            <li>5. 点击 <code>Enter</code> 选择并填充弹幕（连点两下<code>Enter</code>就是直接发送弹幕）</li>
+                            <li>6. 点击 <code>↓</code> 退出选择模式回到正常输入模式，或点击 <code>Esc</code> 关闭候选框</li>
+                            <li>在第2步之后也可以直接鼠标点击选择候选项填充到输入框</li>
+                        </ul>
+                    </li>
+                    <li>长文本预览：当鼠标悬停或键盘选择到内容过长的候选项时，会显示一个悬浮框来展示完整内容。</li>
+                </ul>
+            </div>      
+            <!-- ==================== Tab 5: 关于 ==================== -->
             <div id="tab-about" class="tab-content">
                 <!-- 调试工具 - 仅在开发时启用
                 <h4>调试工具 <span style="color: #ff6b6b;">⚠️ 仅供测试使用</span></h4>

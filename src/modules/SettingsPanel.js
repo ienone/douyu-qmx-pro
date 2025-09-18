@@ -44,6 +44,7 @@ export const SettingsPanel = {
             'stats-info':
                 '此功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！ 在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。',
             'stats-update-interval': '统计信息面板中数据更新的频率，值越小更新越及时，但会增加API使用次数。',
+            'danmupro-mode': '启用斗鱼弹幕助手功能，可以在弹幕输入框中使用自动弹幕推荐等功能。',
         };
 
         // 2. 调用模版函数，传入SETTINGS填充默认值
