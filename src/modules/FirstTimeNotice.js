@@ -24,13 +24,15 @@ export const FirstTimeNotice = {
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <p>为了获得更精确的倒计时，您可以：</p>
-                    <ul class="qmx-styled-list">
-                        <li>关闭DouyuEx中的"阻止P2P上传"功能（详见设置→关于→一些tips底部）</li>
-                        <li>进入设置 → 性能与延迟 → 开启"校准模式"</li>
-                        <li>刷新页面</li>
-                    </ul>
-                    <p class="qmx-warning-text"><strong> 注意："校准模式"和DouyuEx插件"阻止P2P上传"功能不可并存</strong></p>
+                    // <p>为了获得更精确的倒计时，您可以：</p>
+                    // <ul class="qmx-styled-list">
+                    //     <li>关闭DouyuEx中的"阻止P2P上传"功能（详见设置→关于→一些tips底部）</li>
+                    //     <li>进入设置 → 性能与延迟 → 开启"校准模式"</li>
+                    //     <li>刷新页面</li>
+                    // </ul>
+                    // <p class="qmx-warning-text"><strong> 注意："校准模式"和DouyuEx插件"阻止P2P上传"功能不可并存</strong></p>
+                    <p>新增弹幕助手功能😋，助力畅快发弹幕，使用方法详见设置->弹幕助手</p>
+                    <p>如需关闭此功能，关闭‘设置->基本设置->启用弹幕助手😋’即可</p>
                     <h4> 项目地址<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer">douyu-qmx-pro</a>，求个star🌟~~</h4>
                 </div>
                 <div class="qmx-modal-footer">
