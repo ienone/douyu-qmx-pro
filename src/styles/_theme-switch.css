@@ -16,6 +16,10 @@
     height: 0;
 }
 
+.theme-switch-wrapper {
+    align-self: center; /* 水平居中（可选） */
+}
+
 /* --- 背景轨道 --- */
 .slider-track {
     position: absolute;

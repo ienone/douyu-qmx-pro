@@ -1,0 +1,4 @@
+/* 聊天区背景色始终随主题变化 */
+.Chat {
+    background-color: var(--md-sys-color-surface-container, #23232a);
+}

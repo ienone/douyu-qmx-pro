@@ -78,6 +78,7 @@
 .qmx-settings-item {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: 8px;
 }
 
