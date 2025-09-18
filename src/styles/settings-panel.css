@@ -1,0 +1,127 @@
+/**
+ * =================================================================================
+ * 斗鱼弹幕助手 - 设置面板样式 (Material 3 Expressive)
+ * =================================================================================
+ */
+
+/* 设置面板内容 - 继承自 qmx-modal-base */
+.dda-settings-content {
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+/* 设置面板头部 */
+.dda-settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+.dda-settings-header h2 {
+    margin: 0;
+    color: var(--md-sys-color-on-surface);
+    font-size: 22px;
+    font-weight: 400;
+}
+
+/* 设置面板主体 */
+.dda-settings-body {
+    padding: 24px;
+    max-height: calc(80vh - 130px); /* 减去头部和底部的高度 */
+    overflow-y: auto;
+    /* 继承自 qmx-scrollbar */
+}
+
+/* 设置分组 */
+.dda-settings-section {
+    margin-bottom: 32px;
+}
+
+.dda-settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.dda-settings-section h3 {
+    margin: 0 0 16px 0;
+    color: var(--md-sys-color-primary);
+    font-size: 16px;
+    font-weight: 500;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+/* 设置项 */
+.dda-setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--md-sys-color-outline);
+}
+
+.dda-setting-item:last-child {
+    border-bottom: none;
+}
+
+.dda-setting-item label {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 14px;
+    font-weight: 400;
+    flex: 1;
+}
+
+/* 键盘设置组 */
+.dda-key-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.dda-key-group label {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: var(--md-sys-color-on-surface-variant);
+    flex: none;
+}
+
+/* 设置面板底部 */
+.dda-settings-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--md-sys-color-outline);
+}
+
+/* 响应式设计 */
+@media (max-width: 640px) {
+    .dda-settings-content {
+        width: 100%;
+        height: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    .dda-settings-header,
+    .dda-settings-footer {
+        padding: 16px;
+    }
+    
+    .dda-settings-body {
+        padding: 16px;
+        max-height: calc(100vh - 120px);
+    }
+    
+    .dda-setting-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+}

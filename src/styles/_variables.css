@@ -21,6 +21,8 @@
 body[data-theme="dark"] {
     --md-sys-color-primary: #D0BCFF;
     --md-sys-color-on-primary: #381E72;
+    --md-sys-color-primary-container: #4F378B;
+    --md-sys-color-on-primary-container: #EADDFF;
     --md-sys-color-surface-container: #211F26;
     --md-sys-color-on-surface: #E6E1E5;
     --md-sys-color-on-surface-variant: #CAC4D0;
@@ -29,14 +31,14 @@ body[data-theme="dark"] {
     --md-sys-color-tertiary: #EFB8C8;
     --md-sys-color-scrim: #000000;
     --surface-container-highest: #3D3B42;
-    --primary-container: #4F378B;
-    --on-primary-container: #EADDFF;
 }
 
 /* 浅色主题变量 */
 body[data-theme="light"] {
     --md-sys-color-primary: #6750A4;
     --md-sys-color-on-primary: #FFFFFF;
+    --md-sys-color-primary-container: #EADDFF;
+    --md-sys-color-on-primary-container: #21005D;
     --md-sys-color-surface-container: #F3EDF7;
     --md-sys-color-surface-bright: #FEF7FF;
     --md-sys-color-on-surface: #1C1B1F;
@@ -45,6 +47,4 @@ body[data-theme="light"] {
     --md-sys-color-tertiary: #7D5260;
     --md-sys-color-scrim: #000000;
     --surface-container-highest: #E6E0E9;
-    --primary-container: #EADDFF;
-    --on-primary-container: #21005D;
 }
