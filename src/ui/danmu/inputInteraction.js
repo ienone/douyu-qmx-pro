@@ -6,7 +6,7 @@
  * =================================================================================
  */
 
-import { NativeSetter } from '../../utils/nativeSetter.js';
+import { NativeSetter } from '../../utils/NativeSetter.js';
 
 /**
  * 输入框交互管理器
