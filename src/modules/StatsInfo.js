@@ -202,10 +202,7 @@ export const StatsInfo = {
      * 移除过期数据
      */
     removeExpiredData: function () {
-        const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY);
-        if (!allData) {
-            Utils.log('获取本地历史数据失败');
-        }
+        const allData = this.ensureTodayDataExists().allData;
         // 筛选最近两天的数据保留
         let newAllData = Object.keys(allData)
             .filter((dateString) => {
@@ -227,11 +224,7 @@ export const StatsInfo = {
      * 每日0点更新数据
      */
     updateDataForDailyReset: function () {
-        const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-        if (!allData) {
-            Utils.log('更新每日数据时本地数据错误，跳过');
-            return;
-        }
+        const allData = this.ensureTodayDataExists().allData;
         // 检查最后一条数据的日期是否为今天
         const lastDate = Object.keys(allData).at(-1);
         const nowDate = Utils.formatDateAsBeijing(new Date());
