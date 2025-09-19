@@ -207,10 +207,17 @@ export const StatsInfo = {
      * @param {Object} todayData - 今日数据对象
      */
     refreshUI: function (todayData) {
-        for (let todayDataKey in todayData) {
-            let dataName = document.querySelector(`.qmx-stat-info-${todayDataKey}`);
-            let item = dataName.querySelector('.qmx-stat-item');
-            item.textContent = todayData[todayDataKey];
+        for (let key in todayData) {
+            try {
+                const dataName = document.querySelector(`.qmx-stat-info-${key}`);
+                if (!dataName) continue;
+                const item = dataName.querySelector('.qmx-stat-item');
+                if (!item) continue;
+                item.textContent = todayData[key];
+            } catch (e) {
+                Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
+                continue;
+            }
         }
     },
 
@@ -245,7 +252,6 @@ export const StatsInfo = {
             Utils.log('更新每日数据时本地数据错误，跳过');
             return;
         }
-
         // 检查最后一条数据的日期是否为今天
         const lastDate = Object.keys(allData).at(-1);
         const nowDate = Utils.formatDateAsBeijing(new Date());
