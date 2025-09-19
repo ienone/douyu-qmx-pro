@@ -47,6 +47,7 @@ export const StatsInfo = {
     
     /**
      * 统一初始化和校验今日数据
+     * @returns {Object} 包含所有数据和今日数据的对象
      */
     ensureTodayDataExists: function () {
         const today = Utils.formatDateAsBeijing(new Date());
@@ -62,6 +63,7 @@ export const StatsInfo = {
             };
             GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
         }
+        return { allData, todayData: allData[today], today };
     },
 
     bindEvents: function () {
@@ -131,10 +133,7 @@ export const StatsInfo = {
      * 更新今日的数据，并同步更新平均每个红包金币数
      */
     updateTodayData: function () {
-        this.ensureTodayDataExists();
-        let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-        const today = Utils.formatDateAsBeijing(new Date());
-        let todayData = allData?.[today];
+        const { allData, todayData } = this.ensureTodayDataExists();
         if (!todayData) return;
         // 计算平均
         todayData.avg = todayData.receivedCount
@@ -158,10 +157,7 @@ export const StatsInfo = {
      * @param {number} value
      */
     set: function (name, value) {
-        this.ensureTodayDataExists();
-        let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-        const today = Utils.formatDateAsBeijing(new Date());
-        let todayData = allData?.[today];
+        const { allData, todayData } = this.ensureTodayDataExists();
         if (!todayData) return;
         todayData[name] = value;
 
