@@ -111,25 +111,6 @@ export const StatsInfo = {
     },
 
     /**
-     * 初始化一日的数据
-     * @param {string} date - 今日日期 ${year}-${month}-${day}
-     * @returns {{date: {
-     *  receivedCount: number,
-     *  avg: number,
-     *  total: number
-     * }}} - 初始化值为0的统计数据
-     */
-    createDataObj: function (date) {
-        return {
-            [date]: {
-                receivedCount: 0,
-                avg: 0,
-                total: 0,
-            },
-        };
-    },
-
-    /**
      * 更新今日的数据，并同步更新平均每个红包金币数
      */
     updateTodayData: function () {
@@ -242,6 +223,9 @@ export const StatsInfo = {
         Utils.log('[数据统计]：已清理过期数据');
     },
 
+    /**
+     * 每日0点更新数据
+     */
     updateDataForDailyReset: function () {
         const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
         if (!allData) {
@@ -258,6 +242,9 @@ export const StatsInfo = {
         }
     },
 
+    /**
+     * 检查是否需要更新统计数据
+     */
     checkUpdate: function () {
         // 检查是否需要更新统计数据
         const state = GlobalState.get();
