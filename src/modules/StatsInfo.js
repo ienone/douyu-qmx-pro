@@ -20,12 +20,9 @@ export const StatsInfo = {
             stats.appendChild(this.initRender(name, nickname));
         });
 
-        // 初始化数据
-        const nowDate = Utils.formatDateAsBeijing(new Date());
-        let dataObj = this.createDataObj(nowDate);
-        if (!GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null)) {
-            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, dataObj);
-        }
+        // 统一数据初始化和校验
+        GM_setValue('douyu_qmx_stats_lock', false);
+        this.ensureTodayDataExists();
         this.updateTodayData();
 
         // 获取最新的金币记录并更新今日数据
@@ -36,8 +33,9 @@ export const StatsInfo = {
 
         this.bindEvents();
 
-        // 检查数据更新
+        // 统一定时器调度
         setInterval(() => {
+            // 更新数据
             this.checkUpdate();
         }, SETTINGS.STATS_UPDATE_INTERVAL);
 
@@ -45,6 +43,25 @@ export const StatsInfo = {
         setInterval(() => {
             this.updateDataForDailyReset();
         }, 60 * 1000);
+    },
+    
+    /**
+     * 统一初始化和校验今日数据
+     */
+    ensureTodayDataExists: function () {
+        const today = Utils.formatDateAsBeijing(new Date());
+        let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+        if (!allData || typeof allData !== 'object') {
+            allData = {};
+        }
+        if (!allData[today]) {
+            allData[today] = {
+                receivedCount: 0,
+                avg: 0,
+                total: 0,
+            };
+            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
+        }
     },
 
     bindEvents: function () {
@@ -114,45 +131,25 @@ export const StatsInfo = {
      * 更新今日的数据，并同步更新平均每个红包金币数
      */
     updateTodayData: function () {
+        this.ensureTodayDataExists();
         let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-        if (!allData) {
-            return;
-        }
-
         const today = Utils.formatDateAsBeijing(new Date());
         let todayData = allData?.[today];
-        if (!todayData) {
-            // 添加今日初始数据
-            Object.assign(allData, this.createDataObj(today));
-            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
-            this.updateTodayData();
-            return;
-        }
+        if (!todayData) return;
         // 计算平均
-        todayData['avg'] = todayData['total'] / todayData['receivedCount'] || 0;
-        todayData['avg'] = todayData['avg'].toFixed(2);
-        this.set('avg', todayData['avg']);
+        todayData.avg = todayData.receivedCount
+            ? (todayData.total / todayData.receivedCount).toFixed(2)
+            : '0.00';
         // 更新UI
         this.refreshUI(todayData);
-    },
 
-    /**
-     * 验证存储数据是否完整
-     * @param data
-     * @returns {boolean}
-     */
-    validateAllData: function (data) {
-        if (!data) {
-            Utils.log('统计数据错误');
-            return false;
-        }
-        const today = Utils.formatDateAsBeijing(new Date());
-        let todayData = data?.[today];
-        if (!todayData) {
-            Utils.log('今日统计数据错误');
-            return false;
-        }
-        return true;
+        if (!Utils.lockChecker('douyu_qmx_stats_lock', this.updateTodayData.bind(this))) return;
+        Utils.setLocalValueWithLock(
+            'douyu_qmx_stats_lock',
+            SETTINGS.STATS_INFO_STORAGE_KEY,
+            allData,
+            '更新今日统计数据'
+        );
     },
 
     /**
@@ -161,24 +158,21 @@ export const StatsInfo = {
      * @param {number} value
      */
     set: function (name, value) {
-        const lockKey = 'douyu_qmx_stats_lock';
-        if (!Utils.lockChecker(lockKey, () => this.set(), name, value)) {
-            return;
-        }
-        // 验证数据格式
+        this.ensureTodayDataExists();
         let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-        if (!this.validateAllData(allData)) {
-            return;
-        }
         const today = Utils.formatDateAsBeijing(new Date());
         let todayData = allData?.[today];
+        if (!todayData) return;
         todayData[name] = value;
+
+        if (!Utils.lockChecker('douyu_qmx_stats_lock', this.set.bind(this), name, value)) return;
         Utils.setLocalValueWithLock(
-            lockKey,
+            'douyu_qmx_stats_lock',
             SETTINGS.STATS_INFO_STORAGE_KEY,
             allData,
             '更新统计数据'
         );
+
         this.refreshUI(todayData);
     },
 
