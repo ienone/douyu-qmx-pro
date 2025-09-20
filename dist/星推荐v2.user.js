@@ -1273,8 +1273,7 @@ initRender: function(name, nickname) {
 updateTodayData: function() {
           const { allData, todayData } = this.ensureTodayDataExists();
           if (!todayData) return;
-          todayData.avg = todayData.receivedCount ? (todayData.total / todayData.receivedCount).toFixed(2) : "0.00";
-          this.refreshUI(todayData);
+          todayData.avg = todayData.receivedCount ? (todayData.total / todayData.receivedCount).toFixed(2) : 0;
           if (!Utils.lockChecker("douyu_qmx_stats_lock", this.updateTodayData.bind(this))) return;
           Utils.setLocalValueWithLock(
             "douyu_qmx_stats_lock",
@@ -1282,6 +1281,7 @@ updateTodayData: function() {
             allData,
             "更新今日统计数据"
           );
+          this.refreshUI(todayData);
         },
 set: function(name, value) {
           const { allData, todayData } = this.ensureTodayDataExists();

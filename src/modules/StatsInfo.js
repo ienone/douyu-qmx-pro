@@ -119,9 +119,7 @@ export const StatsInfo = {
         // 计算平均
         todayData.avg = todayData.receivedCount
             ? (todayData.total / todayData.receivedCount).toFixed(2)
-            : '0.00';
-        // 更新UI
-        this.refreshUI(todayData);
+            : 0.00;
 
         if (!Utils.lockChecker('douyu_qmx_stats_lock', this.updateTodayData.bind(this))) return;
         Utils.setLocalValueWithLock(
@@ -130,6 +128,8 @@ export const StatsInfo = {
             allData,
             '更新今日统计数据'
         );
+        // 更新UI
+        this.refreshUI(todayData);
     },
 
     /**
