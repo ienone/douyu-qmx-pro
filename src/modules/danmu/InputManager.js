@@ -11,7 +11,7 @@ import { Utils } from '../../utils/utils.js';
 import { DanmukuDB } from './DanmukuDB.js';
 import { UIManager } from './UIManager.js';
 import { InputDetector, INPUT_TYPES } from './InputDetector.js';
-import { NativeSetter } from '../../utils/nativeSetter.js';
+import { NativeSetter } from '../../utils/NativeSetter.js';
 
 /**
  * 应用状态枚举

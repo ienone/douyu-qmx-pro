@@ -1210,11 +1210,8 @@ showCalibrationNotice() {
           ].forEach(([name, nickname]) => {
             stats.appendChild(this.initRender(name, nickname));
           });
-          const nowDate = Utils.formatDateAsBeijing( new Date());
-          let dataObj = this.createDataObj(nowDate);
-          if (!GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null)) {
-            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, dataObj);
-          }
+          GM_setValue("douyu_qmx_stats_lock", false);
+          this.ensureTodayDataExists();
           this.updateTodayData();
           await this.getCoinListUpdate();
           this.removeExpiredData();
@@ -1225,6 +1222,22 @@ showCalibrationNotice() {
           setInterval(() => {
             this.updateDataForDailyReset();
           }, 60 * 1e3);
+        },
+ensureTodayDataExists: function() {
+          const today = Utils.formatDateAsBeijing( new Date());
+          let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+          if (!allData || typeof allData !== "object") {
+            allData = {};
+          }
+          if (!allData[today]) {
+            allData[today] = {
+              receivedCount: 0,
+              avg: 0,
+              total: 0
+            };
+            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
+          }
+          return { allData, todayData: allData[today], today };
         },
         bindEvents: function() {
           const refreshButton = document.querySelector(".qmx-stats-refresh");
@@ -1257,60 +1270,26 @@ initRender: function(name, nickname) {
             `;
           return newItem;
         },
-createDataObj: function(date) {
-          return {
-            [date]: {
-              receivedCount: 0,
-              avg: 0,
-              total: 0
-            }
-          };
-        },
 updateTodayData: function() {
-          let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-          if (!allData) {
-            return;
-          }
-          const today = Utils.formatDateAsBeijing( new Date());
-          let todayData = allData?.[today];
-          if (!todayData) {
-            Object.assign(allData, this.createDataObj(today));
-            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
-            this.updateTodayData();
-            return;
-          }
-          todayData["avg"] = todayData["total"] / todayData["receivedCount"] || 0;
-          todayData["avg"] = todayData["avg"].toFixed(2);
-          this.set("avg", todayData["avg"]);
+          const { allData, todayData } = this.ensureTodayDataExists();
+          if (!todayData) return;
+          todayData.avg = todayData.receivedCount ? (todayData.total / todayData.receivedCount).toFixed(2) : 0;
+          if (!Utils.lockChecker("douyu_qmx_stats_lock", this.updateTodayData.bind(this))) return;
+          Utils.setLocalValueWithLock(
+            "douyu_qmx_stats_lock",
+            SETTINGS.STATS_INFO_STORAGE_KEY,
+            allData,
+            "更新今日统计数据"
+          );
           this.refreshUI(todayData);
         },
-validateAllData: function(data) {
-          if (!data) {
-            Utils.log("统计数据错误");
-            return false;
-          }
-          const today = Utils.formatDateAsBeijing( new Date());
-          let todayData = data?.[today];
-          if (!todayData) {
-            Utils.log("今日统计数据错误");
-            return false;
-          }
-          return true;
-        },
 set: function(name, value) {
-          const lockKey = "douyu_qmx_stats_lock";
-          if (!Utils.lockChecker(lockKey, () => this.set(), name, value)) {
-            return;
-          }
-          let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-          if (!this.validateAllData(allData)) {
-            return;
-          }
-          const today = Utils.formatDateAsBeijing( new Date());
-          let todayData = allData?.[today];
+          const { allData, todayData } = this.ensureTodayDataExists();
+          if (!todayData) return;
           todayData[name] = value;
+          if (!Utils.lockChecker("douyu_qmx_stats_lock", this.set.bind(this), name, value)) return;
           Utils.setLocalValueWithLock(
-            lockKey,
+            "douyu_qmx_stats_lock",
             SETTINGS.STATS_INFO_STORAGE_KEY,
             allData,
             "更新统计数据"
@@ -1337,17 +1316,21 @@ getCoinListUpdate: async function() {
           this.updateTodayData();
         },
 refreshUI: function(todayData) {
-          for (let todayDataKey in todayData) {
-            let dataName = document.querySelector(`.qmx-stat-info-${todayDataKey}`);
-            let item = dataName.querySelector(".qmx-stat-item");
-            item.textContent = todayData[todayDataKey];
+          for (let key in todayData) {
+            try {
+              const dataName = document.querySelector(`.qmx-stat-info-${key}`);
+              if (!dataName) continue;
+              const item = dataName.querySelector(".qmx-stat-item");
+              if (!item) continue;
+              item.textContent = todayData[key];
+            } catch (e) {
+              Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
+              continue;
+            }
           }
         },
 removeExpiredData: function() {
-          const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY);
-          if (!allData) {
-            Utils.log("获取本地历史数据失败");
-          }
+          const allData = this.ensureTodayDataExists().allData;
           let newAllData = Object.keys(allData).filter((dateString) => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
@@ -1361,12 +1344,8 @@ removeExpiredData: function() {
           GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
           Utils.log("[数据统计]：已清理过期数据");
         },
-        updateDataForDailyReset: function() {
-          const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
-          if (!allData) {
-            Utils.log("更新每日数据时本地数据错误，跳过");
-            return;
-          }
+updateDataForDailyReset: function() {
+          const allData = this.ensureTodayDataExists().allData;
           const lastDate = Object.keys(allData).at(-1);
           const nowDate = Utils.formatDateAsBeijing( new Date());
           if (lastDate !== nowDate) {
@@ -1374,7 +1353,7 @@ removeExpiredData: function() {
             this.removeExpiredData();
           }
         },
-        checkUpdate: function() {
+checkUpdate: function() {
           const state = GlobalState.get();
           const tabList = document.getElementById("qmx-tab-list");
           if (!tabList) return;
