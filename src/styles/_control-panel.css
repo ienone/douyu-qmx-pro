@@ -287,9 +287,14 @@
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-indicator {
+    opacity: 1;
     transform: rotate(180deg) scale(1.05);
     position: relative;
     margin: 9px;
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-indicator.transitioning {
+    opacity: 0;
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-label {
@@ -315,6 +320,7 @@
 
 .qmx-stats-toggle.expanded .qmx-stats-refresh.disabled {
     opacity: 0;
+    transform: translateX(100%);
 }
 
 
@@ -322,6 +328,15 @@
 .qmx-stats-toggle.expanded .qmx-stats-switcher {
     cursor: pointer;
     opacity: 1;
+    position: absolute;
+}
+
+.qmx-stats-toggle.expanded #qmx-stats-left {
+    left: 60px;
+}
+
+.qmx-stats-toggle.expanded #qmx-stats-right {
+    right: 60px;
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-switcher.disabled{

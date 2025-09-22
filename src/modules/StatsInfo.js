@@ -134,6 +134,7 @@ export const StatsInfo = {
         globalValue.currentDatePage = globalValue.currentDatePage ?? today;
         const dateList = Object.keys(allData);
         const currentIndex = dateList.indexOf(globalValue.currentDatePage);
+        const indecator = document.querySelector('.qmx-stats-indicator');
 
         const button = document.querySelector(`#qmx-stats-${direction}`);
         if (!button) {
@@ -165,6 +166,7 @@ export const StatsInfo = {
                 this.bindEvents();
             }
             // 更新标签文本
+            this.itemTransiton(indecator);
             if (globalValue.currentDatePage !== today) {
                 this.contentTransition(statsLable, globalValue.currentDatePage);
             } else {
@@ -195,6 +197,13 @@ export const StatsInfo = {
         element.classList.add('transitioning');
         setTimeout(() => {
             element.textContent = newText;
+            element.classList.remove('transitioning');
+        }, duration);
+    },
+
+    itemTransiton: function (element, duration = 300) {
+        element.classList.add('transitioning');
+        setTimeout(() => {
             element.classList.remove('transitioning');
         }, duration);
     },
