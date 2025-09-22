@@ -298,7 +298,12 @@
     font-size: 12px;
     font-weight: 500;
     position: relative;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     color: var(--md-sys-color-on-surface);
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-label.transitioning {
+    opacity: 0;
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-refresh {
@@ -394,11 +399,17 @@
 }
 
 .qmx-stat-details {
+    opacity: 1;
     display: flex;
     align-items: center;
     font-size: 13px;
     color: var(--md-sys-color-on-surface-variant);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     justify-content: center;
+}
+
+.qmx-stat-details.transitioning {
+    opacity: 0;
 }
 
 .qmx-stat-stats {

@@ -106,7 +106,9 @@ export const StatsInfo = {
             refreshButton.onclick = null;
             return;
         }
-        refreshButton.classList.remove('disabled');
+        setTimeout(() => {
+            refreshButton.classList.remove('disabled');
+        }, 300);
         refreshButton.onclick = async (e) => {
             e.stopPropagation();
 
@@ -164,9 +166,9 @@ export const StatsInfo = {
             }
             // 更新标签文本
             if (globalValue.currentDatePage !== today) {
-                statsLable.textContent = globalValue.currentDatePage;
+                this.contentTransition(statsLable, globalValue.currentDatePage);
             } else {
-                statsLable.textContent = '统计面板';
+                this.contentTransition(statsLable, '今日统计');
             }
             // 刷新更新数据计时器
             if (globalValue.currentDatePage === today) {
@@ -187,6 +189,14 @@ export const StatsInfo = {
 
     bindSwitcherRight: function () {
         this.bindSwitcher('right');
+    },
+
+    contentTransition: function (element, newText, duration = 300) {
+        element.classList.add('transitioning');
+        setTimeout(() => {
+            element.textContent = newText;
+            element.classList.remove('transitioning');
+        }, duration);
     },
 
     /**
@@ -291,9 +301,9 @@ export const StatsInfo = {
             try {
                 const dataName = document.querySelector(`.qmx-stat-info-${key}`);
                 if (!dataName) continue;
-                const item = dataName.querySelector('.qmx-stat-item');
-                if (!item) continue;
-                item.textContent = todayData[key];
+                const details = dataName.querySelector('.qmx-stat-details');
+                if (!details) continue;
+                this.contentTransition(details, todayData[key]);
             } catch (e) {
                 Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
                 continue;
