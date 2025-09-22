@@ -463,7 +463,7 @@ deepClone(obj) {
         <div class="qmx-stats-toggle" id="qmx-stats-toggle">
             <button id="qmx-stats-left" class="qmx-stats-switcher"><</button>
             <span class="qmx-stats-indicator">▼</span>
-            <span class="qmx-stats-label">统计面板</span>
+            <span class="qmx-stats-label">今日统计</span>
             <button class="qmx-stats-refresh">⟳</button>
             <button id="qmx-stats-right" class="qmx-stats-switcher">></button>
         </div>
@@ -1227,7 +1227,7 @@ updateIntervalID: null
             this.updateDataForDailyReset();
           }, 60 * 1e3);
         },
-        updateInterval: function() {
+updateInterval: function() {
           if (globalValue.updateIntervalID) {
             clearInterval(globalValue.updateIntervalID);
             globalValue.updateIntervalID = null;
@@ -1252,7 +1252,7 @@ ensureTodayDataExists: function() {
           }
           return { allData, todayData: allData[today], today };
         },
-        bindEvents: function() {
+bindEvents: function() {
           try {
             this.bindRefreshEvent();
             this.bindSwitcherLeft();
@@ -1264,7 +1264,7 @@ ensureTodayDataExists: function() {
             }, 500);
           }
         },
-        bindRefreshEvent: function() {
+bindRefreshEvent: function() {
           const refreshButton = document.querySelector(".qmx-stats-refresh");
           const today = Utils.formatDateAsBeijing( new Date());
           if (!refreshButton) {
@@ -1288,7 +1288,6 @@ ensureTodayDataExists: function() {
             await this.getCoinListUpdate();
           };
         },
-
 bindSwitcher: function(direction) {
           const { allData, _, today } = this.ensureTodayDataExists();
           const statsLable = document.querySelector(".qmx-stats-label");
@@ -1330,20 +1329,20 @@ bindSwitcher: function(direction) {
             }
           };
         },
-        bindSwitcherLeft: function() {
+bindSwitcherLeft: function() {
           this.bindSwitcher("left");
         },
-        bindSwitcherRight: function() {
+bindSwitcherRight: function() {
           this.bindSwitcher("right");
         },
-        contentTransition: function(element, newText, duration = 300) {
+contentTransition: function(element, newText, duration = 300) {
           element.classList.add("transitioning");
           setTimeout(() => {
             element.textContent = newText;
             element.classList.remove("transitioning");
           }, duration);
         },
-        itemTransiton: function(element, duration = 300) {
+itemTransiton: function(element, duration = 300) {
           element.classList.add("transitioning");
           setTimeout(() => {
             element.classList.remove("transitioning");
@@ -1440,7 +1439,13 @@ removeExpiredData: function() {
           Utils.log("[数据统计]：已清理过期数据");
         },
 updateDataForDailyReset: function() {
-          const allData = this.ensureTodayDataExists().allData;
+          const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+          if (!allData || typeof allData !== "object") {
+            this.ensureTodayDataExists();
+            this.updateTodayData();
+            this.removeExpiredData();
+            return;
+          }
           const lastDate = Object.keys(allData).at(-1);
           const nowDate = Utils.formatDateAsBeijing( new Date());
           if (lastDate !== nowDate) {

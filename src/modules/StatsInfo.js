@@ -48,6 +48,9 @@ export const StatsInfo = {
         }, 60 * 1000);
     },
 
+    /**
+     * 设置数据更新定时器
+     */
     updateInterval: function () {
         if (globalValue.updateIntervalID) {
             clearInterval(globalValue.updateIntervalID);
@@ -80,6 +83,9 @@ export const StatsInfo = {
         return { allData, todayData: allData[today], today };
     },
 
+    /**
+     * 绑定所有事件
+     */
     bindEvents: function () {
         try {
             this.bindRefreshEvent();
@@ -93,8 +99,10 @@ export const StatsInfo = {
         }
     },
 
+    /**
+     * 绑定刷新按钮事件
+     */
     bindRefreshEvent: function () {
-        // 绑定刷新按钮事件
         const refreshButton = document.querySelector('.qmx-stats-refresh');
         const today = Utils.formatDateAsBeijing(new Date());
         if (!refreshButton) {
@@ -122,7 +130,6 @@ export const StatsInfo = {
             await this.getCoinListUpdate();
         };
     },
-    // TODO 查看历史时禁止刷新
 
     /**
      * 通用的绑定切换按钮函数
@@ -185,14 +192,26 @@ export const StatsInfo = {
         };
     },
 
+    /**
+     * 绑定左切换按钮事件
+     */
     bindSwitcherLeft: function () {
         this.bindSwitcher('left');
     },
 
+    /**
+     * 绑定右切换按钮事件
+     */
     bindSwitcherRight: function () {
         this.bindSwitcher('right');
     },
 
+    /**
+     * 在修改内容时添加过渡效果
+     * @param {HTMLElement} element 
+     * @param {*} newText 
+     * @param {number} duration 
+     */
     contentTransition: function (element, newText, duration = 300) {
         element.classList.add('transitioning');
         setTimeout(() => {
@@ -201,6 +220,11 @@ export const StatsInfo = {
         }, duration);
     },
 
+    /**
+     * 为元素添加过渡效果
+     * @param {HTMLElement} element 
+     * @param {number} duration 
+     */
     itemTransiton: function (element, duration = 300) {
         element.classList.add('transitioning');
         setTimeout(() => {
@@ -346,7 +370,13 @@ export const StatsInfo = {
      * 每日0点更新数据
      */
     updateDataForDailyReset: function () {
-        const allData = this.ensureTodayDataExists().allData;
+        const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+        if (!allData || typeof allData !== 'object') {
+            this.ensureTodayDataExists();
+            this.updateTodayData();
+            this.removeExpiredData();
+            return;
+        }
         // 检查最后一条数据的日期是否为今天
         const lastDate = Object.keys(allData).at(-1);
         const nowDate = Utils.formatDateAsBeijing(new Date());
