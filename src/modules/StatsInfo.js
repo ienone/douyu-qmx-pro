@@ -325,7 +325,7 @@ export const StatsInfo = {
      */
     removeExpiredData: function () {
         const allData = this.ensureTodayDataExists().allData;
-        // 筛选最近两天的数据保留
+        // 筛选最近七天的数据保留
         let newAllData = Object.keys(allData)
             .filter((dateString) => {
                 const today = new Date();
@@ -333,7 +333,7 @@ export const StatsInfo = {
                 const date = new Date(dateString);
                 const diff = today - date;
                 const dayDiff = diff / (1000 * 60 * 60 * 24);
-                return dayDiff <= 1;
+                return dayDiff <= 6;
             })
             .reduce((obj, key) => {
                 return Object.assign(obj, { [key]: allData[key] });
