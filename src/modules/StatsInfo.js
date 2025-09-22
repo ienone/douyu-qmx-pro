@@ -31,6 +31,7 @@ export const StatsInfo = {
         // 去除过期数据
         this.removeExpiredData();
 
+        // 绑定事件
         this.bindEvents();
 
         // 统一定时器调度
@@ -67,10 +68,21 @@ export const StatsInfo = {
     },
 
     bindEvents: function () {
+        try {
+            this.bindRefreshEvent();
+        } catch (e) {
+            Utils.log(`[StatsInfo] 绑定事件异常: ${e}`);
+            setTimeout(() => {
+                bindEvents();
+            }, 500);
+        }
+    },
+
+    bindRefreshEvent: function () {
         // 绑定刷新按钮事件
         const refreshButton = document.querySelector('.qmx-stats-refresh');
         if (!refreshButton) {
-            return;
+            throw new Error('无法找到刷新按钮元素');
         }
         refreshButton.addEventListener('click', async (e) => {
             e.stopPropagation();
