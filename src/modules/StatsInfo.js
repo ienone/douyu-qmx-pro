@@ -8,6 +8,10 @@ import { Utils } from '../utils/utils.js';
 import { DouyuAPI } from '../utils/DouyuAPI.js';
 import { GlobalState } from './GlobalState.js';
 
+const globalValue = {
+    currentDatePage: null, // 当前查看的日期页面
+};
+
 export const StatsInfo = {
     init: async function () {
         // 初始化组件
@@ -45,7 +49,7 @@ export const StatsInfo = {
             this.updateDataForDailyReset();
         }, 60 * 1000);
     },
-    
+
     /**
      * 统一初始化和校验今日数据
      * @returns {Object} 包含所有数据和今日数据的对象
@@ -70,6 +74,8 @@ export const StatsInfo = {
     bindEvents: function () {
         try {
             this.bindRefreshEvent();
+            this.bindSwitcherLeft();
+            this.bindSwitcherRight();
         } catch (e) {
             Utils.log(`[StatsInfo] 绑定事件异常: ${e}`);
             setTimeout(() => {
@@ -95,6 +101,68 @@ export const StatsInfo = {
             }, 1000);
 
             await this.getCoinListUpdate();
+        });
+    },
+    // TODO 查看历史时禁止刷新
+    bindSwitcherLeft: function () {
+        const { allData, _, today } = this.ensureTodayDataExists();
+        globalValue.currentDatePage = globalValue.currentDatePage ?? today;
+        const dateList = Object.keys(allData);
+
+        const leftButton = document.querySelector('#qmx-stats-left');
+        if (!leftButton) {
+            throw new Error('无法找到左切换按钮元素');
+        }
+
+        if (dateList.length <= 1) {
+            leftButton.classList.add('disabled');
+            return;
+        }
+
+        leftButton.classList.remove('disabled');
+        leftButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = dateList.indexOf(globalValue.currentDatePage);
+            if (currentIndex > 0) {
+                globalValue.currentDatePage = dateList[currentIndex - 1];
+                this.refreshUI(allData[globalValue.currentDatePage]);
+                this.bindSwitcherLeft();
+                this.bindSwitcherRight();
+            }
+            if (currentIndex - 1 <= 0) {
+                leftButton.classList.add('disabled');
+            }
+        });
+    },
+
+    bindSwitcherRight: function () {
+        const { allData, _, today } = this.ensureTodayDataExists();
+        globalValue.currentDatePage = globalValue.currentDatePage ?? today;
+        const dateList = Object.keys(allData);
+
+        const rightButton = document.querySelector('#qmx-stats-right');
+        if (!rightButton) {
+            throw new Error('无法找到右切换按钮元素');
+        }
+
+        if (dateList.length <= 1) {
+            rightButton.classList.add('disabled');
+            return;
+        }
+
+        rightButton.classList.remove('disabled');
+        rightButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = dateList.indexOf(globalValue.currentDatePage);
+            if (currentIndex < dateList.length - 1) {
+                globalValue.currentDatePage = dateList[currentIndex + 1];
+                this.refreshUI(allData[globalValue.currentDatePage]);
+                this.bindSwitcherRight();
+                this.bindSwitcherLeft();
+            }
+            if (currentIndex + 1 >= dateList.length - 1) {
+                rightButton.classList.add('disabled');
+            }
         });
     },
 
@@ -131,7 +199,7 @@ export const StatsInfo = {
         // 计算平均
         todayData.avg = todayData.receivedCount
             ? (todayData.total / todayData.receivedCount).toFixed(2)
-            : 0.00;
+            : 0.0;
 
         if (!Utils.lockChecker('douyu_qmx_stats_lock', this.updateTodayData.bind(this))) return;
         Utils.setLocalValueWithLock(
