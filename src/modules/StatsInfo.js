@@ -10,6 +10,7 @@ import { GlobalState } from './GlobalState.js';
 
 const globalValue = {
     currentDatePage: Utils.formatDateAsBeijing(new Date()), // 当前查看的日期页面
+    updateIntervalID: null,
 };
 
 export const StatsInfo = {
@@ -39,15 +40,23 @@ export const StatsInfo = {
         this.bindEvents();
 
         // 统一定时器调度
-        setInterval(() => {
-            // 更新数据
-            this.checkUpdate();
-        }, SETTINGS.STATS_UPDATE_INTERVAL);
+        this.updateInterval();
 
         // 每日0点更新数据
         setInterval(() => {
             this.updateDataForDailyReset();
         }, 60 * 1000);
+    },
+
+    updateInterval: function () {
+        if (globalValue.updateIntervalID) {
+            clearInterval(globalValue.updateIntervalID);
+            globalValue.updateIntervalID = null;
+        }
+        globalValue.updateIntervalID = setInterval(() => {
+            // 更新数据
+            this.checkUpdate();
+        }, SETTINGS.STATS_UPDATE_INTERVAL);
     },
 
     /**
@@ -79,7 +88,7 @@ export const StatsInfo = {
         } catch (e) {
             Utils.log(`[数据统计] 绑定事件异常: ${e}`);
             setTimeout(() => {
-                bindEvents();
+                this.bindEvents();
             }, 500);
         }
     },
@@ -130,12 +139,12 @@ export const StatsInfo = {
         }
 
         // 检查是否需要禁用按钮
-        const isDisabled =
+        const shouldDisableButton =
             direction === 'left'
                 ? dateList.length <= 1 || currentIndex - 1 < 0
                 : dateList.length <= 1 || currentIndex + 1 >= dateList.length;
 
-        if (isDisabled) {
+        if (shouldDisableButton) {
             button.classList.add('disabled');
             button.onclick = null;
             return;
@@ -147,19 +156,27 @@ export const StatsInfo = {
 
             // 计算新索引
             const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
-
             // 确保索引有效
             if (newIndex >= 0 && newIndex < dateList.length) {
                 globalValue.currentDatePage = dateList[newIndex];
                 this.refreshUI(allData[globalValue.currentDatePage]);
                 this.bindEvents();
             }
-
             // 更新标签文本
             if (globalValue.currentDatePage !== today) {
                 statsLable.textContent = globalValue.currentDatePage;
             } else {
                 statsLable.textContent = '统计面板';
+            }
+            // 刷新更新数据计时器
+            if (globalValue.currentDatePage === today) {
+                this.updateInterval();
+                // 执行一次更新，防止切换后数据不及时
+                this.getCoinListUpdate();
+            } else {
+                // 停止更新
+                clearInterval(globalValue.updateIntervalID);
+                globalValue.updateIntervalID = null;
             }
         };
     },
@@ -336,7 +353,7 @@ export const StatsInfo = {
             // 判断是否更新统计数据
             if (SETTINGS.SHOW_STATS_IN_PANEL) {
                 if (currentStatusText.includes('领取到')) {
-                    StatsInfo.getCoinListUpdate();
+                    this.getCoinListUpdate();
                 }
             }
         });
