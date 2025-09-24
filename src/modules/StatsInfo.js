@@ -8,6 +8,11 @@ import { Utils } from '../utils/utils.js';
 import { DouyuAPI } from '../utils/DouyuAPI.js';
 import { GlobalState } from './GlobalState.js';
 
+const globalValue = {
+    currentDatePage: Utils.formatDateAsBeijing(new Date()), // 当前查看的日期页面
+    updateIntervalID: null,
+};
+
 export const StatsInfo = {
     init: async function () {
         // 初始化组件
@@ -31,20 +36,32 @@ export const StatsInfo = {
         // 去除过期数据
         this.removeExpiredData();
 
+        // 绑定事件
         this.bindEvents();
 
         // 统一定时器调度
-        setInterval(() => {
-            // 更新数据
-            this.checkUpdate();
-        }, SETTINGS.STATS_UPDATE_INTERVAL);
+        this.updateInterval();
 
         // 每日0点更新数据
         setInterval(() => {
             this.updateDataForDailyReset();
         }, 60 * 1000);
     },
-    
+
+    /**
+     * 设置数据更新定时器
+     */
+    updateInterval: function () {
+        if (globalValue.updateIntervalID) {
+            clearInterval(globalValue.updateIntervalID);
+            globalValue.updateIntervalID = null;
+        }
+        globalValue.updateIntervalID = setInterval(() => {
+            // 更新数据
+            this.checkUpdate();
+        }, SETTINGS.STATS_UPDATE_INTERVAL);
+    },
+
     /**
      * 统一初始化和校验今日数据
      * @returns {Object} 包含所有数据和今日数据的对象
@@ -66,13 +83,41 @@ export const StatsInfo = {
         return { allData, todayData: allData[today], today };
     },
 
+    /**
+     * 绑定所有事件
+     */
     bindEvents: function () {
-        // 绑定刷新按钮事件
+        try {
+            this.bindRefreshEvent();
+            this.bindSwitcherLeft();
+            this.bindSwitcherRight();
+        } catch (e) {
+            Utils.log(`[数据统计] 绑定事件异常: ${e}`);
+            setTimeout(() => {
+                this.bindEvents();
+            }, 500);
+        }
+    },
+
+    /**
+     * 绑定刷新按钮事件
+     */
+    bindRefreshEvent: function () {
         const refreshButton = document.querySelector('.qmx-stats-refresh');
+        const today = Utils.formatDateAsBeijing(new Date());
         if (!refreshButton) {
+            throw new Error('无法找到刷新按钮元素');
+        }
+
+        if (globalValue.currentDatePage !== today) {
+            refreshButton.classList.add('disabled');
+            refreshButton.onclick = null;
             return;
         }
-        refreshButton.addEventListener('click', async (e) => {
+        setTimeout(() => {
+            refreshButton.classList.remove('disabled');
+        }, 300);
+        refreshButton.onclick = async (e) => {
             e.stopPropagation();
 
             // 旋转动画
@@ -83,7 +128,108 @@ export const StatsInfo = {
             }, 1000);
 
             await this.getCoinListUpdate();
-        });
+        };
+    },
+
+    /**
+     * 通用的绑定切换按钮函数
+     * @param {string} direction - 方向，'left' 或 'right'
+     */
+    bindSwitcher: function (direction) {
+        const { allData, _, today } = this.ensureTodayDataExists();
+        const statsLable = document.querySelector('.qmx-stats-label');
+        globalValue.currentDatePage = globalValue.currentDatePage ?? today;
+        const dateList = Object.keys(allData);
+        const currentIndex = dateList.indexOf(globalValue.currentDatePage);
+        const indecator = document.querySelector('.qmx-stats-indicator');
+
+        const button = document.querySelector(`#qmx-stats-${direction}`);
+        if (!button) {
+            throw new Error(`无法找到${direction === 'left' ? '左' : '右'}切换按钮元素`);
+        }
+
+        // 检查是否需要禁用按钮
+        const shouldDisableButton =
+            direction === 'left'
+                ? dateList.length <= 1 || currentIndex - 1 < 0
+                : dateList.length <= 1 || currentIndex + 1 >= dateList.length;
+
+        if (shouldDisableButton) {
+            button.classList.add('disabled');
+            button.onclick = null;
+            return;
+        }
+
+        button.classList.remove('disabled');
+        button.onclick = (e) => {
+            e.stopPropagation();
+
+            // 计算新索引
+            const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+            // 确保索引有效
+            if (newIndex >= 0 && newIndex < dateList.length) {
+                globalValue.currentDatePage = dateList[newIndex];
+                this.refreshUI(allData[globalValue.currentDatePage]);
+                this.bindEvents();
+            }
+            // 更新标签文本
+            this.itemTransiton(indecator);
+            if (globalValue.currentDatePage !== today) {
+                this.contentTransition(statsLable, globalValue.currentDatePage);
+            } else {
+                this.contentTransition(statsLable, '今日统计');
+            }
+            // 刷新更新数据计时器
+            if (globalValue.currentDatePage === today) {
+                this.updateInterval();
+                // 执行一次更新，防止切换后数据不及时
+                this.getCoinListUpdate();
+            } else {
+                // 停止更新
+                clearInterval(globalValue.updateIntervalID);
+                globalValue.updateIntervalID = null;
+            }
+        };
+    },
+
+    /**
+     * 绑定左切换按钮事件
+     */
+    bindSwitcherLeft: function () {
+        this.bindSwitcher('left');
+    },
+
+    /**
+     * 绑定右切换按钮事件
+     */
+    bindSwitcherRight: function () {
+        this.bindSwitcher('right');
+    },
+
+    /**
+     * 在修改内容时添加过渡效果
+     * @param {HTMLElement} element 
+     * @param {*} newText 
+     * @param {number} duration 
+     */
+    contentTransition: function (element, newText, duration = 300) {
+        element.classList.add('transitioning');
+        setTimeout(() => {
+            element.textContent = newText;
+            element.classList.remove('transitioning');
+        }, duration);
+    },
+
+    /**
+     * 为元素添加过渡效果
+     * @param {HTMLElement} element 
+     * @param {number} duration 
+     */
+    itemTransiton: function (element, duration = 300) {
+        element.classList.add('transitioning');
+        setTimeout(() => {
+            element.classList.remove('transitioning');
+        }, duration);
     },
 
     /**
@@ -119,7 +265,7 @@ export const StatsInfo = {
         // 计算平均
         todayData.avg = todayData.receivedCount
             ? (todayData.total / todayData.receivedCount).toFixed(2)
-            : 0.00;
+            : 0.0;
 
         if (!Utils.lockChecker('douyu_qmx_stats_lock', this.updateTodayData.bind(this))) return;
         Utils.setLocalValueWithLock(
@@ -188,9 +334,9 @@ export const StatsInfo = {
             try {
                 const dataName = document.querySelector(`.qmx-stat-info-${key}`);
                 if (!dataName) continue;
-                const item = dataName.querySelector('.qmx-stat-item');
-                if (!item) continue;
-                item.textContent = todayData[key];
+                const details = dataName.querySelector('.qmx-stat-details');
+                if (!details) continue;
+                this.contentTransition(details, todayData[key]);
             } catch (e) {
                 Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
                 continue;
@@ -203,7 +349,7 @@ export const StatsInfo = {
      */
     removeExpiredData: function () {
         const allData = this.ensureTodayDataExists().allData;
-        // 筛选最近两天的数据保留
+        // 筛选最近七天的数据保留
         let newAllData = Object.keys(allData)
             .filter((dateString) => {
                 const today = new Date();
@@ -211,7 +357,7 @@ export const StatsInfo = {
                 const date = new Date(dateString);
                 const diff = today - date;
                 const dayDiff = diff / (1000 * 60 * 60 * 24);
-                return dayDiff <= 1;
+                return dayDiff <= 6;
             })
             .reduce((obj, key) => {
                 return Object.assign(obj, { [key]: allData[key] });
@@ -224,7 +370,13 @@ export const StatsInfo = {
      * 每日0点更新数据
      */
     updateDataForDailyReset: function () {
-        const allData = this.ensureTodayDataExists().allData;
+        const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+        if (!allData || typeof allData !== 'object') {
+            this.ensureTodayDataExists();
+            this.updateTodayData();
+            this.removeExpiredData();
+            return;
+        }
         // 检查最后一条数据的日期是否为今天
         const lastDate = Object.keys(allData).at(-1);
         const nowDate = Utils.formatDateAsBeijing(new Date());
@@ -250,7 +402,7 @@ export const StatsInfo = {
             // 判断是否更新统计数据
             if (SETTINGS.SHOW_STATS_IN_PANEL) {
                 if (currentStatusText.includes('领取到')) {
-                    StatsInfo.getCoinListUpdate();
+                    this.getCoinListUpdate();
                 }
             }
         });

@@ -256,6 +256,14 @@
   }
 }
 
+/* 左右切换按钮 */
+.qmx-stats-switcher {
+    opacity: 0;
+    font-size: 20px;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    margin: 8px 8px 12px;
+}
+
 /* 悬浮状态 */
 .qmx-stats-toggle:hover {
     background-color: rgba(255, 255, 255, 0.05);
@@ -279,9 +287,14 @@
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-indicator {
+    opacity: 1;
     transform: rotate(180deg) scale(1.05);
     position: relative;
     margin: 9px;
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-indicator.transitioning {
+    opacity: 0;
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-label {
@@ -290,13 +303,53 @@
     font-size: 12px;
     font-weight: 500;
     position: relative;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     color: var(--md-sys-color-on-surface);
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-label.transitioning {
+    opacity: 0;
 }
 
 .qmx-stats-toggle.expanded .qmx-stats-refresh {
     opacity: 1;
+    cursor: pointer;
     transform: scale(1.05);
     margin: 8px;
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-refresh.disabled {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+
+/* 左右切换按钮 */
+.qmx-stats-toggle.expanded .qmx-stats-switcher {
+    cursor: pointer;
+    opacity: 1;
+    position: absolute;
+}
+
+.qmx-stats-toggle.expanded #qmx-stats-left {
+    left: 60px;
+}
+
+.qmx-stats-toggle.expanded #qmx-stats-right {
+    right: 60px;
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-switcher.disabled{
+    cursor: not-allowed;
+    color: #666;
+}
+
+.qmx-stats-toggle.expanded #qmx-stats-left {
+    transform: translateX(-55px);
+}
+
+.qmx-stats-toggle.expanded #qmx-stats-right {
+    transform: translateX(55px);
 }
 
 /* 统计面板内容区 */
@@ -361,11 +414,17 @@
 }
 
 .qmx-stat-details {
+    opacity: 1;
     display: flex;
     align-items: center;
     font-size: 13px;
     color: var(--md-sys-color-on-surface-variant);
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     justify-content: center;
+}
+
+.qmx-stat-details.transitioning {
+    opacity: 0;
 }
 
 .qmx-stat-stats {
