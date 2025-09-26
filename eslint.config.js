@@ -12,14 +12,14 @@ export default defineConfig([
         languageOptions: {
             parser: tsParser,
             parserOptions: {
-                ecmaVersion: 'es2021',
+                ecmaVersion: 'es2022',
                 sourceType: 'module',
                 project: ['./tsconfig.json'],
             },
             globals: {
                 ...globals.browser,
                 ...globals.node,
-                ...globals.es2021,
+                ...globals.es2022,
                 ...globals.greasemonkey,
             },
         },
