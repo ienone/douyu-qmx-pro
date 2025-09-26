@@ -232,6 +232,7 @@ log(message) {
           try {
             GM_log(logMsg);
           } catch (e) {
+            console.log(e);
             console.log(logMsg);
           }
         },
@@ -344,7 +345,7 @@ deepClone(obj) {
           if (typeof obj === "object") {
             const cloned = {};
             for (const key in obj) {
-              if (obj.hasOwnProperty(key)) {
+              if (Object.hasOwn(obj, key)) {
                 cloned[key] = this.deepClone(obj[key]);
               }
             }
@@ -359,6 +360,7 @@ deepClone(obj) {
           ]);
           workerScript = window.URL.createObjectURL(blob);
         } catch (error) {
+          Utils.log(error);
         }
         var worker, fakeIdToCallback = {}, lastFakeId = 0, maxFakeId = 2147483647, logPrefix = "HackTimer.js by turuslan: ";
         if (typeof Worker !== "undefined") {
@@ -369,7 +371,7 @@ deepClone(obj) {
               } else {
                 lastFakeId++;
               }
-            } while (fakeIdToCallback.hasOwnProperty(lastFakeId));
+            } while (Object.hasOwn(fakeIdToCallback, lastFakeId));
             return lastFakeId;
           };
           try {
@@ -388,7 +390,7 @@ deepClone(obj) {
               return fakeId;
             };
             window.clearInterval = function(fakeId) {
-              if (fakeIdToCallback.hasOwnProperty(fakeId)) {
+              if (Object.hasOwn(fakeIdToCallback, fakeId)) {
                 delete fakeIdToCallback[fakeId];
                 worker.postMessage({
                   name: "clearInterval",
@@ -411,7 +413,7 @@ deepClone(obj) {
               return fakeId;
             };
             window.clearTimeout = function(fakeId) {
-              if (fakeIdToCallback.hasOwnProperty(fakeId)) {
+              if (Object.hasOwn(fakeIdToCallback, fakeId)) {
                 delete fakeIdToCallback[fakeId];
                 worker.postMessage({
                   name: "clearTimeout",
@@ -421,11 +423,11 @@ deepClone(obj) {
             };
             worker.onmessage = function(event) {
               var data = event.data, fakeId = data.fakeId, request, parameters, callback;
-              if (fakeIdToCallback.hasOwnProperty(fakeId)) {
+              if (Object.hasOwn(fakeIdToCallback, fakeId)) {
                 request = fakeIdToCallback[fakeId];
                 callback = request.callback;
                 parameters = request.parameters;
-                if (request.hasOwnProperty("isTimeout") && request.isTimeout) {
+                if (Object.hasOwn(request, "isTimeout") && request.isTimeout) {
                   delete fakeIdToCallback[fakeId];
                 }
               }
@@ -814,12 +816,14 @@ getDailyLimit() {
           return GM_getValue(SETTINGS.DAILY_LIMIT_REACHED_KEY);
         }
       };
+      var _GM_cookie = (() => typeof GM_cookie != "undefined" ? GM_cookie : void 0)();
+      var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
       const DouyuAPI = {
 getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
           return new Promise((resolve, reject) => {
             const attempt = (remainingTries) => {
               Utils.log(`开始调用 API 获取房间列表... (剩余重试次数: ${remainingTries})`);
-              GM_xmlhttpRequest({
+              _GM_xmlhttpRequest({
                 method: "GET",
                 url: `${SETTINGS.API_URL}?rid=${rid}`,
                 headers: {
@@ -863,7 +867,7 @@ getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
         },
 getCookie: function(cookieName) {
           return new Promise((resolve, reject) => {
-            GM_cookie.list({ name: cookieName }, function(cookies, error) {
+            _GM_cookie.list({ name: cookieName }, function(cookies, error) {
               if (error) {
                 Utils.log(error);
                 reject(error);
@@ -876,59 +880,65 @@ getCookie: function(cookieName) {
           });
         },
 getCoinRecord: function(current, count, rid, retries = SETTINGS.API_RETRY_COUNT) {
-          return new Promise(async (resolve, reject) => {
-            const acfCookie = await this.getCookie("acf_auth");
-            if (!acfCookie) {
-              Utils.log("获取cookie错误");
-              reject(new Error("获取cookie错误"));
-              return;
-            }
-            const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
-            const attempt = (remainingTries) => {
-              Utils.log(`开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`);
-              GM_xmlhttpRequest({
-                method: "GET",
-                url: fullUrl,
-                headers: {
-                  Referer: "https://www.douyu.com/",
-                  "User-Agent": navigator.userAgent
-                },
-                cookie: acfCookie["value"],
-                responseType: "json",
-                timeout: 1e4,
-                onload: (response) => {
-                  if (response.status === 200 && response.response?.error === 0 && Array.isArray(response.response.data.list)) {
-                    const coinListData = response.response.data.list.filter(
-                      (item) => item.opDirection === 1 && item.remark.includes("红包")
-                    );
-                    Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
-                    resolve(coinListData);
-                  } else {
-                    const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || "未知错误"}`;
+          return new Promise((resolve, reject) => {
+            this.getCookie("acf_auth").then((acfCookie) => {
+              if (!acfCookie) {
+                Utils.log("获取cookie错误");
+                reject(new Error("获取cookie错误"));
+                return;
+              }
+              const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
+              const attempt = (remainingTries) => {
+                Utils.log(
+                  `开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`
+                );
+                _GM_xmlhttpRequest({
+                  method: "GET",
+                  url: fullUrl,
+                  headers: {
+                    Referer: "https://www.douyu.com/",
+                    "User-Agent": navigator.userAgent
+                  },
+                  cookie: acfCookie["value"],
+                  responseType: "json",
+                  timeout: 1e4,
+                  onload: (response) => {
+                    if (response.status === 200 && response.response?.error === 0 && Array.isArray(response.response.data.list)) {
+                      const coinListData = response.response.data.list.filter(
+                        (item) => item.opDirection === 1 && item.remark.includes("红包")
+                      );
+                      Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
+                      resolve(coinListData);
+                    } else {
+                      const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || "未知错误"}`;
+                      Utils.log(errorMsg);
+                      if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+                      else reject(new Error(errorMsg));
+                    }
+                  },
+                  onerror: (error) => {
+                    const errorMsg = `API 请求网络错误: ${error.statusText || "未知"}`;
+                    Utils.log(errorMsg);
+                    if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+                    else reject(new Error(errorMsg));
+                  },
+                  ontimeout: () => {
+                    const errorMsg = "API 请求超时";
                     Utils.log(errorMsg);
                     if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
                     else reject(new Error(errorMsg));
                   }
-                },
-                onerror: (error) => {
-                  const errorMsg = `API 请求网络错误: ${error.statusText || "未知"}`;
-                  Utils.log(errorMsg);
-                  if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                  else reject(new Error(errorMsg));
-                },
-                ontimeout: () => {
-                  const errorMsg = "API 请求超时";
-                  Utils.log(errorMsg);
-                  if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                  else reject(new Error(errorMsg));
-                }
-              });
-            };
-            const retry = (remainingTries, reason) => {
-              Utils.log(`${reason}，将在 ${SETTINGS.API_RETRY_DELAY / 1e3} 秒后重试...`);
-              setTimeout(() => attempt(remainingTries), SETTINGS.API_RETRY_DELAY);
-            };
-            attempt(retries);
+                });
+              };
+              const retry = (remainingTries, reason) => {
+                Utils.log(`${reason}，将在 ${SETTINGS.API_RETRY_DELAY / 1e3} 秒后重试...`);
+                setTimeout(() => attempt(remainingTries), SETTINGS.API_RETRY_DELAY);
+              };
+              attempt(retries);
+            }).catch((error) => {
+              Utils.log(error);
+              reject(error);
+            });
           });
         }
       };
@@ -2369,17 +2379,6 @@ async selfClose(roomId, fromCloseAll = false) {
             await Utils.sleep(100);
             this.closeTab();
             return;
-          }
-          GlobalState.updateWorker(roomId, "SWITCHING", "任务结束，关闭中...");
-          await Utils.sleep(100);
-          GlobalState.removeWorker(roomId);
-          await Utils.sleep(300);
-          this.closeTab();
-        },
-async selfClose(roomId) {
-          Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
-          if (this.pauseSentinelInterval) {
-            clearInterval(this.pauseSentinelInterval);
           }
           GlobalState.updateWorker(roomId, "SWITCHING", "任务结束，关闭中...");
           await Utils.sleep(100);
@@ -6332,8 +6331,6 @@ scrollCapsuleIntoView(candidateList, capsule) {
             return;
           }
           try {
-            const listRect = candidateList.getBoundingClientRect();
-            const capsuleRect = capsule.getBoundingClientRect();
             const scrollLeft = candidateList.scrollLeft;
             const capsuleRelativeLeft = capsule.offsetLeft;
             const capsuleWidth = capsule.offsetWidth;
@@ -6557,7 +6554,7 @@ bindComponentEvents() {
             const { inputEl } = event.detail;
             this.currentTargetInput = inputEl;
           });
-          document.addEventListener("inputBlurred", (event) => {
+          document.addEventListener("inputBlurred", () => {
             Utils.log("=== 输入框失焦事件触发（已完全禁用隐藏逻辑） ===");
             return;
           });
@@ -6581,22 +6578,6 @@ destroy() {
           Utils.log("UI管理器已销毁");
         },
 calculateCandidateListHeight(suggestions) {
-          const baseHeight = 12;
-          const capsuleHeight = 32;
-          const maxCapsulesPerRow = Math.floor(window.innerWidth * 0.6 / 120);
-          const rows = Math.ceil(suggestions.length / maxCapsulesPerRow);
-          const calculatedHeight = baseHeight + rows * capsuleHeight;
-          Utils.log(`计算候选列表高度:`);
-          Utils.log(`- 建议数量: ${suggestions.length}`);
-          Utils.log(`- 窗口宽度: ${window.innerWidth}px`);
-          Utils.log(`- 每行最大胶囊数: ${maxCapsulesPerRow}`);
-          Utils.log(`- 计算行数: ${rows}`);
-          Utils.log(`- 基础高度: ${baseHeight}px`);
-          Utils.log(`- 胶囊高度: ${capsuleHeight}px`);
-          Utils.log(`- 计算总高度: ${calculatedHeight}px`);
-          return calculatedHeight;
-        },
-        calculateCandidateListHeight(suggestions) {
           const baseHeight = 12;
           const capsuleHeight = 32;
           const maxCapsulesPerRow = Math.floor(window.innerWidth * 0.6 / 120);
@@ -6773,12 +6754,14 @@ isChatInput(element) {
 getSendButton(input) {
           const type = this.getInputType(input);
           switch (type) {
-            case INPUT_TYPES.MAIN_CHAT:
+            case INPUT_TYPES.MAIN_CHAT: {
               const chatSend = input.closest(".ChatSend");
               return chatSend ? chatSend.querySelector(".ChatSend-button") : null;
-            case INPUT_TYPES.FULLSCREEN_FLOAT:
+            }
+            case INPUT_TYPES.FULLSCREEN_FLOAT: {
               const fullscreenSendor = input.closest('[class*="fullScreenSendor-"]');
               return fullscreenSendor ? fullscreenSendor.querySelector('.sendDanmu-592760, [class*="sendDanmu-"]') : null;
+            }
             default:
               return null;
           }
@@ -6864,7 +6847,7 @@ setupInputByType(input, type) {
           }
         },
 setupMainChatInput(input) {
-          const focusHandler = (event) => {
+          const focusHandler = () => {
             this.currentInput = input;
             this.setState(APP_STATES.IDLE);
             console.log("Main chat input focused and activated");
@@ -6878,7 +6861,7 @@ setupMainChatInput(input) {
         },
 setupFullscreenInput(input) {
           console.log("Fullscreen input setup completed");
-          const focusHandler = (event) => {
+          const focusHandler = () => {
             this.currentInput = input;
             this.setState(APP_STATES.IDLE);
             console.log("Fullscreen input focused and activated");
@@ -7259,10 +7242,10 @@ async firstTimeImport() {
           if (roomId && (currentUrl.match(/douyu\.com\/(?:beta\/)?(\d+)/) || currentUrl.match(/douyu\.com\/(?:beta\/)?topic\/.*rid=(\d+)/))) {
             const globalTabs = GlobalState.get().tabs;
             const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-            if (globalTabs.hasOwnProperty(roomId) || pendingWorkers.includes(roomId)) {
+            if (Object.hasOwn(globalTabs, roomId) || pendingWorkers.includes(roomId)) {
               Utils.log(`[身份验证] 房间 ${roomId} 身份合法，授权初始化。`);
               const pendingIndex = pendingWorkers.indexOf(roomId);
-              if (globalTabs.hasOwnProperty(roomId) && pendingIndex > -1) {
+              if (Object.hasOwn(globalTabs, roomId) && pendingIndex > -1) {
                 pendingWorkers.splice(pendingIndex, 1);
                 GM_setValue("qmx_pending_workers", pendingWorkers);
                 Utils.log(`[身份清理] 房间 ${roomId} 已是激活状态，清理残留的待处理标记。`);

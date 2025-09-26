@@ -41,12 +41,12 @@ import { DanmuPro} from './modules/danmu/DanmuPro';
             // 双重验证
             // 1. 检查自己是否已经是全局状态里公认的 worker
             // 2. 或者，检查自己是否是刚刚被打开、尚在等待名单中的 new worker
-            if (globalTabs.hasOwnProperty(roomId) || pendingWorkers.includes(roomId)) {
+            if (Object.hasOwn(globalTabs, roomId) || pendingWorkers.includes(roomId)) {
                 // 验证通过，授权 WorkerPage 初始化
                 Utils.log(`[身份验证] 房间 ${roomId} 身份合法，授权初始化。`);
                 //  如果是因为在全局状态中而通过的，顺便清理一下可能残留的 pending token
                 const pendingIndex = pendingWorkers.indexOf(roomId);
-                if (globalTabs.hasOwnProperty(roomId) && pendingIndex > -1) {
+                if (Object.hasOwn(globalTabs, roomId) && pendingIndex > -1) {
                     pendingWorkers.splice(pendingIndex, 1);
                     GM_setValue('qmx_pending_workers', pendingWorkers);
                     Utils.log(`[身份清理] 房间 ${roomId} 已是激活状态，清理残留的待处理标记。`);

@@ -17,6 +17,7 @@ export const Utils = {
         try {
             GM_log(logMsg);
         } catch (e) {
+            console.log(e);
             console.log(logMsg);
         }
     },
@@ -234,7 +235,7 @@ export const Utils = {
         if (typeof obj === 'object') {
             const cloned = {};
             for (const key in obj) {
-                if (obj.hasOwnProperty(key)) {
+                if (Object.hasOwn(obj, key)) {
                     cloned[key] = this.deepClone(obj[key]);
                 }
             }
