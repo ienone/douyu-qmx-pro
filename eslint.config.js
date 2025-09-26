@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import ts from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 import globals from 'globals';
-import { defineConfig } from 'eslint/config';
+import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
     {
@@ -24,4 +24,5 @@ export default defineConfig([
             },
         },
     },
+    globalIgnores(['**/dist/**', '**/node_modules/**', '**/.git/**']),
 ]);
