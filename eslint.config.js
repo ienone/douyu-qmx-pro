@@ -1,13 +1,19 @@
-import js from "@eslint/js";
-import globals from "globals";
-import { defineConfig } from "eslint/config";
+import js from '@eslint/js';
+import globals from 'globals';
+import { defineConfig } from 'eslint/config';
 
 export default defineConfig([
     {
-        env: { es2021: true, browser: true, node: true },
-        files: ["**/*.{js,mjs,cjs}"],
+        files: ['**/*.{js,mjs,cjs}'],
         plugins: { js },
-        extends: ["js/recommended"],
-        languageOptions: { globals: globals.browser },
+        extends: ['js/recommended'],
+        languageOptions: {
+            globals: {
+                ...globals.browser,
+                ...globals.node,
+                ...globals.es2021,
+                ...globals.greasemonkey,
+            },
+        },
     },
 ]);
