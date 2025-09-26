@@ -1202,13 +1202,20 @@ showCalibrationNotice() {
           }
         }
       };
+      const typedSettings = SETTINGS;
       const globalValue = {
         currentDatePage: Utils.formatDateAsBeijing( new Date()),
-updateIntervalID: null
+updateIntervalID: void 0
       };
       const StatsInfo = {
         init: async function() {
           const stats = document.getElementById("qmx-stats-panel");
+          if (!stats) {
+            setTimeout(() => {
+              this.init();
+            }, 500);
+            return;
+          }
           [
             ["receivedCount", "已领个数"],
             ["total", "总金币"],
@@ -1230,15 +1237,15 @@ updateIntervalID: null
 updateInterval: function() {
           if (globalValue.updateIntervalID) {
             clearInterval(globalValue.updateIntervalID);
-            globalValue.updateIntervalID = null;
+            globalValue.updateIntervalID = void 0;
           }
           globalValue.updateIntervalID = setInterval(() => {
             this.checkUpdate();
-          }, SETTINGS.STATS_UPDATE_INTERVAL);
+          }, typedSettings.STATS_UPDATE_INTERVAL);
         },
 ensureTodayDataExists: function() {
           const today = Utils.formatDateAsBeijing( new Date());
-          let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+          let allData = GM_getValue(typedSettings.STATS_INFO_STORAGE_KEY, null);
           if (!allData || typeof allData !== "object") {
             allData = {};
           }
@@ -1248,7 +1255,7 @@ ensureTodayDataExists: function() {
               avg: 0,
               total: 0
             };
-            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
+            GM_setValue(typedSettings.STATS_INFO_STORAGE_KEY, allData);
           }
           return { allData, todayData: allData[today], today };
         },
@@ -1280,7 +1287,7 @@ bindRefreshEvent: function() {
           }, 300);
           refreshButton.onclick = async (e) => {
             e.stopPropagation();
-            void this.offsetWidth;
+            void refreshButton.offsetWidth;
             refreshButton.classList.add("rotating");
             setTimeout(() => {
               refreshButton.classList.remove("rotating");
@@ -1289,15 +1296,19 @@ bindRefreshEvent: function() {
           };
         },
 bindSwitcher: function(direction) {
-          const { allData, _, today } = this.ensureTodayDataExists();
-          const statsLable = document.querySelector(".qmx-stats-label");
+          const { allData, today } = this.ensureTodayDataExists();
           globalValue.currentDatePage = globalValue.currentDatePage ?? today;
           const dateList = Object.keys(allData);
           const currentIndex = dateList.indexOf(globalValue.currentDatePage);
+          const statsLable = document.querySelector(".qmx-stats-label");
           const indecator = document.querySelector(".qmx-stats-indicator");
           const button = document.querySelector(`#qmx-stats-${direction}`);
-          if (!button) {
-            throw new Error(`无法找到${direction === "left" ? "左" : "右"}切换按钮元素`);
+          if (!statsLable || !indecator || !button) {
+            Utils.log("[数据统计] 切换按钮绑定失败，正在重试");
+            setTimeout(() => {
+              this.bindSwitcher(direction);
+            }, 500);
+            return;
           }
           const shouldDisableButton = direction === "left" ? dateList.length <= 1 || currentIndex - 1 < 0 : dateList.length <= 1 || currentIndex + 1 >= dateList.length;
           if (shouldDisableButton) {
@@ -1325,7 +1336,7 @@ bindSwitcher: function(direction) {
               this.getCoinListUpdate();
             } else {
               clearInterval(globalValue.updateIntervalID);
-              globalValue.updateIntervalID = null;
+              globalValue.updateIntervalID = void 0;
             }
           };
         },
@@ -1367,11 +1378,11 @@ initRender: function(name, nickname) {
 updateTodayData: function() {
           const { allData, todayData } = this.ensureTodayDataExists();
           if (!todayData) return;
-          todayData.avg = todayData.receivedCount ? (todayData.total / todayData.receivedCount).toFixed(2) : 0;
+          todayData.avg = todayData.receivedCount ? parseFloat((todayData.total / todayData.receivedCount).toFixed(2)) : 0;
           if (!Utils.lockChecker("douyu_qmx_stats_lock", this.updateTodayData.bind(this))) return;
           Utils.setLocalValueWithLock(
             "douyu_qmx_stats_lock",
-            SETTINGS.STATS_INFO_STORAGE_KEY,
+            typedSettings.STATS_INFO_STORAGE_KEY,
             allData,
             "更新今日统计数据"
           );
@@ -1384,7 +1395,7 @@ set: function(name, value) {
           if (!Utils.lockChecker("douyu_qmx_stats_lock", this.set.bind(this), name, value)) return;
           Utils.setLocalValueWithLock(
             "douyu_qmx_stats_lock",
-            SETTINGS.STATS_INFO_STORAGE_KEY,
+            typedSettings.STATS_INFO_STORAGE_KEY,
             allData,
             "更新统计数据"
           );
@@ -1399,24 +1410,30 @@ getCoinListUpdate: async function() {
           const coinList = await DouyuAPI.getCoinRecord(1, 100, currentRoomId, 3);
           const startOfToday = new Date();
           startOfToday.setHours(0, 0, 0, 0);
-          const filteredData = coinList.filter((item) => item.createTime > startOfToday / 1e3);
+          const filteredData = coinList.filter(
+            (item) => item.createTime > startOfToday.getTime() / 1e3
+          );
           const totalCoin = filteredData.reduce((sum, item) => sum + item.balanceDiff, 0);
-          [
+          const updateList = [
             ["receivedCount", filteredData.length],
             ["total", totalCoin]
-          ].forEach(([name, value]) => {
+          ];
+          updateList.forEach(([name, value]) => {
             this.set(name, value);
           });
           this.updateTodayData();
         },
 refreshUI: function(todayData) {
-          for (let key in todayData) {
+          for (const key in todayData) {
             try {
-              const dataName = document.querySelector(`.qmx-stat-info-${key}`);
+              const typedKey = key;
+              const dataName = document.querySelector(
+                `.qmx-stat-info-${key}`
+              );
               if (!dataName) continue;
               const details = dataName.querySelector(".qmx-stat-details");
               if (!details) continue;
-              this.contentTransition(details, todayData[key]);
+              this.contentTransition(details, todayData[typedKey].toString());
             } catch (e) {
               Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
               continue;
@@ -1425,21 +1442,24 @@ refreshUI: function(todayData) {
         },
 removeExpiredData: function() {
           const allData = this.ensureTodayDataExists().allData;
-          let newAllData = Object.keys(allData).filter((dateString) => {
+          const newAllData = Object.keys(allData).filter((dateString) => {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const date = new Date(dateString);
-            const diff = today - date;
+            const diff = today.getTime() - date.getTime();
             const dayDiff = diff / (1e3 * 60 * 60 * 24);
             return dayDiff <= 6;
           }).reduce((obj, key) => {
             return Object.assign(obj, { [key]: allData[key] });
           }, {});
-          GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
+          GM_setValue(typedSettings.STATS_INFO_STORAGE_KEY, newAllData);
           Utils.log("[数据统计]：已清理过期数据");
         },
 updateDataForDailyReset: function() {
-          const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+          const allData = GM_getValue(
+            typedSettings.STATS_INFO_STORAGE_KEY,
+            null
+          );
           if (!allData || typeof allData !== "object") {
             this.ensureTodayDataExists();
             this.updateTodayData();
@@ -1460,8 +1480,8 @@ checkUpdate: function() {
           const tabIds = Object.keys(state.tabs);
           tabIds.forEach((roomId) => {
             const tabData = state.tabs[roomId];
-            let currentStatusText = tabData.statusText;
-            if (SETTINGS.SHOW_STATS_IN_PANEL) {
+            const currentStatusText = tabData.statusText;
+            if (typedSettings.SHOW_STATS_IN_PANEL) {
               if (currentStatusText.includes("领取到")) {
                 this.getCoinListUpdate();
               }

@@ -7,7 +7,6 @@ import { GlobalState } from './GlobalState';
 import { DOM } from '../utils/DOM';
 import { SETTINGS, STATE } from './SettingsManager';
 import { DouyuAPI } from '../utils/DouyuAPI';
-import { StatsInfo } from './StatsInfo.js';
 
 /**
  * =================================================================================
