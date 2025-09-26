@@ -19,8 +19,16 @@ import { DanmuPro} from './modules/danmu/DanmuPro';
         initHackTimer('HackTimerWorker.js');
 
         const currentUrl = window.location.href;
-        const isControlRoom = currentUrl.includes(`/${SETTINGS.CONTROL_ROOM_ID}`) ||
-                            (currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${SETTINGS.TEMP_CONTROL_ROOM_RID}`));
+
+        // 新的控制页识别逻辑：只要URL中出现靓号或第二房间号，无论格式如何，都识别为控制页
+        const controlIds = [SETTINGS.CONTROL_ROOM_ID, SETTINGS.TEMP_CONTROL_ROOM_RID]
+            .filter(Boolean); // 去除未填写的项
+        Utils.log(`控制页识别ID列表: ${controlIds.join(', ')}`);
+        Utils.log(`当前页面URL: ${currentUrl}`);
+        const isControlRoom = controlIds.some(id =>
+            currentUrl.includes(`/${id}`) ||
+            currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${id}`)
+        );
 
         if (isControlRoom) {
             ControlPage.init();
