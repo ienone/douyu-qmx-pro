@@ -482,8 +482,9 @@ export const UIManager = {
         }
         
         try {
-            const listRect = candidateList.getBoundingClientRect();
-            const capsuleRect = capsule.getBoundingClientRect();
+            // 未使用变量
+            // const listRect = candidateList.getBoundingClientRect();
+            // const capsuleRect = capsule.getBoundingClientRect();
             const scrollLeft = candidateList.scrollLeft;
             
             // 计算胶囊相对于容器的位置
@@ -865,7 +866,7 @@ export const UIManager = {
         });
         
         // 监听输入框失焦事件 - 完全禁用隐藏逻辑以测试
-        document.addEventListener('inputBlurred', (event) => {
+        document.addEventListener('inputBlurred', () => {
             Utils.log('=== 输入框失焦事件触发（已完全禁用隐藏逻辑） ===');
             // 完全禁用隐藏逻辑，看看是否还有其他地方调用 hidePopup
             return;
@@ -907,31 +908,6 @@ export const UIManager = {
      * @param {Array} suggestions - 候选项列表
      * @returns {number} 计算出的高度
      */
-    calculateCandidateListHeight(suggestions) {
-        // 基础高度：容器padding + margin
-        const baseHeight = 12; // 上下padding/margin
-        
-        // 单个胶囊高度（包括margin）
-        const capsuleHeight = 32; // 高度 + margin
-        
-        // 计算行数（假设每行最多显示的胶囊数）
-        const maxCapsulesPerRow = Math.floor(window.innerWidth * 0.6 / 120); // 每个胶囊约120px宽
-        const rows = Math.ceil(suggestions.length / maxCapsulesPerRow);
-        
-        const calculatedHeight = baseHeight + (rows * capsuleHeight);
-        
-        Utils.log(`计算候选列表高度:`);
-        Utils.log(`- 建议数量: ${suggestions.length}`);
-        Utils.log(`- 窗口宽度: ${window.innerWidth}px`);
-        Utils.log(`- 每行最大胶囊数: ${maxCapsulesPerRow}`);
-        Utils.log(`- 计算行数: ${rows}`);
-        Utils.log(`- 基础高度: ${baseHeight}px`);
-        Utils.log(`- 胶囊高度: ${capsuleHeight}px`);
-        Utils.log(`- 计算总高度: ${calculatedHeight}px`);
-        
-        return calculatedHeight;
-    },
-
     calculateCandidateListHeight(suggestions) {
         // 基础高度：容器padding + margin
         const baseHeight = 12; // 上下padding/margin

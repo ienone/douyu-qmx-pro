@@ -1,5 +1,8 @@
 // --- HackTimer.js Inlined Code Start ---
 // 这段代码的作用是重写系统的计时器，以避免浏览器在后台标签页降低其运行频率。
+
+import { Utils } from "./utils";
+
 // https://cdn.jsdelivr.net/gh/turuslan/HackTimer/HackTimer.js
 function initHackTimer(workerScript) {
     try {
@@ -46,6 +49,7 @@ function initHackTimer(workerScript) {
         // Obtain a blob URL reference to our worker 'file'.
         workerScript = window.URL.createObjectURL(blob);
     } catch (error) {
+        Utils.log(error);
         /* Blob is not supported, use external script instead */
     }
     var worker,
@@ -61,7 +65,7 @@ function initHackTimer(workerScript) {
                 } else {
                     lastFakeId++;
                 }
-            } while (fakeIdToCallback.hasOwnProperty(lastFakeId));
+            } while (Object.hasOwn(fakeIdToCallback, lastFakeId));
             return lastFakeId;
         }
 
@@ -81,7 +85,7 @@ function initHackTimer(workerScript) {
                 return fakeId;
             };
             window.clearInterval = function(fakeId) {
-                if (fakeIdToCallback.hasOwnProperty(fakeId)) {
+                if (Object.hasOwn(fakeIdToCallback, fakeId)) {
                     delete fakeIdToCallback[fakeId];
                     worker.postMessage({
                         name: 'clearInterval',
@@ -104,7 +108,7 @@ function initHackTimer(workerScript) {
                 return fakeId;
             };
             window.clearTimeout = function(fakeId) {
-                if (fakeIdToCallback.hasOwnProperty(fakeId)) {
+                if (Object.hasOwn(fakeIdToCallback, fakeId)) {
                     delete fakeIdToCallback[fakeId];
                     worker.postMessage({
                         name: 'clearTimeout',
@@ -118,11 +122,11 @@ function initHackTimer(workerScript) {
                     request,
                     parameters,
                     callback;
-                if (fakeIdToCallback.hasOwnProperty(fakeId)) {
+                if (Object.hasOwn(fakeIdToCallback, fakeId)) {
                     request = fakeIdToCallback[fakeId];
                     callback = request.callback;
                     parameters = request.parameters;
-                    if (request.hasOwnProperty('isTimeout') && request.isTimeout) {
+                    if (Object.hasOwn(request, 'isTimeout') && request.isTimeout) {
                         delete fakeIdToCallback[fakeId];
                     }
                 }

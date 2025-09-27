@@ -242,7 +242,7 @@ export const CapsulePreview = {
         // 垂直位置：预览框始终显示在胶囊上方
         const verticalGap = 8; // 预览框与胶囊之间的间距
         let top = capsuleRect.top - previewHeight - verticalGap;
-        let showAbove = true; // 始终显示在上方
+        // let showAbove = true; // 始终显示在上方              未使用变量
         
         Utils.log(`强制上方显示: top=${top}px (胶囊顶部${capsuleRect.top} - 预览框高度${previewHeight} - 间距${verticalGap})`);
         

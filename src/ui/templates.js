@@ -2,7 +2,6 @@
  * @file    templates.js
  * @description 负责UI模板的定义和管理。
  */
-import { SETTINGS } from '../modules/SettingsManager';
 
 /**
  * 控制面板模板

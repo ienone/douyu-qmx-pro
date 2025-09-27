@@ -12,7 +12,7 @@ import { GlobalState } from './GlobalState';
 import { DouyuAPI } from '../utils/DouyuAPI';
 import { SettingsPanel } from './SettingsPanel.js';
 import { FirstTimeNotice } from './FirstTimeNotice.js';
-import { StatsInfo } from './StatsInfo.js';
+import { StatsInfo } from './StatsInfo';
 
 /**
  * =================================================================================

@@ -1,5 +1,6 @@
 import { SETTINGS } from '../modules/SettingsManager';
 import { Utils } from './utils';
+import { GM_cookie, GM_xmlhttpRequest } from '$';
 
 /**
  * =================================================================================
@@ -43,7 +44,9 @@ export const DouyuAPI = {
                             Utils.log(`API 成功返回 ${rooms.length} 个房间URL。`);
                             resolve(rooms);
                         } else {
-                            const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || '未知错误'}`;
+                            const errorMsg = `API 数据格式错误或失败: ${
+                                response.response?.msg || '未知错误'
+                            }`;
                             Utils.log(errorMsg);
                             if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
                             else reject(new Error(errorMsg));
@@ -107,66 +110,77 @@ export const DouyuAPI = {
      * }>>}
      */
     getCoinRecord: function (current, count, rid, retries = SETTINGS.API_RETRY_COUNT) {
-        return new Promise(async (resolve, reject) => {
-            const acfCookie = await this.getCookie('acf_auth');
-            if (!acfCookie) {
-                Utils.log('获取cookie错误');
-                reject(new Error('获取cookie错误'));
-                return;
-            }
+        return new Promise((resolve, reject) => {
+            this.getCookie('acf_auth')
+                .then((acfCookie) => {
+                    if (!acfCookie) {
+                        Utils.log('获取cookie错误');
+                        reject(new Error('获取cookie错误'));
+                        return;
+                    }
 
-            const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
-            const attempt = (remainingTries) => {
-                Utils.log(`开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`);
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: fullUrl,
-                    headers: {
-                        Referer: 'https://www.douyu.com/',
-                        'User-Agent': navigator.userAgent,
-                    },
-                    cookie: acfCookie['value'],
-                    responseType: 'json',
-                    timeout: 10000,
-                    onload: (response) => {
-                        if (
-                            response.status === 200 &&
-                            response.response?.error === 0 &&
-                            Array.isArray(response.response.data.list)
-                        ) {
-                            const coinListData = response.response.data.list.filter(
-                                (item) => item.opDirection === 1 && item.remark.includes('红包')
-                            );
-                            Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
-                            resolve(coinListData);
-                        } else {
-                            const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || '未知错误'}`;
-                            Utils.log(errorMsg);
-                            if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                            else reject(new Error(errorMsg));
-                        }
-                    },
-                    onerror: (error) => {
-                        const errorMsg = `API 请求网络错误: ${error.statusText || '未知'}`;
-                        Utils.log(errorMsg);
-                        if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                        else reject(new Error(errorMsg));
-                    },
-                    ontimeout: () => {
-                        const errorMsg = 'API 请求超时';
-                        Utils.log(errorMsg);
-                        if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                        else reject(new Error(errorMsg));
-                    },
+                    const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
+                    const attempt = (remainingTries) => {
+                        Utils.log(
+                            `开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`
+                        );
+                        GM_xmlhttpRequest({
+                            method: 'GET',
+                            url: fullUrl,
+                            headers: {
+                                Referer: 'https://www.douyu.com/',
+                                'User-Agent': navigator.userAgent,
+                            },
+                            cookie: acfCookie['value'],
+                            responseType: 'json',
+                            timeout: 10000,
+                            onload: (response) => {
+                                if (
+                                    response.status === 200 &&
+                                    response.response?.error === 0 &&
+                                    Array.isArray(response.response.data.list)
+                                ) {
+                                    const coinListData = response.response.data.list.filter(
+                                        (item) =>
+                                            item.opDirection === 1 && item.remark.includes('红包')
+                                    );
+                                    Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
+                                    resolve(coinListData);
+                                } else {
+                                    const errorMsg = `API 数据格式错误或失败: ${
+                                        response.response?.msg || '未知错误'
+                                    }`;
+                                    Utils.log(errorMsg);
+                                    if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+                                    else reject(new Error(errorMsg));
+                                }
+                            },
+                            onerror: (error) => {
+                                const errorMsg = `API 请求网络错误: ${error.statusText || '未知'}`;
+                                Utils.log(errorMsg);
+                                if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+                                else reject(new Error(errorMsg));
+                            },
+                            ontimeout: () => {
+                                const errorMsg = 'API 请求超时';
+                                Utils.log(errorMsg);
+                                if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
+                                else reject(new Error(errorMsg));
+                            },
+                        });
+                    };
+
+                    const retry = (remainingTries, reason) => {
+                        Utils.log(`${reason}，将在 ${SETTINGS.API_RETRY_DELAY / 1000} 秒后重试...`);
+                        setTimeout(() => attempt(remainingTries), SETTINGS.API_RETRY_DELAY);
+                    };
+
+                    attempt(retries);
+                })
+                .catch((error) => {
+                    Utils.log(error);
+                    reject(error);
                 });
-            };
-
-            const retry = (remainingTries, reason) => {
-                Utils.log(`${reason}，将在 ${SETTINGS.API_RETRY_DELAY / 1000} 秒后重试...`);
-                setTimeout(() => attempt(remainingTries), SETTINGS.API_RETRY_DELAY);
-            };
-
-            attempt(retries);
         });
     },
 };

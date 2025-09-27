@@ -7,7 +7,6 @@ import { GlobalState } from './GlobalState';
 import { DOM } from '../utils/DOM';
 import { SETTINGS, STATE } from './SettingsManager';
 import { DouyuAPI } from '../utils/DouyuAPI';
-import { StatsInfo } from './StatsInfo.js';
 
 /**
  * =================================================================================
@@ -505,30 +504,6 @@ export const WorkerPage = {
         }
 
         // 1. 广播"正在关闭"的状态，让控制中心知道它已收到指令
-        GlobalState.updateWorker(roomId, 'SWITCHING', '任务结束，关闭中...');
-        await Utils.sleep(100); // 短暂等待确保状态写入
-
-        // 2. 异步地调用状态移除，不阻塞后续的关闭操作
-        GlobalState.removeWorker(roomId);
-        await Utils.sleep(300);
-
-        // 3. 执行关闭
-        this.closeTab();
-    },
-
-    /**
-     * 统一的自毁程序
-     * 在关闭前，异步从全局状态中移除自己。
-     * @param {string} roomId - 要移除的房间ID。
-     */
-    async selfClose(roomId) {
-        Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
-
-        // 在关闭前，主动清理定时器
-        if (this.pauseSentinelInterval) {
-            clearInterval(this.pauseSentinelInterval);
-        }
-        // 1. 广播“正在关闭”的状态，让控制中心知道它已收到指令
         GlobalState.updateWorker(roomId, 'SWITCHING', '任务结束，关闭中...');
         await Utils.sleep(100); // 短暂等待确保状态写入
 
