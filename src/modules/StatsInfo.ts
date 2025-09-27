@@ -23,7 +23,7 @@ export const StatsInfo = {
         // 初始化组件
         let stats: HTMLElement;
         try {
-            stats = await Utils.getElementWithRetry('qmx-stats-panel');
+            stats = await Utils.getElementWithRetry('.qmx-stats-content');
         } catch (error) {
             Utils.log(`[数据统计] 初始化失败，错误: ${error}`);
             return;
@@ -39,7 +39,7 @@ export const StatsInfo = {
             stats.appendChild(element);
             // 定义缓存元素
             try {
-                const details: HTMLElement = await Utils.getElementWithRetry('.qmx-stat-details');
+                const details: HTMLElement = await Utils.getElementWithRetry('.qmx-stat-details', element);
                 if (details) {
                     globalValue.statElements.set(
                         name as keyof DailyStatsData,

@@ -351,6 +351,20 @@ deepClone(obj) {
             }
             return cloned;
           }
+        },
+getElementWithRetry: async function(selector, parentNode = document, retries = 5, interval = 1e3) {
+          let element = parentNode.querySelector(selector);
+          if (element) {
+            return element;
+          }
+          for (let i = 0; i < retries; i++) {
+            await Utils.sleep(interval);
+            element = parentNode.querySelector(selector);
+            if (element) {
+              return element;
+            }
+          }
+          throw new Error(`无法找到元素: ${selector}，已重试 ${retries} 次`);
         }
       };
       function initHackTimer(workerScript) {
@@ -1208,24 +1222,38 @@ showCalibrationNotice() {
       const typedSettings = SETTINGS;
       const globalValue = {
         currentDatePage: Utils.formatDateAsBeijing( new Date()),
-updateIntervalID: void 0
+updateIntervalID: void 0,
+        statElements: new Map()
       };
       const StatsInfo = {
         init: async function() {
-          const stats = document.getElementById("qmx-stats-panel");
-          if (!stats) {
-            setTimeout(() => {
-              this.init();
-            }, 500);
+          let stats;
+          try {
+            stats = await Utils.getElementWithRetry(".qmx-stats-content");
+          } catch (error) {
+            Utils.log(`[数据统计] 初始化失败，错误: ${error}`);
             return;
           }
-          [
+          const statsConfigs = [
             ["receivedCount", "已领个数"],
             ["total", "总金币"],
             ["avg", "平均每个"]
-          ].forEach(([name, nickname]) => {
-            stats.appendChild(this.initRender(name, nickname));
-          });
+          ];
+          for (const [name, nickname] of statsConfigs) {
+            const element = this.initRender(name, nickname);
+            stats.appendChild(element);
+            try {
+              const details = await Utils.getElementWithRetry(".qmx-stat-details", element);
+              if (details) {
+                globalValue.statElements.set(
+                  name,
+                  details
+                );
+              }
+            } catch (error) {
+              Utils.log(`[数据统计] 缓存元素获取失败: ${error}`);
+            }
+          }
           GM_setValue("douyu_qmx_stats_lock", false);
           this.ensureTodayDataExists();
           this.updateTodayData();
@@ -1430,13 +1458,9 @@ refreshUI: function(todayData) {
           for (const key in todayData) {
             try {
               const typedKey = key;
-              const dataName = document.querySelector(
-                `.qmx-stat-info-${key}`
-              );
-              if (!dataName) continue;
-              const details = dataName.querySelector(".qmx-stat-details");
-              if (!details) continue;
-              this.contentTransition(details, todayData[typedKey].toString());
+              const element = globalValue.statElements.get(typedKey);
+              if (!element) continue;
+              this.contentTransition(element, todayData[typedKey].toString());
             } catch (e) {
               Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
               continue;
