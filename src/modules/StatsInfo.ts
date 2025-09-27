@@ -20,13 +20,14 @@ const globalValue: globalValue = {
 export const StatsInfo = {
     init: async function () {
         // 初始化组件
-        const stats: HTMLElement | null = document.getElementById('qmx-stats-panel');
-        if (!stats) {
-            setTimeout(() => {
-                this.init();
-            }, 500);
+        let stats: HTMLElement;
+        try {
+            stats = await Utils.getElementWithRetry('qmx-stats-panel');
+        } catch (error) {
+            Utils.log(`[数据统计] 初始化失败，错误: ${error}`);
             return;
         }
+        
         [
             ['receivedCount', '已领个数'],
             ['total', '总金币'],

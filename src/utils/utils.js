@@ -186,7 +186,7 @@ export const Utils = {
             x: rect.left + window.scrollX,
             y: rect.top + window.scrollY,
             width: rect.width,
-            height: rect.height
+            height: rect.height,
         };
     },
 
@@ -223,15 +223,15 @@ export const Utils = {
         if (obj === null || typeof obj !== 'object') {
             return obj;
         }
-        
+
         if (obj instanceof Date) {
             return new Date(obj.getTime());
         }
-        
+
         if (obj instanceof Array) {
-            return obj.map(item => this.deepClone(item));
+            return obj.map((item) => this.deepClone(item));
         }
-        
+
         if (typeof obj === 'object') {
             const cloned = {};
             for (const key in obj) {
@@ -241,5 +241,29 @@ export const Utils = {
             }
             return cloned;
         }
-    }
+    },
+
+    /**
+     * 获取元素，带重试机制
+     * @param {string} selector - CSS选择器
+     * @param {number} retries - 重试次数
+     * @param {number} interval - 重试间隔（毫秒）
+     * @returns {Promise<HTMLElement>}
+     */
+    getElementWithRetry: async function (selector, retries = 5, interval = 1000) {
+        let element = document.querySelector(selector);
+        if (element) {
+            return element;
+        }
+
+        for (let i = 0; i < retries; i++) {
+            await Utils.sleep(interval);
+            element = document.querySelector(selector);
+            if (element) {
+                return element;
+            }
+        }
+
+        throw new Error(`无法找到元素: ${selector}，已重试 ${retries} 次`);
+    },
 };
