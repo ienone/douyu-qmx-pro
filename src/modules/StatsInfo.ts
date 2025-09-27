@@ -15,6 +15,7 @@ const typedSettings = SETTINGS as RuntimeSettings;
 const globalValue: globalValue = {
     currentDatePage: Utils.formatDateAsBeijing(new Date()), // 当前查看的日期页面
     updateIntervalID: undefined,
+    statElements: new Map(),
 };
 
 export const StatsInfo = {
@@ -27,14 +28,28 @@ export const StatsInfo = {
             Utils.log(`[数据统计] 初始化失败，错误: ${error}`);
             return;
         }
-        
-        [
+
+        const statsConfigs: [string, string][] = [
             ['receivedCount', '已领个数'],
             ['total', '总金币'],
             ['avg', '平均每个'],
-        ].forEach(([name, nickname]) => {
-            stats.appendChild(this.initRender(name, nickname));
-        });
+        ] as const;
+        for (const [name, nickname] of statsConfigs) {
+            const element = this.initRender(name, nickname);
+            stats.appendChild(element);
+            // 定义缓存元素
+            try {
+                const details: HTMLElement = await Utils.getElementWithRetry('.qmx-stat-details');
+                if (details) {
+                    globalValue.statElements.set(
+                        name as keyof DailyStatsData,
+                        details as HTMLElement
+                    );
+                }
+            } catch (error) {
+                Utils.log(`[数据统计] 缓存元素获取失败: ${error}`);
+            }
+        }
 
         // 统一数据初始化和校验
         GM_setValue('douyu_qmx_stats_lock', false);
@@ -355,13 +370,9 @@ export const StatsInfo = {
         for (const key in todayData) {
             try {
                 const typedKey = key as keyof DailyStatsData;
-                const dataName: HTMLElement | null = document.querySelector(
-                    `.qmx-stat-info-${key}`
-                );
-                if (!dataName) continue;
-                const details: HTMLElement | null = dataName.querySelector('.qmx-stat-details');
-                if (!details) continue;
-                this.contentTransition(details, todayData[typedKey].toString());
+                const element = globalValue.statElements.get(typedKey);
+                if (!element) continue;
+                this.contentTransition(element, todayData[typedKey].toString());
             } catch (e) {
                 Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
                 continue;
@@ -420,7 +431,7 @@ export const StatsInfo = {
      */
     checkUpdate: function () {
         // 检查是否需要更新统计数据
-        const state: GlobalStateData  = GlobalState.get() as GlobalStateData;
+        const state: GlobalStateData = GlobalState.get() as GlobalStateData;
         const tabList: HTMLElement | null = document.getElementById('qmx-tab-list');
         if (!tabList) return;
         const tabIds = Object.keys(state.tabs);

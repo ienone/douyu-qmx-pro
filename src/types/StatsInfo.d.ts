@@ -16,4 +16,5 @@ interface DailyStatsData {
 interface globalValue {
     currentDatePage: string;
     updateIntervalID: NodeJS.Timeout | undefined;
+    statElements: Map<keyof DailyStatsData, HTMLElement>;
 }
