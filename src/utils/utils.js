@@ -246,19 +246,25 @@ export const Utils = {
     /**
      * 获取元素，带重试机制
      * @param {string} selector - CSS选择器
+     * @param {HTMLElement} [parentNode=document] - 父节点，默认是document
      * @param {number} retries - 重试次数
      * @param {number} interval - 重试间隔（毫秒）
      * @returns {Promise<HTMLElement>}
      */
-    getElementWithRetry: async function (selector, retries = 5, interval = 1000) {
-        let element = document.querySelector(selector);
+    getElementWithRetry: async function (
+        selector,
+        parentNode = document,
+        retries = 5,
+        interval = 1000
+    ) {
+        let element = parentNode.querySelector(selector);
         if (element) {
             return element;
         }
 
         for (let i = 0; i < retries; i++) {
             await Utils.sleep(interval);
-            element = document.querySelector(selector);
+            element = parentNode.querySelector(selector);
             if (element) {
                 return element;
             }
