@@ -301,17 +301,19 @@ export const InputDetector = {
         const type = this.getInputType(input);
         
         switch (type) {
-            case INPUT_TYPES.MAIN_CHAT:
+            case INPUT_TYPES.MAIN_CHAT: {
                 // 在 .ChatSend 父容器中查找发送按钮
                 const chatSend = input.closest('.ChatSend');
                 return chatSend ? chatSend.querySelector('.ChatSend-button') : null;
-                
-            case INPUT_TYPES.FULLSCREEN_FLOAT:
+            }
+            
+            case INPUT_TYPES.FULLSCREEN_FLOAT: {
                 // 在 .fullScreenSendor-* 父容器中查找发送按钮
                 const fullscreenSendor = input.closest('[class*="fullScreenSendor-"]');
                 return fullscreenSendor ? 
                     fullscreenSendor.querySelector('.sendDanmu-592760, [class*="sendDanmu-"]') : null;
-                
+            }
+            
             default:
                 return null;
         }

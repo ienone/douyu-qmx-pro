@@ -159,7 +159,7 @@ export const InputManager = {
      */
     setupMainChatInput(input) {
         // 主聊天区输入框需要在focus时才处理，避免与框架冲突
-        const focusHandler = (event) => {
+        const focusHandler = () => {
             this.currentInput = input;
             this.setState(APP_STATES.IDLE);
             console.log('Main chat input focused and activated');
@@ -183,7 +183,7 @@ export const InputManager = {
         // 全屏浮动输入框可以立即处理
         console.log('Fullscreen input setup completed');
         
-        const focusHandler = (event) => {
+        const focusHandler = () => {
             this.currentInput = input;
             this.setState(APP_STATES.IDLE);
             console.log('Fullscreen input focused and activated');

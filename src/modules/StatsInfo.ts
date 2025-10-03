@@ -1,5 +1,5 @@
 /**
- * @file StatsInfo.js
+ * @file StatsInfo.ts
  * @description 负责统计面板的UI和数据更新
  */
 import '../styles/ControlPanel-refactored.css';
@@ -7,23 +7,49 @@ import { SETTINGS } from './SettingsManager.js';
 import { Utils } from '../utils/utils.js';
 import { DouyuAPI } from '../utils/DouyuAPI.js';
 import { GlobalState } from './GlobalState.js';
+import type { RuntimeSettings } from '../types/Config';
+import type { GlobalStateData } from '../types/GlobalState';
 
-const globalValue = {
+const typedSettings = SETTINGS as RuntimeSettings;
+
+const globalValue: globalValue = {
     currentDatePage: Utils.formatDateAsBeijing(new Date()), // 当前查看的日期页面
-    updateIntervalID: null,
+    updateIntervalID: undefined,
+    statElements: new Map(),
 };
 
 export const StatsInfo = {
     init: async function () {
         // 初始化组件
-        const stats = document.getElementById('qmx-stats-panel');
-        [
+        let stats: HTMLElement;
+        try {
+            stats = await Utils.getElementWithRetry('.qmx-stats-content');
+        } catch (error) {
+            Utils.log(`[数据统计] 初始化失败，错误: ${error}`);
+            return;
+        }
+
+        const statsConfigs: [string, string][] = [
             ['receivedCount', '已领个数'],
             ['total', '总金币'],
             ['avg', '平均每个'],
-        ].forEach(([name, nickname]) => {
-            stats.appendChild(this.initRender(name, nickname));
-        });
+        ] as const;
+        for (const [name, nickname] of statsConfigs) {
+            const element = this.initRender(name, nickname);
+            stats.appendChild(element);
+            // 定义缓存元素
+            try {
+                const details: HTMLElement = await Utils.getElementWithRetry('.qmx-stat-details', element);
+                if (details) {
+                    globalValue.statElements.set(
+                        name as keyof DailyStatsData,
+                        details as HTMLElement
+                    );
+                }
+            } catch (error) {
+                Utils.log(`[数据统计] 缓存元素获取失败: ${error}`);
+            }
+        }
 
         // 统一数据初始化和校验
         GM_setValue('douyu_qmx_stats_lock', false);
@@ -54,21 +80,25 @@ export const StatsInfo = {
     updateInterval: function () {
         if (globalValue.updateIntervalID) {
             clearInterval(globalValue.updateIntervalID);
-            globalValue.updateIntervalID = null;
+            globalValue.updateIntervalID = undefined;
         }
         globalValue.updateIntervalID = setInterval(() => {
             // 更新数据
             this.checkUpdate();
-        }, SETTINGS.STATS_UPDATE_INTERVAL);
+        }, typedSettings.STATS_UPDATE_INTERVAL);
     },
 
     /**
      * 统一初始化和校验今日数据
-     * @returns {Object} 包含所有数据和今日数据的对象
+     * @returns {allData: AllStatsData; todayData: DailyStatsData; today: string;} 包含所有数据和今日数据的对象
      */
-    ensureTodayDataExists: function () {
-        const today = Utils.formatDateAsBeijing(new Date());
-        let allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+    ensureTodayDataExists: function (): {
+        allData: AllStatsData;
+        todayData: DailyStatsData;
+        today: string;
+    } {
+        const today: string = Utils.formatDateAsBeijing(new Date());
+        let allData: AllStatsData | null = GM_getValue(typedSettings.STATS_INFO_STORAGE_KEY, null);
         if (!allData || typeof allData !== 'object') {
             allData = {};
         }
@@ -78,7 +108,7 @@ export const StatsInfo = {
                 avg: 0,
                 total: 0,
             };
-            GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, allData);
+            GM_setValue(typedSettings.STATS_INFO_STORAGE_KEY, allData);
         }
         return { allData, todayData: allData[today], today };
     },
@@ -103,8 +133,8 @@ export const StatsInfo = {
      * 绑定刷新按钮事件
      */
     bindRefreshEvent: function () {
-        const refreshButton = document.querySelector('.qmx-stats-refresh');
-        const today = Utils.formatDateAsBeijing(new Date());
+        const refreshButton: HTMLElement | null = document.querySelector('.qmx-stats-refresh');
+        const today: string = Utils.formatDateAsBeijing(new Date());
         if (!refreshButton) {
             throw new Error('无法找到刷新按钮元素');
         }
@@ -121,7 +151,7 @@ export const StatsInfo = {
             e.stopPropagation();
 
             // 旋转动画
-            void this.offsetWidth; // 触发重绘以重新应用动画
+            void refreshButton.offsetWidth; // 触发重绘以重新应用动画
             refreshButton.classList.add('rotating');
             setTimeout(() => {
                 refreshButton.classList.remove('rotating');
@@ -135,21 +165,25 @@ export const StatsInfo = {
      * 通用的绑定切换按钮函数
      * @param {string} direction - 方向，'left' 或 'right'
      */
-    bindSwitcher: function (direction) {
-        const { allData, _, today } = this.ensureTodayDataExists();
-        const statsLable = document.querySelector('.qmx-stats-label');
+    bindSwitcher: function (direction: string) {
+        const { allData, today } = this.ensureTodayDataExists();
         globalValue.currentDatePage = globalValue.currentDatePage ?? today;
-        const dateList = Object.keys(allData);
-        const currentIndex = dateList.indexOf(globalValue.currentDatePage);
-        const indecator = document.querySelector('.qmx-stats-indicator');
+        const dateList: string[] = Object.keys(allData);
+        const currentIndex: number = dateList.indexOf(globalValue.currentDatePage);
 
-        const button = document.querySelector(`#qmx-stats-${direction}`);
-        if (!button) {
-            throw new Error(`无法找到${direction === 'left' ? '左' : '右'}切换按钮元素`);
+        const statsLable: HTMLElement | null = document.querySelector('.qmx-stats-label');
+        const indecator: HTMLElement | null = document.querySelector('.qmx-stats-indicator');
+        const button: HTMLElement | null = document.querySelector(`#qmx-stats-${direction}`);
+        if (!statsLable || !indecator || !button) {
+            Utils.log('[数据统计] 切换按钮绑定失败，正在重试');
+            setTimeout(() => {
+                this.bindSwitcher(direction);
+            }, 500);
+            return;
         }
 
         // 检查是否需要禁用按钮
-        const shouldDisableButton =
+        const shouldDisableButton: boolean =
             direction === 'left'
                 ? dateList.length <= 1 || currentIndex - 1 < 0
                 : dateList.length <= 1 || currentIndex + 1 >= dateList.length;
@@ -165,7 +199,7 @@ export const StatsInfo = {
             e.stopPropagation();
 
             // 计算新索引
-            const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+            const newIndex: number = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
             // 确保索引有效
             if (newIndex >= 0 && newIndex < dateList.length) {
                 globalValue.currentDatePage = dateList[newIndex];
@@ -187,7 +221,7 @@ export const StatsInfo = {
             } else {
                 // 停止更新
                 clearInterval(globalValue.updateIntervalID);
-                globalValue.updateIntervalID = null;
+                globalValue.updateIntervalID = undefined;
             }
         };
     },
@@ -208,11 +242,11 @@ export const StatsInfo = {
 
     /**
      * 在修改内容时添加过渡效果
-     * @param {HTMLElement} element 
-     * @param {*} newText 
-     * @param {number} duration 
+     * @param {HTMLElement} element
+     * @param {string} newText
+     * @param {number} duration
      */
-    contentTransition: function (element, newText, duration = 300) {
+    contentTransition: function (element: HTMLElement, newText: string, duration: number = 300) {
         element.classList.add('transitioning');
         setTimeout(() => {
             element.textContent = newText;
@@ -222,10 +256,10 @@ export const StatsInfo = {
 
     /**
      * 为元素添加过渡效果
-     * @param {HTMLElement} element 
-     * @param {number} duration 
+     * @param {HTMLElement} element
+     * @param {number} duration
      */
-    itemTransiton: function (element, duration = 300) {
+    itemTransiton: function (element: HTMLElement, duration: number = 300) {
         element.classList.add('transitioning');
         setTimeout(() => {
             element.classList.remove('transitioning');
@@ -238,10 +272,10 @@ export const StatsInfo = {
      * @param {string} nickname - 小组件中文名
      * @returns {HTMLDivElement}
      */
-    initRender: function (name, nickname) {
-        const newItem = document.createElement('div');
+    initRender: function (name: string, nickname: string): HTMLDivElement {
+        const newItem: HTMLDivElement = document.createElement('div');
         newItem.className = 'qmx-modal-stats-child';
-        const className = 'qmx-stat-info-' + name;
+        const className: string = 'qmx-stat-info-' + name;
 
         newItem.innerHTML = `
                 <div class=${className}>
@@ -264,13 +298,13 @@ export const StatsInfo = {
         if (!todayData) return;
         // 计算平均
         todayData.avg = todayData.receivedCount
-            ? (todayData.total / todayData.receivedCount).toFixed(2)
+            ? parseFloat((todayData.total / todayData.receivedCount).toFixed(2))
             : 0.0;
 
         if (!Utils.lockChecker('douyu_qmx_stats_lock', this.updateTodayData.bind(this))) return;
         Utils.setLocalValueWithLock(
             'douyu_qmx_stats_lock',
-            SETTINGS.STATS_INFO_STORAGE_KEY,
+            typedSettings.STATS_INFO_STORAGE_KEY,
             allData,
             '更新今日统计数据'
         );
@@ -280,10 +314,10 @@ export const StatsInfo = {
 
     /**
      * 设置统计数据
-     * @param {string} name - 统计名String 包含 receivedCount total avg
+     * @param {keyof DailyStatsData} name - 统计键名
      * @param {number} value
      */
-    set: function (name, value) {
+    set: function (name: keyof DailyStatsData, value: number) {
         const { allData, todayData } = this.ensureTodayDataExists();
         if (!todayData) return;
         todayData[name] = value;
@@ -291,7 +325,7 @@ export const StatsInfo = {
         if (!Utils.lockChecker('douyu_qmx_stats_lock', this.set.bind(this), name, value)) return;
         Utils.setLocalValueWithLock(
             'douyu_qmx_stats_lock',
-            SETTINGS.STATS_INFO_STORAGE_KEY,
+            typedSettings.STATS_INFO_STORAGE_KEY,
             allData,
             '更新统计数据'
         );
@@ -304,21 +338,24 @@ export const StatsInfo = {
      */
     getCoinListUpdate: async function () {
         // 获取金币历史数据
-        const currentRoomId = Utils.getCurrentRoomId();
+        const currentRoomId: string | null = Utils.getCurrentRoomId();
         if (!currentRoomId) {
             Utils.log('[统计] 无法获取当前房间ID，跳过金币记录更新。');
             return;
         }
         const coinList = await DouyuAPI.getCoinRecord(1, 100, currentRoomId, 3);
         // 处理今日数据
-        const startOfToday = new Date();
+        const startOfToday: Date = new Date();
         startOfToday.setHours(0, 0, 0, 0);
-        const filteredData = coinList.filter((item) => item.createTime > startOfToday / 1000);
-        const totalCoin = filteredData.reduce((sum, item) => sum + item.balanceDiff, 0);
-        [
+        const filteredData = coinList.filter(
+            (item) => item.createTime > startOfToday.getTime() / 1000
+        );
+        const totalCoin: number = filteredData.reduce((sum, item) => sum + item.balanceDiff, 0);
+        const updateList: [keyof DailyStatsData, number][] = [
             ['receivedCount', filteredData.length],
             ['total', totalCoin],
-        ].forEach(([name, value]) => {
+        ];
+        updateList.forEach(([name, value]) => {
             this.set(name, value);
         });
         // 更新本地数据
@@ -327,16 +364,15 @@ export const StatsInfo = {
 
     /**
      * 刷新数据UI
-     * @param {Object} todayData - 今日数据对象
+     * @param {DailyStatsData} todayData - 今日数据对象
      */
-    refreshUI: function (todayData) {
-        for (let key in todayData) {
+    refreshUI: function (todayData: DailyStatsData) {
+        for (const key in todayData) {
             try {
-                const dataName = document.querySelector(`.qmx-stat-info-${key}`);
-                if (!dataName) continue;
-                const details = dataName.querySelector('.qmx-stat-details');
-                if (!details) continue;
-                this.contentTransition(details, todayData[key]);
+                const typedKey = key as keyof DailyStatsData;
+                const element = globalValue.statElements.get(typedKey);
+                if (!element) continue;
+                this.contentTransition(element, todayData[typedKey].toString());
             } catch (e) {
                 Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
                 continue;
@@ -348,21 +384,21 @@ export const StatsInfo = {
      * 移除过期数据
      */
     removeExpiredData: function () {
-        const allData = this.ensureTodayDataExists().allData;
+        const allData: AllStatsData = this.ensureTodayDataExists().allData;
         // 筛选最近七天的数据保留
-        let newAllData = Object.keys(allData)
+        const newAllData = Object.keys(allData)
             .filter((dateString) => {
-                const today = new Date();
+                const today: Date = new Date();
                 today.setHours(0, 0, 0, 0);
-                const date = new Date(dateString);
-                const diff = today - date;
-                const dayDiff = diff / (1000 * 60 * 60 * 24);
+                const date: Date = new Date(dateString);
+                const diff: number = today.getTime() - date.getTime();
+                const dayDiff: number = diff / (1000 * 60 * 60 * 24);
                 return dayDiff <= 6;
             })
             .reduce((obj, key) => {
                 return Object.assign(obj, { [key]: allData[key] });
             }, {});
-        GM_setValue(SETTINGS.STATS_INFO_STORAGE_KEY, newAllData);
+        GM_setValue(typedSettings.STATS_INFO_STORAGE_KEY, newAllData);
         Utils.log('[数据统计]：已清理过期数据');
     },
 
@@ -370,7 +406,10 @@ export const StatsInfo = {
      * 每日0点更新数据
      */
     updateDataForDailyReset: function () {
-        const allData = GM_getValue(SETTINGS.STATS_INFO_STORAGE_KEY, null);
+        const allData: AllStatsData | null = GM_getValue(
+            typedSettings.STATS_INFO_STORAGE_KEY,
+            null
+        );
         if (!allData || typeof allData !== 'object') {
             this.ensureTodayDataExists();
             this.updateTodayData();
@@ -378,8 +417,8 @@ export const StatsInfo = {
             return;
         }
         // 检查最后一条数据的日期是否为今天
-        const lastDate = Object.keys(allData).at(-1);
-        const nowDate = Utils.formatDateAsBeijing(new Date());
+        const lastDate: string | undefined = Object.keys(allData).at(-1);
+        const nowDate: string = Utils.formatDateAsBeijing(new Date());
         if (lastDate !== nowDate) {
             // 日期已过，更新数据
             this.updateTodayData();
@@ -392,15 +431,15 @@ export const StatsInfo = {
      */
     checkUpdate: function () {
         // 检查是否需要更新统计数据
-        const state = GlobalState.get();
-        const tabList = document.getElementById('qmx-tab-list');
+        const state: GlobalStateData = GlobalState.get() as GlobalStateData;
+        const tabList: HTMLElement | null = document.getElementById('qmx-tab-list');
         if (!tabList) return;
         const tabIds = Object.keys(state.tabs);
         tabIds.forEach((roomId) => {
             const tabData = state.tabs[roomId];
-            let currentStatusText = tabData.statusText;
+            const currentStatusText = tabData.statusText;
             // 判断是否更新统计数据
-            if (SETTINGS.SHOW_STATS_IN_PANEL) {
+            if (typedSettings.SHOW_STATS_IN_PANEL) {
                 if (currentStatusText.includes('领取到')) {
                     this.getCoinListUpdate();
                 }
