@@ -6,8 +6,6 @@
 // @description      原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
 // @license          MIT
 // @match            *://www.douyu.com/*
-// @require          https://cdn.jsdelivr.net/npm/systemjs@6.15.1/dist/system.min.js
-// @require          https://cdn.jsdelivr.net/npm/systemjs@6.15.1/dist/extras/named-register.min.js
 // @require          data:application/javascript,%3B(typeof%20System!%3D'undefined')%26%26(System%3Dnew%20System.constructor())%3B
 // @connect          list-www.douyu.com
 // @connect          data.ienone.top
@@ -28,22 +26,31 @@
 // @original-author  ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
 // ==/UserScript==
 
+// -------- Inlined Dependencies --------
+// @require https://cdn.jsdelivr.net/npm/systemjs@6.15.1/dist/system.min.js
+/*!
+ * SystemJS 6.15.1
+ */
+!function(){function e(e,t){return(t||"")+" (SystemJS Error#"+e+" https://github.com/systemjs/systemjs/blob/main/docs/errors.md#"+e+")"}function t(e,t){if(-1!==e.indexOf("\\")&&(e=e.replace(j,"/")),"/"===e[0]&&"/"===e[1])return t.slice(0,t.indexOf(":")+1)+e;if("."===e[0]&&("/"===e[1]||"."===e[1]&&("/"===e[2]||2===e.length&&(e+="/"))||1===e.length&&(e+="/"))||"/"===e[0]){var n,r=t.slice(0,t.indexOf(":")+1);if(n="/"===t[r.length+1]?"file:"!==r?(n=t.slice(r.length+2)).slice(n.indexOf("/")+1):t.slice(8):t.slice(r.length+("/"===t[r.length])),"/"===e[0])return t.slice(0,t.length-n.length-1)+e;for(var i=n.slice(0,n.lastIndexOf("/")+1)+e,o=[],s=-1,u=0;u<i.length;u++)-1!==s?"/"===i[u]&&(o.push(i.slice(s,u+1)),s=-1):"."===i[u]?"."!==i[u+1]||"/"!==i[u+2]&&u+2!==i.length?"/"===i[u+1]||u+1===i.length?u+=1:s=u:(o.pop(),u+=2):s=u;return-1!==s&&o.push(i.slice(s)),t.slice(0,t.length-n.length)+o.join("")}}function n(e,n){return t(e,n)||(-1!==e.indexOf(":")?e:t("./"+e,n))}function r(e,n,r,i,o){for(var s in e){var a=t(s,r)||s,f=e[s];if("string"==typeof f){var l=c(i,t(f,r)||f,o);l?n[a]=l:u("W1",s,f,"bare specifier did not resolve")}}}function i(e,t,i){var o;for(o in e.imports&&r(e.imports,i.imports,t,i,null),e.scopes||{}){var s=n(o,t);r(e.scopes[o],i.scopes[s]||(i.scopes[s]={}),t,i,s)}for(o in e.depcache||{})i.depcache[n(o,t)]=e.depcache[o];for(o in e.integrity||{})i.integrity[n(o,t)]=e.integrity[o]}function o(e,t){if(t[e])return e;var n=e.length;do{var r=e.slice(0,n+1);if(r in t)return r}while(-1!==(n=e.lastIndexOf("/",n-1)))}function s(e,t){var n=o(e,t);if(n){var r=t[n];if(null===r)return;if(!(e.length>n.length&&"/"!==r[r.length-1]))return r+e.slice(n.length);u("W2",n,r,"should have a trailing '/'")}}function u(t,n,r,i){console.warn(e(t,"Package target "+i+", resolving target '"+r+"' for "+n))}function c(e,t,n){for(var r=e.scopes,i=n&&o(n,r);i;){var u=s(t,r[i]);if(u)return u;i=o(i.slice(0,i.lastIndexOf("/")),r)}return s(t,e.imports)||-1!==t.indexOf(":")&&t}function a(){this[M]={}}function f(e){return e.id}function l(e,t,n,r){if(e.onload(n,t.id,t.d&&t.d.map(f),!!r),n)throw n}function d(t,n,r,i){var o=t[M][n];if(o)return o;var s=[],u=Object.create(null);P&&Object.defineProperty(u,P,{value:"Module"});var c=Promise.resolve().then((function(){return t.instantiate(n,r,i)})).then((function(r){if(!r)throw Error(e(2,"Module "+n+" did not instantiate"));var i=r[1]((function(e,t){o.h=!0;var n=!1;if("string"==typeof e)e in u&&u[e]===t||(u[e]=t,n=!0);else{for(var r in e)t=e[r],r in u&&u[r]===t||(u[r]=t,n=!0);e&&e.__esModule&&(u.__esModule=e.__esModule)}if(n)for(var i=0;i<s.length;i++){var c=s[i];c&&c(u)}return t}),2===r[1].length?{import:function(e,r){return t.import(e,n,r)},meta:t.createContext(n)}:void 0);return o.e=i.execute||function(){},[r[0],i.setters||[],r[2]||[]]}),(function(e){throw o.e=null,o.er=e,l(t,o,e,!0),e})),a=c.then((function(e){return Promise.all(e[0].map((function(r,i){var o=e[1][i],s=e[2][i];return Promise.resolve(t.resolve(r,n)).then((function(e){var r=d(t,e,n,s);return Promise.resolve(r.I).then((function(){return o&&(r.i.push(o),!r.h&&r.I||o(r.n)),r}))}))}))).then((function(e){o.d=e}))}));return o=t[M][n]={id:n,i:s,n:u,m:i,I:c,L:a,h:!1,d:void 0,e:void 0,er:void 0,E:void 0,C:void 0,p:void 0}}function h(e,t,n,r){if(!r[t.id])return r[t.id]=!0,Promise.resolve(t.L).then((function(){return t.p&&null!==t.p.e||(t.p=n),Promise.all(t.d.map((function(t){return h(e,t,n,r)})))})).catch((function(n){if(t.er)throw n;throw t.e=null,l(e,t,n,!1),n}))}function p(e,t){return t.C=h(e,t,t,{}).then((function(){return v(e,t,{})})).then((function(){return t.n}))}function v(e,t,n){function r(){try{var n=o.call(L);if(n)return n=n.then((function(){t.C=t.n,t.E=null,l(e,t,null,!0)}),(function(n){throw t.er=n,t.E=null,l(e,t,n,!0),n})),t.E=n;t.C=t.n,t.L=t.I=void 0}catch(r){throw t.er=r,r}finally{l(e,t,t.er,!0)}}if(!n[t.id]){if(n[t.id]=!0,!t.e){if(t.er)throw t.er;return t.E?t.E:void 0}var i,o=t.e;return t.e=null,t.d.forEach((function(r){try{var o=v(e,r,n);o&&(i=i||[]).push(o)}catch(s){throw t.er=s,l(e,t,s,!1),s}})),i?Promise.all(i).then(r):r()}}function m(){[].forEach.call(document.querySelectorAll("script"),(function(t){if(!t.sp)if("systemjs-module"===t.type){if(t.sp=!0,!t.src)return;System.import("import:"===t.src.slice(0,7)?t.src.slice(7):n(t.src,g)).catch((function(e){if(e.message.indexOf("https://github.com/systemjs/systemjs/blob/main/docs/errors.md#3")>-1){var n=document.createEvent("Event");n.initEvent("error",!1,!1),t.dispatchEvent(n)}return Promise.reject(e)}))}else if("systemjs-importmap"===t.type){t.sp=!0;var r=t.src?(System.fetch||fetch)(t.src,{integrity:t.integrity,priority:t.fetchPriority,passThrough:!0}).then((function(e){if(!e.ok)throw Error("Invalid status code: "+e.status);return e.text()})).catch((function(n){return n.message=e("W4","Error fetching systemjs-import map "+t.src)+"\n"+n.message,console.warn(n),"function"==typeof t.onerror&&t.onerror(),"{}"})):t.innerHTML;W=W.then((function(){return r})).then((function(n){!function(t,n,r){var o={};try{o=JSON.parse(n)}catch(s){console.warn(Error(e("W5","systemjs-importmap contains invalid JSON")+"\n\n"+n+"\n"))}i(o,r,t)}(N,n,t.src||g)}))}}))}var g,y="undefined"!=typeof Symbol,b="undefined"!=typeof self,S="undefined"!=typeof document,w=b?self:global;if(S){var O=document.querySelector("base[href]");O&&(g=O.href)}if(!g&&"undefined"!=typeof location){var E=(g=location.href.split("#")[0].split("?")[0]).lastIndexOf("/");-1!==E&&(g=g.slice(0,E+1))}var x,j=/\\/g,P=y&&Symbol.toStringTag,M=y?Symbol():"@",I=a.prototype;I.import=function(e,t,n){var r=this;return t&&"object"==typeof t&&(n=t,t=void 0),Promise.resolve(r.prepareImport()).then((function(){return r.resolve(e,t,n)})).then((function(e){var t=d(r,e,void 0,n);return t.C||p(r,t)}))},I.createContext=function(e){var t=this;return{url:e,resolve:function(n,r){return Promise.resolve(t.resolve(n,r||e))}}},I.onload=function(){},I.register=function(e,t,n){x=[e,t,n]},I.getRegister=function(){var e=x;return x=void 0,e};var L=Object.freeze(Object.create(null));w.System=new a;var C,R,W=Promise.resolve(),N={imports:{},scopes:{},depcache:{},integrity:{}},T=S;if(I.prepareImport=function(e){return(T||e)&&(m(),T=!1),W},I.getImportMap=function(){return JSON.parse(JSON.stringify(N))},S&&(m(),window.addEventListener("DOMContentLoaded",m)),I.addImportMap=function(e,t){i(e,t||g,N)},S){window.addEventListener("error",(function(e){J=e.filename,_=e.error}));var A=location.origin}I.createScript=function(e){var t=document.createElement("script");t.async=!0,e.indexOf(A+"/")&&(t.crossOrigin="anonymous");var n=N.integrity[e];return n&&(t.integrity=n),t.src=e,t};var J,_,k={},U=I.register;I.register=function(e,t){if(S&&"loading"===document.readyState&&"string"!=typeof e){var n=document.querySelectorAll("script[src]"),r=n[n.length-1];if(r){C=e;var i=this;R=setTimeout((function(){k[r.src]=[e,t],i.import(r.src)}))}}else C=void 0;return U.call(this,e,t)},I.instantiate=function(t,n){var r=k[t];if(r)return delete k[t],r;var i=this;return Promise.resolve(I.createScript(t)).then((function(r){return new Promise((function(o,s){r.addEventListener("error",(function(){s(Error(e(3,"Error loading "+t+(n?" from "+n:""))))})),r.addEventListener("load",(function(){if(document.head.removeChild(r),J===t)s(_);else{var e=i.getRegister(t);e&&e[0]===C&&clearTimeout(R),o(e)}})),document.head.appendChild(r)}))}))},I.shouldFetch=function(){return!1},"undefined"!=typeof fetch&&(I.fetch=fetch);var $=I.instantiate,B=/^(text|application)\/(x-)?javascript(;|$)/;I.instantiate=function(t,n,r){var i=this;return this.shouldFetch(t,n,r)?this.fetch(t,{credentials:"same-origin",integrity:N.integrity[t],meta:r}).then((function(r){if(!r.ok)throw Error(e(7,r.status+" "+r.statusText+", loading "+t+(n?" from "+n:"")));var o=r.headers.get("content-type");if(!o||!B.test(o))throw Error(e(4,'Unknown Content-Type "'+o+'", loading '+t+(n?" from "+n:"")));return r.text().then((function(e){return e.indexOf("//# sourceURL=")<0&&(e+="\n//# sourceURL="+t),(0,eval)(e),i.getRegister(t)}))})):$.apply(this,arguments)},I.resolve=function(n,r){return c(N,t(n,r=r||g)||n,r)||function(t,n){throw Error(e(8,"Unable to resolve bare specifier '"+t+(n?"' from "+n:"'")))}(n,r)};var F=I.instantiate;I.instantiate=function(e,t,n){var r=N.depcache[e];if(r)for(var i=0;i<r.length;i++)d(this,this.resolve(r[i],e),e);return F.call(this,e,t,n)},b&&"function"==typeof importScripts&&(I.instantiate=function(e){var t=this;return Promise.resolve().then((function(){return importScripts(e),t.getRegister(e)}))}),function(e){function t(t){return!e.hasOwnProperty(t)||!isNaN(t)&&t<e.length||a&&e[t]&&"undefined"!=typeof window&&e[t].parent===window}var n,r,i,o=e.System.constructor.prototype,s=o.import;o.import=function(o,u,c){return function(){for(var o in n=r=void 0,e)t(o)||(n?r||(r=o):n=o,i=o)}(),s.call(this,o,u,c)};var u=[[],function(){return{}}],c=o.getRegister;o.getRegister=function(){var o=c.call(this);if(o)return o;var s,a=function(o){var s,u,c=0;for(var a in e)if(!t(a)){if(0===c&&a!==n||1===c&&a!==r)return a;s?(i=a,u=o&&u||a):s=a===i,c++}return u}(this.firstGlobalProp);if(!a)return u;try{s=e[a]}catch(f){return u}return[[],function(e){return{execute:function(){e(s),e({default:s,__useDefault:!0})}}}]};var a="undefined"!=typeof navigator&&-1!==navigator.userAgent.indexOf("Trident")}("undefined"!=typeof self?self:global),function(e){var t=e.System.constructor.prototype,r=/^[^#?]+\.(css|html|json|wasm)([?#].*)?$/,i=t.shouldFetch.bind(t);t.shouldFetch=function(e){return i(e)||r.test(e)};var o=/^application\/json(;|$)/,s=/^text\/css(;|$)/,u=/^application\/wasm(;|$)/,c=t.fetch;t.fetch=function(t,r){return c(t,r).then((function(i){if(r.passThrough)return i;if(!i.ok)return i;var c=i.headers.get("content-type");return o.test(c)?i.json().then((function(e){return new Response(new Blob(['System.register([],function(e){return{execute:function(){e("default",'+JSON.stringify(e)+")}}})"],{type:"application/javascript"}))})):s.test(c)?i.text().then((function(e){return e=e.replace(/url\(\s*(?:(["'])((?:\\.|[^\n\\"'])+)\1|((?:\\.|[^\s,"'()\\])+))\s*\)/g,(function(e,r,i,o){return["url(",r,n(i||o,t),r,")"].join("")})),new Response(new Blob(["System.register([],function(e){return{execute:function(){var s=new CSSStyleSheet();s.replaceSync("+JSON.stringify(e)+');e("default",s)}}})'],{type:"application/javascript"}))})):u.test(c)?(WebAssembly.compileStreaming?WebAssembly.compileStreaming(i):i.arrayBuffer().then(WebAssembly.compile)).then((function(n){e.System.wasmModules||(e.System.wasmModules=Object.create(null)),e.System.wasmModules[t]=n;var r=[],i=[];return WebAssembly.Module.imports&&WebAssembly.Module.imports(n).forEach((function(e){var t=JSON.stringify(e.module);-1===r.indexOf(t)&&(r.push(t),i.push("function(m){i["+t+"]=m}"))})),new Response(new Blob(["System.register(["+r.join(",")+"],function(e){var i={};return{setters:["+i.join(",")+"],execute:function(){return WebAssembly.instantiate(System.wasmModules["+JSON.stringify(t)+"],i).then(function(m){e(m.exports)})}}})"],{type:"application/javascript"}))})):i}))}}("undefined"!=typeof self?self:global);var q="undefined"!=typeof Symbol&&Symbol.toStringTag;I.get=function(e){var t=this[M][e];if(t&&null===t.e&&!t.E)return t.er?null:t.n},I.set=function(t,n){try{new URL(t)}catch(s){console.warn(Error(e("W3",'"'+t+'" is not a valid URL to set in the module registry')))}var r;q&&"Module"===n[q]?r=n:(r=Object.assign(Object.create(null),n),q&&Object.defineProperty(r,q,{value:"Module"}));var i=Promise.resolve(r),o=this[M][t]||(this[M][t]={id:t,i:[],h:!1,d:[],e:null,er:void 0,E:void 0});return!o.e&&!o.E&&(Object.assign(o,{n:r,I:void 0,L:void 0,C:i}),r)},I.has=function(e){return!!this[M][e]},I.delete=function(e){var t=this[M],n=t[e];if(!n||n.p&&null!==n.p.e||n.E)return!1;var r=n.i;return n.d&&n.d.forEach((function(e){var t=e.i.indexOf(n);-1!==t&&e.i.splice(t,1)})),delete t[e],function(){var n=t[e];if(!n||!r||null!==n.e||n.E)return!1;r.forEach((function(e){n.i.push(e),e(n.n)})),r=null}};var D="undefined"!=typeof Symbol&&Symbol.iterator;I.entries=function(){var e,t,n=this,r=Object.keys(n[M]),i=0,o={next:function(){for(;void 0!==(t=r[i++])&&void 0===(e=n.get(t)););return{done:void 0===t,value:void 0!==t&&[t,e]}}};return o[D]=function(){return this},o}}();
+//# sourceMappingURL=system.min.js.map
+
+
+// @require https://cdn.jsdelivr.net/npm/systemjs@6.15.1/dist/extras/named-register.min.js
+!function(t){function e(t){t.registerRegistry=Object.create(null),t.namedRegisterAliases=Object.create(null)}var r=t.System;e(r);var i,s,n=r.constructor.prototype,l=r.constructor,a=function(){l.call(this),e(this)};a.prototype=n,r.constructor=a;var o=n.register;n.register=function(t,e,r,n){if("string"!=typeof t)return o.apply(this,arguments);var l=[e,r,n];return this.registerRegistry[t]=l,i||(i=l,s=t),Promise.resolve().then((function(){i=null,s=null})),o.apply(this,[e,r,n])};var u=n.resolve;n.resolve=function(t,e){try{return u.call(this,t,e)}catch(r){if(t in this.registerRegistry)return this.namedRegisterAliases[t]||t;throw r}};var c=n.instantiate;n.instantiate=function(t,e,r){var i=this.registerRegistry[t];return i?(this.registerRegistry[t]=null,i):c.call(this,t,e,r)};var g=n.getRegister;n.getRegister=function(t){var e=g.call(this,t);s&&t&&(this.namedRegisterAliases[s]=t);var r=i||e;return i=null,s=null,r}}("undefined"!=typeof self?self:global);
+//# sourceMappingURL=named-register.min.js.map
+
+// ------ End Inlined Dependencies ------
+
 
 System.register("./__entry.js", [], (function (exports, module) {
   'use strict';
   return {
     execute: (function () {
-
       const d=new Set;const importCSS = async e=>{d.has(e)||(d.add(e),(t=>{typeof GM_addStyle=="function"?GM_addStyle(t):document.head.appendChild(document.createElement("style")).append(t);})(e));};
-
       const CONFIG = {
-
-
-
 SCRIPT_PREFIX: "[全民星推荐助手]",
 CONTROL_ROOM_ID: "6657",
 TEMP_CONTROL_ROOM_RID: "6979222",
-
 POPUP_WAIT_TIMEOUT: 2e4,
 PANEL_WAIT_TIMEOUT: 1e4,
 ELEMENT_WAIT_TIMEOUT: 3e4,
@@ -57,16 +64,13 @@ SWITCHING_CLEANUP_TIMEOUT: 3e4,
 HEALTHCHECK_INTERVAL: 1e4,
 DISCONNECTED_GRACE_PERIOD: 1e4,
 STATS_UPDATE_INTERVAL: 4e3,
-
 DRAGGABLE_BUTTON_ID: "douyu-qmx-starter-button",
 BUTTON_POS_STORAGE_KEY: "douyu_qmx_button_position",
 MODAL_DISPLAY_MODE: "floating",
-
 API_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/square/list",
 COIN_LIST_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/coin/record/list",
 API_RETRY_COUNT: 3,
 API_RETRY_DELAY: 5e3,
-
 MAX_WORKER_TABS: 24,
 DAILY_LIMIT_ACTION: "CONTINUE_DORMANT",
 AUTO_PAUSE_ENABLED: true,
@@ -74,11 +78,9 @@ AUTO_PAUSE_DELAY_AFTER_ACTION: 5e3,
 CALIBRATION_MODE_ENABLED: false,
 SHOW_STATS_IN_PANEL: false,
 ENABLE_DANMU_PRO: true,
-
 STATE_STORAGE_KEY: "douyu_qmx_dashboard_state",
 DAILY_LIMIT_REACHED_KEY: "douyu_qmx_daily_limit_reached",
 STATS_INFO_STORAGE_KEY: "douyu_qmx_stats",
-
 DEFAULT_THEME: "dark",
         INJECT_TARGET_RETRIES: 10,
 INJECT_TARGET_INTERVAL: 500,
@@ -86,8 +88,6 @@ API_ROOM_FETCH_COUNT: 10,
 UI_FEEDBACK_DELAY: 2e3,
 DRAG_BUTTON_DEFAULT_PADDING: 20,
 CONVERT_LEGACY_POSITION: true,
-
-
 SELECTORS: {
           redEnvelopeContainer: "#layout-Player-aside div.LiveNewAnchorSupportT-enter",
 countdownTimer: "span.LiveNewAnchorSupportT-enter--bottom",
@@ -102,12 +102,6 @@ limitReachedPopup: "div.dy-Message-custom-content.dy-Message-info",
 rankListContainer: "#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank",
 anchorName: "div.Title-anchorName > h2.Title-anchorNameH2"
 },
-
-
-
-
-
-
 DB_NAME: "DouyuDanmukuPro",
         DB_VERSION: 2,
         DB_STORE_NAME: "danmuku_templates",
@@ -139,17 +133,13 @@ API: {
         },
 DEBUG: false,
 LOG_LEVEL: "info",
-
-
 minSearchLength: 1,
 maxSuggestions: 10,
 debounceDelay: 300,
-
 sortBy: "relevance",
 autoImportMaxPages: 5,
 autoImportPageSize: 50,
 autoImportSortByPopularity: true,
-
 enterSelectionModeKey: "ArrowUp",
 exitSelectionModeKey: "ArrowDown",
 expandCandidatesKey: "ArrowUp",
@@ -157,15 +147,12 @@ navigationLeftKey: "ArrowLeft",
 navigationRightKey: "ArrowRight",
 selectKey: "Enter",
 cancelKey: "Escape",
-
 popupShowDelay: 100,
 popupHideDelay: 200,
 animationDuration: 200,
-
 maxPopupHeight: 300,
 itemHeight: 40,
 maxCandidateWidth: 200,
-
 capsule: {
           maxWidth: 150,
 height: 24,
@@ -175,7 +162,6 @@ totalHeight: 40,
 fontSize: 12,
 itemsPerRow: 4,
 singleRowMaxItems: 8,
-
 preview: {
             enabled: true,
 showDelay: 500,
@@ -192,10 +178,8 @@ enableAutoComplete: true,
 enableKeyboardShortcuts: true,
 enableSelectionMode: true,
 enableSound: false,
-
 enableSync: false,
 syncInterval: 3e5,
-
 maxCacheSize: 1e3,
 cacheExpireTime: 864e5
 };
@@ -524,10 +508,8 @@ deepClone(obj) {
                     <div class="theme-switch-wrapper">
                         <label class="theme-switch">
                             <input type="checkbox" id="setting-theme-mode" ${SETTINGS2.THEME === "dark" ? "checked" : ""}>
-
                             <!-- 1. 背景轨道：只负责展开和收缩的动画 -->
                             <span class="slider-track"></span>
-
                             <!-- 2. 滑块圆点：只负责左右移动和图标切换 -->
                             <span class="slider-dot">
                                 <span class="icon sun">
@@ -614,7 +596,6 @@ deepClone(obj) {
                     </div>
                 </div>
             </div>
-
             <!-- ==================== Tab 2: 性能与延迟 ==================== -->
             <div id="tab-perf" class="tab-content">
                 <div class="qmx-settings-grid">
@@ -630,7 +611,6 @@ deepClone(obj) {
                     ${createUnitInput("setting-disconnected-grace-period", "断开连接清理延迟", settingsMeta)}
                     ${createUnitInput("setting-api-retry-delay", "API重试延迟", settingsMeta)}
                     ${createUnitInput("setting-stats-update-interval", "统计信息更新间隔", settingsMeta)}
-                    
                     <div class="qmx-settings-item" style="grid-column: 1 / -1;">
                         <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>
                         <div class="qmx-range-slider-wrapper">
@@ -644,7 +624,6 @@ deepClone(obj) {
                     </div>
                 </div>
             </div>
-
             <!-- ==================== Tab 3: 高级设置 ==================== -->
             <div id="tab-advanced" class="tab-content">
                 <div class="qmx-settings-grid">
@@ -660,15 +639,11 @@ deepClone(obj) {
                         <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
                         <input type="number" class="qmx-input" id="setting-api-retry-count" value="${SETTINGS2.API_RETRY_COUNT}">
                     </div>
-
-                    
-
                     <!-- 新增：添加两个空的占位符，使网格平衡为 2x3 -->
                     <div class="qmx-settings-item"></div>
                     <div class="qmx-settings-item"></div>
                 </div>
             </div>
-
             <!-- ==================== Tab 4: 弹幕助手 ==================== -->
             <div id="tab-danmupro" class="tab-content">
                 <h4>关于斗鱼弹幕助手功能</h4>
@@ -714,7 +689,6 @@ deepClone(obj) {
                     </div>
                 </div>
                 -->
-                
                 <h4>关于脚本 <span class="version-tag">v2.0.8</span></h4>
                 <h4>致谢</h4>
                 <ul class="qmx-styled-list">
@@ -1093,7 +1067,6 @@ CONTROL_ROOM_ID: document.getElementById("setting-control-room-id").value,
             MODAL_DISPLAY_MODE: document.getElementById("setting-modal-mode").value,
             SHOW_STATS_IN_PANEL: document.getElementById("setting-stats-info").checked,
             THEME: document.getElementById("setting-theme-mode").checked ? "dark" : "light",
-
 INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script-delay").value) * 1e3,
             AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat(document.getElementById("setting-auto-pause-delay").value) * 1e3,
             SWITCHING_CLEANUP_TIMEOUT: parseFloat(document.getElementById("setting-switching-cleanup-timeout").value) * 1e3,
@@ -1146,7 +1119,6 @@ bindPanelEvents(modal) {
             });
           }
         }
-
 };
       const FirstTimeNotice = {
 showCalibrationNotice() {
@@ -2018,7 +1990,6 @@ healthCheckTimeoutId: null,
 remainingTimeMap: new Map(),
 consecutiveStallCount: 0,
         previousDeviation: 0,
-
 async init() {
           Utils.log("混合模式工作单元初始化...");
           const roomId = Utils.getCurrentRoomId();
@@ -2368,7 +2339,6 @@ closeTab() {
             Utils.log(`关闭失败，故障为: ${e.message}`);
           }
         },
-
 startCommandListener(roomId) {
           this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
           Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
@@ -7256,20 +7226,15 @@ async firstTimeImport() {
         Utils.log(`脚本将在 ${SETTINGS.INITIAL_SCRIPT_DELAY / 1e3} 秒后开始初始化...`);
         setTimeout(main, SETTINGS.INITIAL_SCRIPT_DELAY);
       })();
-
     })
   };
 }));
-
 System.register("./__vite-browser-external-2Ng8QIWW-Xya9USxv.js", [], (function (exports, module) {
   'use strict';
   return {
     execute: (function () {
-
       const __viteBrowserExternal = exports("default", {});
-
     })
   };
 }));
-
 System.import("./__entry.js", "./");

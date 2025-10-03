@@ -4,6 +4,9 @@ import monkey from 'vite-plugin-monkey';
 export default defineConfig({
     plugins: [
         monkey({
+
+            systemjs:'inline',
+
             entry: 'src/main.js',
             userscript: {
                 name: '斗鱼全民星推荐自动领取pro',
@@ -35,7 +38,7 @@ export default defineConfig({
             },
             build: {
                 fileName: '星推荐v2.user.js',
-                sourcemap: 'inline',
+                sourcemap: false,
             },
             server: {
                 mountGmApi: true,
