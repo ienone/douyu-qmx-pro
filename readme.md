@@ -2,8 +2,13 @@
 
 [![版本](https://img.shields.io/badge/Version-2.0.7-blue.svg)](https://greasyfork.org/zh-CN/scripts/543589-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96pro)
 [![许可证](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)[![原作者](https://img.shields.io/badge/Original-ysl--ovo-orange.svg)](https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
-
 用于自动领取斗鱼【全民星推荐】活动红包的油猴脚本。本脚本基于 [ysl-ovo 的原版脚本](https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96) 进行二次开发，在保留核心功能的基础上，重构了整体架构并新增了可视化管理面板。
+
+## 下载
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ienone/douyu-qmx-pro)](https://github.com/ienone/douyu-qmx-pro/releases/latest)
+[![GitHub Release Date](https://img.shields.io/github/release-date/ienone/douyu-qmx-pro)](https://github.com/ienone/douyu-qmx-pro/releases/latest)
+[![GitHub all releases](https://img.shields.io/github/downloads/ienone/douyu-qmx-pro/total)](https://github.com/ienone/douyu-qmx-pro/releases/latest)
+
 
 ---
 ## 关于斗鱼新版界面的说明
