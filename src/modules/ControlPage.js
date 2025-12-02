@@ -34,6 +34,10 @@ export const ControlPage = {
         this.commandChannel = new BroadcastChannel('douyu_qmx_commands'); // 创建广播频道
         // this.injectCSS();
         ThemeManager.applyTheme(SETTINGS.THEME);
+        
+        // 重新打开控制页面时先清空列表，避免残留已关闭的直播间信息
+        this.clearClosedTabs();
+        
         this.createHTML();
         
         // 根据设置决定是否显示统计信息面板
@@ -753,5 +757,24 @@ export const ControlPage = {
      */
     correctModalPosition() {
         this.correctPosition('qmx-modal-container', 'douyu_qmx_modal_position', true);
+    },
+
+    /**
+     * 清空已关闭的标签页，避免重新打开控制页面时残留已关闭的直播间信息
+     */
+    clearClosedTabs() {
+        // 获取当前状态
+        const state = GlobalState.get();
+        
+        // 检查是否有标签页需要清理
+        if (state.tabs && Object.keys(state.tabs).length > 0) {
+            Utils.log('检测到残留的标签页状态，正在清空...');
+            
+            // 清空所有标签页状态
+            state.tabs = {};
+            GlobalState.set(state);
+            
+            Utils.log('已清空残留的标签页状态');
+        }
     },
 };

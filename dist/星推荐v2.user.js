@@ -1496,6 +1496,7 @@ init() {
           Utils.log("当前是控制页面，开始设置UI...");
           this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
           ThemeManager.applyTheme(SETTINGS.THEME);
+          this.clearClosedTabs();
           this.createHTML();
           const qmxModalHeader = document.querySelector(".qmx-modal-header");
           if (SETTINGS.SHOW_STATS_IN_PANEL) {
@@ -2003,6 +2004,15 @@ correctButtonPosition() {
         },
 correctModalPosition() {
           this.correctPosition("qmx-modal-container", "douyu_qmx_modal_position", true);
+        },
+clearClosedTabs() {
+          const state = GlobalState.get();
+          if (state.tabs && Object.keys(state.tabs).length > 0) {
+            Utils.log("检测到残留的标签页状态，正在清空...");
+            state.tabs = {};
+            GlobalState.set(state);
+            Utils.log("已清空残留的标签页状态");
+          }
         }
       };
       const DOM = {
