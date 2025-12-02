@@ -1524,6 +1524,7 @@ init() {
           });
           window.addEventListener("resize", () => {
             this.correctButtonPosition();
+            this.correctModalPosition();
           });
         },
         createHTML() {
@@ -1983,17 +1984,25 @@ applyModalMode() {
           modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
           modalContainer.classList.add(`mode-${mode}`);
         },
-correctButtonPosition() {
-          const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-          const storageKey = SETTINGS.BUTTON_POS_STORAGE_KEY;
-          if (!mainButton) return;
+correctPosition(elementId, storageKey, checkFloatingMode = false) {
+          const element = document.getElementById(elementId);
+          if (!element) return;
+          if (checkFloatingMode && (SETTINGS.MODAL_DISPLAY_MODE !== "floating" || this.isPanelInjected)) {
+            return;
+          }
           const savedPos = GM_getValue(storageKey);
           if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
-            const newX = savedPos.ratioX * (window.innerWidth - mainButton.offsetWidth);
-            const newY = savedPos.ratioY * (window.innerHeight - mainButton.offsetHeight);
-            mainButton.style.setProperty("--tx", `${newX}px`);
-            mainButton.style.setProperty("--ty", `${newY}px`);
+            const newX = savedPos.ratioX * (window.innerWidth - element.offsetWidth);
+            const newY = savedPos.ratioY * (window.innerHeight - element.offsetHeight);
+            element.style.setProperty("--tx", `${newX}px`);
+            element.style.setProperty("--ty", `${newY}px`);
           }
+        },
+correctButtonPosition() {
+          this.correctPosition(SETTINGS.DRAGGABLE_BUTTON_ID, SETTINGS.BUTTON_POS_STORAGE_KEY);
+        },
+correctModalPosition() {
+          this.correctPosition("qmx-modal-container", "douyu_qmx_modal_position", true);
         }
       };
       const DOM = {

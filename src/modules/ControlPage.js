@@ -71,6 +71,7 @@ export const ControlPage = {
         });
         window.addEventListener('resize', () => {
             this.correctButtonPosition();
+            this.correctModalPosition();
         });
     },
 
@@ -716,20 +717,41 @@ export const ControlPage = {
     },
 
     /**
-     * 校正悬浮按钮位置，确保在屏幕可见区域
+     * 位置校正函数
+     * @param {string} elementId - 要校正位置的元素ID
+     * @param {string} storageKey - 用于存储位置的键
+     * @param {boolean} checkFloatingMode - 是否需要检查浮动模式
      */
-    correctButtonPosition() {
-        const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-        const storageKey = SETTINGS.BUTTON_POS_STORAGE_KEY;
-        if (!mainButton) return;
+    correctPosition(elementId, storageKey, checkFloatingMode = false) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // 如果需要检查浮动模式，且不符合条件则返回
+        if (checkFloatingMode && (SETTINGS.MODAL_DISPLAY_MODE !== 'floating' || this.isPanelInjected)) {
+            return;
+        }
 
         const savedPos = GM_getValue(storageKey);
         if (savedPos && typeof savedPos.ratioX === 'number' && typeof savedPos.ratioY === 'number') {
-            const newX = savedPos.ratioX * (window.innerWidth - mainButton.offsetWidth);
-            const newY = savedPos.ratioY * (window.innerHeight - mainButton.offsetHeight);
+            const newX = savedPos.ratioX * (window.innerWidth - element.offsetWidth);
+            const newY = savedPos.ratioY * (window.innerHeight - element.offsetHeight);
 
-            mainButton.style.setProperty('--tx', `${newX}px`);
-            mainButton.style.setProperty('--ty', `${newY}px`);
+            element.style.setProperty('--tx', `${newX}px`);
+            element.style.setProperty('--ty', `${newY}px`);
         }
+    },
+
+    /**
+     * 校正悬浮按钮位置，确保在屏幕可见区域
+     */
+    correctButtonPosition() {
+        this.correctPosition(SETTINGS.DRAGGABLE_BUTTON_ID, SETTINGS.BUTTON_POS_STORAGE_KEY);
+    },
+
+    /**
+     * 校正控制中心位置，确保在屏幕可见区域
+     */
+    correctModalPosition() {
+        this.correctPosition('qmx-modal-container', 'douyu_qmx_modal_position', true);
     },
 };
