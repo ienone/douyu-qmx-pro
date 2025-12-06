@@ -724,16 +724,10 @@ export const ControlPage = {
      * 位置校正函数
      * @param {string} elementId - 要校正位置的元素ID
      * @param {string} storageKey - 用于存储位置的键
-     * @param {boolean} checkFloatingMode - 是否需要检查浮动模式
      */
-    correctPosition(elementId, storageKey, checkFloatingMode = false) {
+    correctPosition(elementId, storageKey) {
         const element = document.getElementById(elementId);
         if (!element) return;
-
-        // 如果需要检查浮动模式，且不符合条件则返回
-        if (checkFloatingMode && (SETTINGS.MODAL_DISPLAY_MODE !== 'floating' || this.isPanelInjected)) {
-            return;
-        }
 
         const savedPos = GM_getValue(storageKey);
         if (savedPos && typeof savedPos.ratioX === 'number' && typeof savedPos.ratioY === 'number') {
@@ -756,7 +750,12 @@ export const ControlPage = {
      * 校正控制中心位置，确保在屏幕可见区域
      */
     correctModalPosition() {
-        this.correctPosition('qmx-modal-container', 'douyu_qmx_modal_position', true);
+        
+        // 不符合浮动模式条件则返回
+        if (SETTINGS.MODAL_DISPLAY_MODE !== 'floating' || this.isPanelInjected) {
+            return;
+        }
+        this.correctPosition('qmx-modal-container', 'douyu_qmx_modal_position');
     },
 
     /**
