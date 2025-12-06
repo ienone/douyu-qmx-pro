@@ -1,12 +1,23 @@
 import { defineConfig } from 'vite';
 import monkey from 'vite-plugin-monkey';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// 获取 __dirname (ESM 模式下需要这样获取)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+    resolve: {
+        alias: {
+            // 强制将 flexsearch 指向其 UMD 构建版本
+            // 1. 避免 ESM 版本中的动态导入导致 SystemJS 被强制开启
+            // 2. 避免 IIFE 格式不支持动态导入的构建错误
+            flexsearch: path.resolve(__dirname, 'node_modules/flexsearch/dist/flexsearch.bundle.min.js'),
+        },
+    },
     plugins: [
         monkey({
-
-            systemjs:'inline',
-
+            systemjs: false, // 显式禁用 SystemJS
             entry: 'src/main.js',
             userscript: {
                 name: '斗鱼全民星推荐自动领取pro',
