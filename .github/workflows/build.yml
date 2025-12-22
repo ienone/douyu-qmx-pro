@@ -1,15 +1,17 @@
-name: Build and Check
+name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
     branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    # 授予推送分支的权限
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
       
@@ -25,8 +27,10 @@ jobs:
       - name: Build
         run: npm run build
         
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      # 核心步骤：将 dist 文件夹推送到 build 分支
+      - name: Deploy to Build Branch
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          name: build-output
-          path: dist/
+          folder: dist
+          branch: build # 产物将被推送到这个分支
+          clean: true   # 每次部署都会清理旧文件
