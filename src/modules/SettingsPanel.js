@@ -15,6 +15,12 @@ import { ThemeManager } from './ThemeManager';
  * 设置面板的UI、提示文本和部分交互逻辑
  */
 export const SettingsPanel = {
+    // 定义需要刷新的配置项
+    // 保留此机制以应对未来可能出现的必须在初始化阶段生效的配置（如底层Hook开关）
+    RELOAD_REQUIRED_KEYS: [
+        // 'INITIAL_SCRIPT_DELAY',  // 示例：只在启动时生效的配置，如果修改后想立即看效果，通常需要刷新
+    ],
+
     /**
      * 显示设置面板
      */
@@ -23,7 +29,7 @@ export const SettingsPanel = {
 
         // 1. 所有工具提示的文本
         const allTooltips = {
-            'control-room': '只有在此房间号的直播间中才能看到插件面板，看准了再改！',
+            'control-room': '只有在此房间号的直播间中才能看到插件面板，看准了再改！(修改后不会立即刷新，下次进入该房间生效)',
             'temp-control-room': '备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。', // 新增提示
             'auto-pause': '自动暂停非控制直播间的视频播放，大幅降低资源占用。',
             'initial-script-delay': '页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。',
@@ -63,6 +69,9 @@ export const SettingsPanel = {
         document.getElementById('qmx-modal-backdrop').classList.add('visible');
         modal.classList.add('visible');
         document.body.classList.add('qmx-modal-open-scroll-lock');
+        
+        // 初始化按钮状态
+        this.updateSaveButtonState();
     },
 
     /**
@@ -82,14 +91,13 @@ export const SettingsPanel = {
     },
 
     /**
-     * 从UI读取并保存设置
+     * 从UI读取当前设置
      */
-    save() {
-        // 从UI读取所有暴露出来的值，并进行单位转换
-        const newSettings = {
+    getSettingsFromUI() {
+        return {
             // Tab 1: 基本设置
             CONTROL_ROOM_ID: document.getElementById('setting-control-room-id').value,
-            TEMP_CONTROL_ROOM_RID: document.getElementById('setting-temp-control-room-id').value, // 新增保存逻辑
+            TEMP_CONTROL_ROOM_RID: document.getElementById('setting-temp-control-room-id').value,
             AUTO_PAUSE_ENABLED: document.getElementById('setting-auto-pause').checked,
             ENABLE_DANMU_PRO: document.getElementById('setting-danmupro-mode').checked,
             DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
@@ -119,6 +127,44 @@ export const SettingsPanel = {
             API_RETRY_COUNT: parseInt(document.getElementById('setting-api-retry-count').value, 10),
             API_RETRY_DELAY: parseFloat(document.getElementById('setting-api-retry-delay').value) * 1000,
         };
+    },
+
+    /**
+     * 检查是否需要刷新，并更新按钮文本
+     */
+    updateSaveButtonState() {
+        const newSettings = this.getSettingsFromUI();
+        let needReload = false;
+        
+        for (const key of Object.keys(newSettings)) {
+            if (SETTINGS[key] !== newSettings[key]) {
+                if (this.RELOAD_REQUIRED_KEYS.includes(key)) {
+                    needReload = true;
+                    break;
+                }
+            }
+        }
+        
+        const saveBtn = document.getElementById('qmx-settings-save-btn');
+        if (saveBtn) {
+            // 如果按钮正在显示"已保存"，不要覆盖它
+            if (saveBtn.textContent.includes('已保存')) return { newSettings, needReload };
+
+            if (needReload) {
+                saveBtn.textContent = '保存并刷新';
+            } else {
+                saveBtn.textContent = '保存';
+            }
+        }
+        
+        return { newSettings, needReload };
+    },
+
+    /**
+     * 从UI读取并保存设置
+     */
+    save() {
+        const { newSettings, needReload } = this.updateSaveButtonState();
 
         // 获取所有已存在的用户设置，以保留那些未在UI中暴露的设置
         const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY, {});
@@ -130,8 +176,30 @@ export const SettingsPanel = {
 
         SettingsManager.save(finalSettingsToSave);
 
-        alert('设置已保存！页面将刷新以应用所有更改。');
-        window.location.reload();
+        if (needReload) {
+            // 如果按钮已经提示了"保存并刷新"，则直接刷新
+            window.location.reload();
+        } else {
+            // 更新内存中的设置
+            SettingsManager.update(newSettings);
+
+            // 视觉反馈
+            const saveBtn = document.getElementById('qmx-settings-save-btn');
+            if (saveBtn) {
+                const originalText = saveBtn.textContent;
+                saveBtn.textContent = '已保存~';
+                saveBtn.style.backgroundColor = 'var(--status-color-success, #4CAF50)';
+                setTimeout(() => {
+                    saveBtn.textContent = originalText;
+                    saveBtn.style.backgroundColor = '';
+                    this.hide();
+                    // 恢复按钮状态检查
+                    this.updateSaveButtonState();
+                }, 600);
+            } else {
+                this.hide();
+            }
+        }
     },
 
     /**
@@ -148,6 +216,22 @@ export const SettingsPanel = {
                 window.location.reload();
             }
         };
+
+        // 监听所有输入变化以更新保存按钮状态
+        const inputs = modal.querySelectorAll('input, select');
+        inputs.forEach(input => {
+            input.addEventListener('change', () => this.updateSaveButtonState());
+            input.addEventListener('input', () => this.updateSaveButtonState());
+        });
+
+        // 监听自定义下拉菜单的变化
+        const customOptions = modal.querySelectorAll('.qmx-select-options div');
+        customOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                // 延时一点点以确保值已更新
+                setTimeout(() => this.updateSaveButtonState(), 10);
+            });
+        });
 
         // 绑定标签页切换事件
         modal.querySelectorAll('.tab-link').forEach((button) => {
@@ -166,6 +250,7 @@ export const SettingsPanel = {
             themeToggle.addEventListener('change', (e) => {
                 const newTheme = e.target.checked ? 'dark' : 'light';
                 ThemeManager.applyTheme(newTheme);
+                this.updateSaveButtonState();
             });
         }
 

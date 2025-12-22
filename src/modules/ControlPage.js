@@ -4,7 +4,7 @@
  */
 
 import '../styles/ControlPanel-refactored.css';
-import { mainPanelTemplate } from '../ui/templates.js';
+import { mainPanelTemplate, statsPanelTemplate } from '../ui/templates.js';
 import { Utils } from '../utils/utils';
 import { SETTINGS } from './SettingsManager';
 import { ThemeManager } from './ThemeManager';
@@ -13,6 +13,7 @@ import { DouyuAPI } from '../utils/DouyuAPI';
 import { SettingsPanel } from './SettingsPanel.js';
 import { FirstTimeNotice } from './FirstTimeNotice.js';
 import { StatsInfo } from './StatsInfo';
+import { DanmuPro } from './danmu/DanmuPro';
 
 /**
  * =================================================================================
@@ -59,6 +60,12 @@ export const ControlPage = {
         // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
         this.applyModalMode();
         this.bindEvents();
+
+        // 监听设置更新事件
+        window.addEventListener('qmx-settings-update', (e) => {
+            this.handleSettingsUpdate(e.detail);
+        });
+
         setInterval(() => {
             this.renderDashboard();
             this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
@@ -77,6 +84,85 @@ export const ControlPage = {
             this.correctButtonPosition();
             this.correctModalPosition();
         });
+    },
+
+    /**
+     * 处理设置更新
+     */
+    handleSettingsUpdate(newSettings) {
+        Utils.log('[ControlPage] 检测到设置更新，正在应用...');
+
+        // 1. 处理显示模式变更
+        if (newSettings.MODAL_DISPLAY_MODE) {
+            this.applyModalMode();
+            this.correctModalPosition();
+        }
+
+        // 2. 处理弹幕助手开关
+        if (typeof newSettings.ENABLE_DANMU_PRO !== 'undefined') {
+            if (newSettings.ENABLE_DANMU_PRO) {
+                DanmuPro.init();
+            } else {
+                DanmuPro.destroy();
+            }
+        }
+
+        // 3. 处理统计面板开关
+        if (typeof newSettings.SHOW_STATS_IN_PANEL !== 'undefined') {
+            this.toggleStatsPanel(newSettings.SHOW_STATS_IN_PANEL);
+        }
+
+        // 4. 处理统计更新间隔
+        if (newSettings.STATS_UPDATE_INTERVAL && SETTINGS.SHOW_STATS_IN_PANEL) {
+            StatsInfo.updateInterval();
+        }
+    },
+
+    /**
+     * 切换统计面板显示状态
+     */
+    toggleStatsPanel(show) {
+        const qmxModalHeader = document.querySelector('.qmx-modal-header');
+        let statsContent = document.querySelector('.qmx-stats-container');
+
+        if (show) {
+            if (!statsContent) {
+                // 创建并插入统计面板
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = statsPanelTemplate;
+                statsContent = tempDiv.firstElementChild;
+                qmxModalHeader.after(statsContent);
+                
+                // 重新绑定统计面板的折叠事件
+                const statsToggle = document.getElementById('qmx-stats-toggle');
+                const statsContentEl = document.getElementById('qmx-stats-content');
+                if (statsToggle && statsContentEl) {
+                    statsToggle.addEventListener('click', () => {
+                        const isExpanded = statsToggle.classList.contains('expanded');
+                        if (isExpanded) {
+                            statsToggle.classList.remove('expanded');
+                            statsContentEl.classList.remove('expanded');
+                        } else {
+                            statsToggle.classList.add('expanded');
+                            statsContentEl.classList.add('expanded');
+                        }
+                    });
+                }
+            }
+            
+            if (qmxModalHeader) {
+                qmxModalHeader.style.padding = '12px 20px 0px 20px;';
+            }
+            StatsInfo.init();
+        } else {
+            if (statsContent) {
+                statsContent.remove();
+            }
+            if (qmxModalHeader) {
+                qmxModalHeader.style.padding = '16px 24px';
+            }
+            StatsInfo.destroy();
+        }
     },
 
     createHTML() {
@@ -690,6 +776,17 @@ export const ControlPage = {
 
         const mode = SETTINGS.MODAL_DISPLAY_MODE;
         Utils.log(`尝试应用模态框模式: ${mode}`);
+
+        // 重置：如果之前是注入模式，先还原到 body
+        if (this.isPanelInjected && mode !== 'inject-rank-list') {
+            document.body.appendChild(modalContainer);
+            this.isPanelInjected = false;
+            this.injectionTarget = null;
+            modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
+            // 恢复主按钮显示
+            const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+            if (mainButton) mainButton.classList.remove('hidden');
+        }
 
         if (mode === 'inject-rank-list') {
             const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
