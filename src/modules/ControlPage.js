@@ -27,6 +27,7 @@ export const ControlPage = {
     injectionTarget: null, // 存储被注入的DOM元素引用
     isPanelInjected: false, // 标记是否成功进入注入模式
     commandChannel: null,
+    modalContainer: null, // 新增：持有面板引用，防止DOM丢失后无法找回
     /**
      * 控制页面的总入口和初始化函数。
      */
@@ -69,6 +70,7 @@ export const ControlPage = {
         setInterval(() => {
             this.renderDashboard();
             this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
+            this.checkInjectionState(); // 新增：检查注入状态
         }, 1000);
 
         // 显示首次使用提示
@@ -84,6 +86,21 @@ export const ControlPage = {
             this.correctButtonPosition();
             this.correctModalPosition();
         });
+    },
+
+    /**
+     * 新增：检查注入状态，防止因页面重绘导致面板丢失
+     */
+    checkInjectionState() {
+        // 仅在注入模式且认为已注入的情况下检查
+        if (SETTINGS.MODAL_DISPLAY_MODE === 'inject-rank-list' && this.isPanelInjected) {
+            // 如果持有引用的元素不再连接到DOM，说明被宿主页面清理了
+            if (this.modalContainer && !this.modalContainer.isConnected) {
+                Utils.log('[监控] 检测到面板脱离DOM (可能是页面重绘)，正在重新注入...');
+                this.isPanelInjected = false; // 重置标志位
+                this.applyModalMode(); // 重新执行注入逻辑
+            }
+        }
     },
 
     /**
@@ -172,6 +189,7 @@ export const ControlPage = {
 
         const modalContainer = document.createElement('div');
         modalContainer.id = 'qmx-modal-container';
+        this.modalContainer = modalContainer; // 保存引用
         modalContainer.innerHTML = mainPanelTemplate(SETTINGS.MAX_WORKER_TABS);
         document.body.appendChild(modalBackdrop);
         document.body.appendChild(modalContainer);
@@ -267,12 +285,9 @@ export const ControlPage = {
         // --- 核心交互：主按钮的点击与拖拽 ---
         this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
 
-        // 仅在浮动模式下，插件面板本身才可拖动
-        if (SETTINGS.MODAL_DISPLAY_MODE === 'floating') {
-            const modalHeader = modalContainer.querySelector('.qmx-modal-header');
-            // 面板拖拽不需要点击行为，所以第三个参数留空或不传
-            this.setupDrag(modalContainer, 'douyu_qmx_modal_position', null, modalHeader);
-        }
+        // 核心修复：无论当前是什么模式，都初始化面板拖拽（由CSS控制是否启用位移）
+        const modalHeader = modalContainer.querySelector('.qmx-modal-header');
+        this.setupDrag(modalContainer, 'douyu_qmx_modal_position', null, modalHeader);
 
         // --- 关闭事件 ---
         document.getElementById('qmx-modal-close-btn').onclick = () => this.hidePanel();
@@ -771,32 +786,77 @@ export const ControlPage = {
      * 应用当前配置的模态框模式
      */
     applyModalMode() {
-        const modalContainer = document.getElementById('qmx-modal-container');
+        const modalContainer = this.modalContainer || document.getElementById('qmx-modal-container');
         if (!modalContainer) return;
 
         const mode = SETTINGS.MODAL_DISPLAY_MODE;
+        const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+        
         Utils.log(`尝试应用模态框模式: ${mode}`);
 
-        // 重置：如果之前是注入模式，先还原到 body
+        // 1. 退出注入模式的清理逻辑
         if (this.isPanelInjected && mode !== 'inject-rank-list') {
+            // 核心修复：恢复排行榜显示
+            if (this.injectionTarget) {
+                this.injectionTarget.classList.remove('qmx-hidden');
+            }
+            
             document.body.appendChild(modalContainer);
             this.isPanelInjected = false;
             this.injectionTarget = null;
+            
+            // 清理注入模式特有的类
             modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
-            // 恢复主按钮显示
-            const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-            if (mainButton) mainButton.classList.remove('hidden');
+            
+            // 状态同步：如果主按钮是隐藏的，说明面板应该处于显示状态
+            if (mainButton && mainButton.classList.contains('hidden')) {
+                modalContainer.classList.add('visible');
+            } else {
+                modalContainer.classList.remove('visible');
+            }
         }
 
+        // 2. 进入/维持 注入模式
         if (mode === 'inject-rank-list') {
             const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
                 const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
                 if (target) {
-                    Utils.log('注入目标已找到，开始注入...');
+                    // 如果已经注入且目标没变，不需要重复操作，防止闪烁和状态丢失
+                    if (this.isPanelInjected && this.injectionTarget === target && modalContainer.parentNode === target.parentNode) {
+                        return;
+                    }
+
+                    Utils.log('执行注入逻辑...');
+                    
+                    // 如果之前已经注入过别的目标，先恢复旧目标
+                    if (this.injectionTarget && this.injectionTarget !== target) {
+                        this.injectionTarget.classList.remove('qmx-hidden');
+                    }
+
                     this.injectionTarget = target;
                     this.isPanelInjected = true;
+                    
+                    // 插入 DOM
                     target.parentNode.insertBefore(modalContainer, target.nextSibling);
-                    modalContainer.classList.add('mode-inject-rank-list', 'qmx-hidden');
+                    modalContainer.classList.add('mode-inject-rank-list');
+                    
+                    // 核心修复：进入注入模式时，必须移除其它模式类，防止继承 mode-floating 的 opacity: 0
+                    modalContainer.classList.remove('mode-centered', 'mode-floating');
+                    
+                    // 核心修复：根据主按钮状态决定面板和排行榜的显隐，而不是暴力隐藏
+                    if (mainButton && mainButton.classList.contains('hidden')) {
+                        // 面板应显示，排行榜应隐藏
+                        modalContainer.classList.remove('qmx-hidden');
+                        this.injectionTarget.classList.add('qmx-hidden');
+                    } else {
+                        // 面板应隐藏，排行榜应显示
+                        modalContainer.classList.add('qmx-hidden');
+                        this.injectionTarget.classList.remove('qmx-hidden');
+                    }
+                    
+                    // 注入模式下不需要 visible 类（该类用于浮动模式的定位）
+                    modalContainer.classList.remove('visible');
+
                 } else if (retries > 0) {
                     setTimeout(() => waitForTarget(retries - 1, interval), interval);
                 } else {
@@ -804,16 +864,17 @@ export const ControlPage = {
                     Utils.log("[降级] 自动切换到 'floating' 备用模式。");
                     SETTINGS.MODAL_DISPLAY_MODE = 'floating';
                     this.applyModalMode();
-                    SETTINGS.MODAL_DISPLAY_MODE = 'inject-rank-list';
                 }
             };
             waitForTarget();
             return;
         }
 
-        // 对于所有非注入模式 (centered, floating)
+        // 3. 普通模式 (centered, floating)
         this.isPanelInjected = false;
         modalContainer.classList.remove('mode-inject-rank-list', 'qmx-hidden');
+        // 确保移除所有模式类并添加当前的
+        modalContainer.classList.remove('mode-centered', 'mode-floating');
         modalContainer.classList.add(`mode-${mode}`);
     },
 
