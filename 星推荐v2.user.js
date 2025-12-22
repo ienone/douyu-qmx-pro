@@ -6444,6 +6444,8 @@ async firstTimeImport() {
 injectionTarget: null,
 isPanelInjected: false,
 commandChannel: null,
+    modalContainer: null,
+
 init() {
       Utils.log("当前是控制页面，开始设置UI...");
       this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
@@ -6471,6 +6473,7 @@ init() {
       setInterval(() => {
         this.renderDashboard();
         this.cleanupAndMonitorWorkers();
+        this.checkInjectionState();
       }, 1e3);
       FirstTimeNotice.showCalibrationNotice();
       window.addEventListener("beforeunload", () => {
@@ -6482,6 +6485,15 @@ init() {
         this.correctButtonPosition();
         this.correctModalPosition();
       });
+    },
+checkInjectionState() {
+      if (SETTINGS.MODAL_DISPLAY_MODE === "inject-rank-list" && this.isPanelInjected) {
+        if (this.modalContainer && !this.modalContainer.isConnected) {
+          Utils.log("[监控] 检测到面板脱离DOM (可能是页面重绘)，正在重新注入...");
+          this.isPanelInjected = false;
+          this.applyModalMode();
+        }
+      }
     },
 handleSettingsUpdate(newSettings) {
       Utils.log("[ControlPage] 检测到设置更新，正在应用...");
@@ -6547,6 +6559,7 @@ toggleStatsPanel(show) {
       modalBackdrop.id = "qmx-modal-backdrop";
       const modalContainer = document.createElement("div");
       modalContainer.id = "qmx-modal-container";
+      this.modalContainer = modalContainer;
       modalContainer.innerHTML = mainPanelTemplate(SETTINGS.MAX_WORKER_TABS);
       document.body.appendChild(modalBackdrop);
       document.body.appendChild(modalContainer);
@@ -6612,10 +6625,8 @@ bindEvents() {
         });
       }
       this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
-      if (SETTINGS.MODAL_DISPLAY_MODE === "floating") {
-        const modalHeader = modalContainer.querySelector(".qmx-modal-header");
-        this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
-      }
+      const modalHeader = modalContainer.querySelector(".qmx-modal-header");
+      this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
       document.getElementById("qmx-modal-close-btn").onclick = () => this.hidePanel();
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && modalContainer.classList.contains("visible")) {
@@ -6968,27 +6979,49 @@ createTaskItem(roomId, tabData, statusMap, statusText) {
       return newItem;
     },
 applyModalMode() {
-      const modalContainer = document.getElementById("qmx-modal-container");
+      const modalContainer = this.modalContainer || document.getElementById("qmx-modal-container");
       if (!modalContainer) return;
       const mode = SETTINGS.MODAL_DISPLAY_MODE;
+      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
       Utils.log(`尝试应用模态框模式: ${mode}`);
       if (this.isPanelInjected && mode !== "inject-rank-list") {
+        if (this.injectionTarget) {
+          this.injectionTarget.classList.remove("qmx-hidden");
+        }
         document.body.appendChild(modalContainer);
         this.isPanelInjected = false;
         this.injectionTarget = null;
         modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
-        const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-        if (mainButton) mainButton.classList.remove("hidden");
+        if (mainButton && mainButton.classList.contains("hidden")) {
+          modalContainer.classList.add("visible");
+        } else {
+          modalContainer.classList.remove("visible");
+        }
       }
       if (mode === "inject-rank-list") {
         const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
           const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
           if (target) {
-            Utils.log("注入目标已找到，开始注入...");
+            if (this.isPanelInjected && this.injectionTarget === target && modalContainer.parentNode === target.parentNode) {
+              return;
+            }
+            Utils.log("执行注入逻辑...");
+            if (this.injectionTarget && this.injectionTarget !== target) {
+              this.injectionTarget.classList.remove("qmx-hidden");
+            }
             this.injectionTarget = target;
             this.isPanelInjected = true;
             target.parentNode.insertBefore(modalContainer, target.nextSibling);
-            modalContainer.classList.add("mode-inject-rank-list", "qmx-hidden");
+            modalContainer.classList.add("mode-inject-rank-list");
+            modalContainer.classList.remove("mode-centered", "mode-floating");
+            if (mainButton && mainButton.classList.contains("hidden")) {
+              modalContainer.classList.remove("qmx-hidden");
+              this.injectionTarget.classList.add("qmx-hidden");
+            } else {
+              modalContainer.classList.add("qmx-hidden");
+              this.injectionTarget.classList.remove("qmx-hidden");
+            }
+            modalContainer.classList.remove("visible");
           } else if (retries > 0) {
             setTimeout(() => waitForTarget(retries - 1, interval), interval);
           } else {
@@ -6996,7 +7029,6 @@ applyModalMode() {
             Utils.log("[降级] 自动切换到 'floating' 备用模式。");
             SETTINGS.MODAL_DISPLAY_MODE = "floating";
             this.applyModalMode();
-            SETTINGS.MODAL_DISPLAY_MODE = "inject-rank-list";
           }
         };
         waitForTarget();
@@ -7004,6 +7036,7 @@ applyModalMode() {
       }
       this.isPanelInjected = false;
       modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
+      modalContainer.classList.remove("mode-centered", "mode-floating");
       modalContainer.classList.add(`mode-${mode}`);
     },
 correctPosition(elementId, storageKey) {
