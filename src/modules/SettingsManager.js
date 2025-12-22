@@ -35,11 +35,35 @@ const SettingsManager = {
      */
     save(settingsToSave) {
         // 在保存时，将主题设置单独存储，因为它需要实时应用
-        const theme = settingsToSave.THEME;
-        delete settingsToSave.THEME;
-        GM_setValue('douyu_qmx_theme', theme);
+        if (Object.hasOwn(settingsToSave, 'THEME')) {
+            const theme = settingsToSave.THEME;
+            GM_setValue('douyu_qmx_theme', theme);
+            delete settingsToSave.THEME;
+        }
+
+        // 清理废弃的键
+        delete settingsToSave.OPEN_TAB_DELAY;
 
         GM_setValue(this.STORAGE_KEY, settingsToSave);
+    },
+
+    /**
+     * 更新并保存设置，同时更新内存中的 SETTINGS 对象
+     * @param {object} newSettings - 新的设置对象
+     */
+    update(newSettings) {
+        // 1. 更新内存中的 SETTINGS
+        Object.assign(SETTINGS, newSettings);
+        
+        // 2. 保存到存储
+        // 获取当前存储的设置（避免覆盖未在 newSettings 中的项）
+        const currentStored = GM_getValue(this.STORAGE_KEY, {});
+        const mergedToSave = Object.assign({}, currentStored, newSettings);
+        
+        this.save(mergedToSave);
+
+        // 3. 派发设置更新事件
+        window.dispatchEvent(new CustomEvent('qmx-settings-update', { detail: newSettings }));
     },
 
     /**
