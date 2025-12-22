@@ -204,10 +204,20 @@ get() {
       return Object.assign({}, CONFIG, userSettings, { THEME: themeSetting });
     },
 save(settingsToSave) {
-      const theme = settingsToSave.THEME;
-      delete settingsToSave.THEME;
-      GM_setValue("douyu_qmx_theme", theme);
+      if (Object.hasOwn(settingsToSave, "THEME")) {
+        const theme = settingsToSave.THEME;
+        GM_setValue("douyu_qmx_theme", theme);
+        delete settingsToSave.THEME;
+      }
+      delete settingsToSave.OPEN_TAB_DELAY;
       GM_setValue(this.STORAGE_KEY, settingsToSave);
+    },
+update(newSettings) {
+      Object.assign(SETTINGS, newSettings);
+      const currentStored = GM_getValue(this.STORAGE_KEY, {});
+      const mergedToSave = Object.assign({}, currentStored, newSettings);
+      this.save(mergedToSave);
+      window.dispatchEvent(new CustomEvent("qmx-settings-update", { detail: newSettings }));
     },
 reset() {
       GM_deleteValue(this.STORAGE_KEY);
@@ -464,11 +474,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
   }
   const ControlPanelRefactoredCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-primary-container: #4F378B;--md-sys-color-on-primary-container: #EADDFF;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-primary-container: #EADDFF;--md-sys-color-on-primary-container: #21005D;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}.is-dragging{transition:none!important}.qmx-flex-center{display:flex;align-items:center;justify-content:center}.qmx-flex-between{display:flex;align-items:center;justify-content:space-between}.qmx-flex-column{display:flex;flex-direction:column}.qmx-modal-base{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}.qmx-modal-base.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}.qmx-backdrop.visible{opacity:.5;visibility:visible}.qmx-btn{padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-btn--primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-btn--primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-btn--danger{border-color:#f44336;color:#f44336}.qmx-btn--danger:hover{background-color:#f443361a}.qmx-btn--icon{width:36px;height:36px;padding:0;border-radius:50%;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary)}.qmx-btn--icon:hover{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);transform:scale(1.05) rotate(180deg)}.qmx-styled-list{list-style:none;padding-left:0}.qmx-styled-list li{position:relative;padding-left:20px;margin-bottom:8px}.qmx-styled-list li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}.qmx-scrollbar::-webkit-scrollbar{width:10px}.qmx-scrollbar::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-scrollbar::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-scrollbar::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}.qmx-input{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:12px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-input:hover{border-color:var(--md-sys-color-primary)}.qmx-input:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-input[type=number]::-webkit-inner-spin-button,.qmx-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.qmx-input[type=number]{margin-left:5px;margin-bottom:9px;-moz-appearance:textfield;appearance:textfield}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:background-color .3s,border-color .3s}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}.qmx-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background-color:var(--md-sys-color-outline);color:var(--md-sys-color-surface-container);font-size:12px;font-weight:700;cursor:help;-webkit-user-select:none;user-select:none}#qmx-global-tooltip{position:fixed;background-color:var(--surface-container-highest);color:var(--md-sys-color-on-surface);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px #0003;font-size:12px;font-weight:400;line-height:1.5;z-index:10002;max-width:250px;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none}#qmx-global-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}.theme-switch{position:relative;display:block;width:60px;height:34px;cursor:pointer;transition:none}.theme-switch input{opacity:0;width:0;height:0}.theme-switch-wrapper{align-self:center}.slider-track{position:absolute;top:0;left:0;width:34px;height:34px;background-color:var(--surface-container-highest);border-radius:17px;box-shadow:inset 2px 2px 4px #0003,inset -2px -2px 4px #ffffff0d;transition:width .3s ease,left .3s ease,border-radius .3s ease,box-shadow .3s ease}.theme-switch:hover .slider-track{width:60px}.theme-switch input:checked+.slider-track{left:26px}.theme-switch:hover input:checked+.slider-track{left:0}.slider-dot{position:absolute;height:26px;width:26px;left:4px;top:4px;background-color:var(--md-sys-color-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 8px #0000004d;transition:transform .3s cubic-bezier(.4,0,.2,1),background-color .3s ease,box-shadow .3s ease}.theme-switch input:checked~.slider-dot{transform:translate(26px);background-color:var(--primary-container)}.slider-dot .icon{position:absolute;width:20px;height:20px;color:var(--md-sys-color-on-primary);transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.2,1)}.sun{opacity:1;transform:translateY(0) rotate(0)}.moon{opacity:0;transform:translateY(20px) rotate(-45deg)}.theme-switch input:checked~.slider-dot .sun{opacity:0;transform:translateY(-20px) rotate(45deg)}.theme-switch input:checked~.slider-dot .moon{opacity:1;transform:translateY(0) rotate(0);color:var(--md-sys-color-on-surface)}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:12px 20px 0;font-size:22px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:background-color .2s,transform .2s;position:relative;flex-shrink:0}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:var(--md-sys-color-primary);transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{padding:0 24px;flex:1;min-height:0;display:flex;flex-direction:column}.qmx-modal-content h3{flex-shrink:0;font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:0 0 8px}.qmx-stats-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0;-webkit-user-select:none;user-select:none;transition:background-color .2s;border-radius:8px}.qmx-stats-header:hover{background-color:#ffffff0d}.qmx-stats-header h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-stats-arrow{font-size:12px;color:var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-stats-header.expanded .qmx-stats-arrow{transform:rotate(180deg)}.qmx-stats-container{position:relative;overflow:hidden;padding:0}.qmx-stats-toggle{position:relative;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-user-select:none;user-select:none;transition:all .3s cubic-bezier(.25,.46,.45,.94);margin:4px 24px;border-radius:10px}.qmx-stats-indicator{font-size:15px;color:var(--md-sys-color-on-surface-variant);transition:all .3s cubic-bezier(.25,.46,.45,.94);position:absolute;z-index:2}.qmx-stats-label{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:0;transform:scale(.95);transition:all .3s cubic-bezier(.25,.46,.45,.94);position:absolute;z-index:1;white-space:nowrap}.qmx-stats-refresh{opacity:0;font-size:15px;transition:all .3s cubic-bezier(.25,.46,.45,.94);position:relative}.qmx-stats-refresh.rotating{animation:rotate360 1s linear}@keyframes rotate360{0%{transform:rotate(0)}to{transform:rotate(360deg)}}.qmx-stats-switcher{opacity:0;font-size:20px;transition:all .3s cubic-bezier(.25,.46,.45,.94);margin:8px 8px 12px}.qmx-stats-toggle:hover{background-color:#ffffff0d;margin:4px 24px 21px}.qmx-stats-toggle:hover .qmx-stats-indicator{transform:translateY(85%)}.qmx-stats-toggle:hover .qmx-stats-label{opacity:1;transform:scale(1)}.qmx-stats-toggle.expanded{height:28px;padding:0 12px;margin:6px 20px}.qmx-stats-toggle.expanded .qmx-stats-indicator{opacity:1;transform:rotate(180deg) scale(1.05);position:relative;margin:9px}.qmx-stats-toggle.expanded .qmx-stats-indicator.transitioning{opacity:0}.qmx-stats-toggle.expanded .qmx-stats-label{opacity:1;transform:scale(1.05);font-size:12px;font-weight:500;position:relative;transition:all .3s cubic-bezier(.25,.46,.45,.94);color:var(--md-sys-color-on-surface)}.qmx-stats-toggle.expanded .qmx-stats-label.transitioning{opacity:0}.qmx-stats-toggle.expanded .qmx-stats-refresh{opacity:1;cursor:pointer;transform:scale(1.05);margin:8px}.qmx-stats-toggle.expanded .qmx-stats-refresh.disabled{opacity:0;transform:translate(100%)}.qmx-stats-toggle.expanded .qmx-stats-switcher{cursor:pointer;opacity:1;position:absolute}.qmx-stats-toggle.expanded #qmx-stats-left{left:60px}.qmx-stats-toggle.expanded #qmx-stats-right{right:60px}.qmx-stats-toggle.expanded .qmx-stats-switcher.disabled{cursor:not-allowed;color:#666}.qmx-stats-toggle.expanded #qmx-stats-left{transform:translate(-55px)}.qmx-stats-toggle.expanded #qmx-stats-right{transform:translate(55px)}.qmx-stats-content{max-height:0;opacity:0;overflow:hidden;transition:max-height .3s cubic-bezier(.25,.46,.45,.94),opacity .2s cubic-bezier(.25,.46,.45,.94) .1s,padding .3s cubic-bezier(.25,.46,.45,.94);padding:0 24px}.qmx-stats-content.expanded{max-height:120px;opacity:1;padding:8px 24px 16px}.qmx-modal-stats{display:flex;gap:1px}.qmx-modal-stats-child{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease;width:88px;float:left;margin-left:2%}.qmx-stat-info-avg,.qmx-stat-info-total,.qmx-stat-info-receivedCount{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-stat-header{display:flex;align-items:baseline;justify-content:center}.qmx-stat-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-stat-details{opacity:1;display:flex;align-items:center;font-size:13px;color:var(--md-sys-color-on-surface-variant);transition:all .3s cubic-bezier(.25,.46,.45,.94);justify-content:center}.qmx-stat-details.transitioning{opacity:0}.qmx-stat-stats{font-weight:500}#qmx-tab-list{overflow-y:auto;flex-grow:1;padding-right:4px;margin-right:-4px}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease}.qmx-tab-list-item:hover{background-color:#ffffff0d}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-tab-header{display:flex;align-items:baseline;justify-content:space-between}.qmx-tab-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-room-id{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.7}.qmx-tab-details{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--md-sys-color-on-surface-variant)}.qmx-tab-status-name{font-weight:500}.qmx-tab-close-btn{flex-shrink:0;background:none;border:none;color:var(--md-sys-color-on-surface-variant);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;opacity:.6;transition:opacity .2s,color .2s,transform .2s}.qmx-tab-close-btn:hover{opacity:1;color:#f44336;transform:scale(1.1)}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}#qmx-settings-modal{width:500px;max-width:95vw}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:background-color .2s,color .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;overflow-x:hidden;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;justify-content:center;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}.qmx-settings-item small{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.8}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}#tab-about{line-height:1.7;font-size:14px}#tab-about h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:20px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#tab-about h4:first-child{margin-top:0}#tab-about p{margin-bottom:10px;color:var(--md-sys-color-on-surface-variant)}#tab-about .version-tag{display:inline-block;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);padding:2px 8px;border-radius:12px;font-size:13px;font-weight:500;margin-left:8px}#tab-about a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#tab-about a:hover{color:#ffd6e1;text-decoration:underline}#qmx-notice-modal{width:450px;max-width:90vw}#qmx-notice-modal .qmx-modal-content{padding:16px 24px}#qmx-notice-modal .qmx-modal-content p{margin-bottom:12px;line-height:1.6;font-size:15px;color:var(--md-sys-color-on-surface-variant)}#qmx-notice-modal .qmx-modal-content ul{margin:12px 0;padding-left:20px}#qmx-notice-modal .qmx-modal-content li{margin-bottom:10px;position:relative;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-modal-content li:before{content:"◆";position:absolute;left:-18px;color:var(--md-sys-color-primary);font-size:12px}#qmx-notice-modal h3{font-size:20px;font-weight:500;margin:0}#qmx-notice-modal h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:16px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#qmx-notice-modal .qmx-warning-text{background-color:#ffc1071a;border-left:4px solid #FFC107;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-warning-text strong{color:#ff8f00}#qmx-notice-modal a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#qmx-notice-modal a:hover{color:#ffd6e1;text-decoration:underline}#qmx-modal-backdrop,#qmx-notice-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible,#qmx-notice-backdrop.visible{opacity:.5;visibility:visible}#qmx-settings-modal,#qmx-notice-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible,#qmx-notice-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-modal-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn.primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:#f443361a}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}';
   importCSS(ControlPanelRefactoredCss);
-  const mainPanelTemplate = (maxTabs) => `
-    <div class="qmx-modal-header">
-        <span>控制中心</span>
-        <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
-    </div>
+  const statsPanelTemplate = `
     <div class="qmx-stats-container">
         <div class="qmx-stats-toggle" id="qmx-stats-toggle">
             <button id="qmx-stats-left" class="qmx-stats-switcher"><</button>
@@ -481,6 +487,13 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
             <div class="qmx-modal-stats" id="qmx-stats-panel"></div>
         </div>
     </div>
+`;
+  const mainPanelTemplate = (maxTabs) => `
+    <div class="qmx-modal-header">
+        <span>控制中心</span>
+        <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
+    </div>
+    ${statsPanelTemplate}
     <div class="qmx-modal-content">
         <h3>监控面板 (<span id="qmx-active-tabs-count">0</span>/${maxTabs})</h3>
         <div id="qmx-tab-list"></div>
@@ -570,7 +583,11 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
                         <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS2.CONTROL_ROOM_ID}">
                     </div>
-                    <div class="qmx-settings-item"></div>
+                    <!-- 新增：第二房间号设置 -->
+                    <div class="qmx-settings-item">
+                        <label for="setting-temp-control-room-id">第二房间号(RID) <span class="qmx-tooltip-icon" data-tooltip-key="temp-control-room">?</span></label>
+                        <input type="number" class="qmx-input" id="setting-temp-control-room-id" value="${SETTINGS2.TEMP_CONTROL_ROOM_RID}">
+                    </div>
                     <div class="qmx-settings-item">
                         <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                         <label class="qmx-toggle">
@@ -757,7 +774,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
         <div class="qmx-settings-footer">
             <button id="qmx-settings-cancel-btn" class="qmx-modal-btn">取消</button>
             <button id="qmx-settings-reset-btn" class="qmx-modal-btn danger">恢复默认</button>
-            <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存并刷新</button>
+            <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存</button>
         </div>
         `;
   };
@@ -1060,11 +1077,15 @@ getCoinRecord: function(current, count, rid, retries = SETTINGS.API_RETRY_COUNT)
     });
   }
   const SettingsPanel = {
+
+RELOAD_REQUIRED_KEYS: [
+],
 show() {
       const modal = document.getElementById("qmx-settings-modal");
       const allTooltips = {
-        "control-room": "只有在此房间号的直播间中才能看到插件面板，看准了再改！",
-        "auto-pause": "自动暂停非控制直播间的视频播放，大幅降低资源占用。",
+        "control-room": "只有在此房间号的直播间中才能看到插件面板，看准了再改！(修改后不会立即刷新，下次进入该房间生效)",
+        "temp-control-room": "备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。",
+"auto-pause": "自动暂停非控制直播间的视频播放，大幅降低资源占用。",
         "initial-script-delay": "页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。",
         "auto-pause-delay": "领取红包后等待多久再次尝试暂停视频。",
         "unresponsive-timeout": "工作页多久未汇报任何状态后，在面板上标记为“无响应”。",
@@ -1093,6 +1114,7 @@ show() {
       document.getElementById("qmx-modal-backdrop").classList.add("visible");
       modal.classList.add("visible");
       document.body.classList.add("qmx-modal-open-scroll-lock");
+      this.updateSaveButtonState();
     },
 hide() {
       const modal = document.getElementById("qmx-settings-modal");
@@ -1102,9 +1124,10 @@ hide() {
         document.getElementById("qmx-modal-backdrop").classList.remove("visible");
       }
     },
-save() {
-      const newSettings = {
+getSettingsFromUI() {
+      return {
 CONTROL_ROOM_ID: document.getElementById("setting-control-room-id").value,
+        TEMP_CONTROL_ROOM_RID: document.getElementById("setting-temp-control-room-id").value,
         AUTO_PAUSE_ENABLED: document.getElementById("setting-auto-pause").checked,
         ENABLE_DANMU_PRO: document.getElementById("setting-danmupro-mode").checked,
         DAILY_LIMIT_ACTION: document.getElementById("setting-daily-limit-action").value,
@@ -1131,12 +1154,54 @@ MAX_WORKER_TABS: parseInt(document.getElementById("setting-max-tabs").value, 10)
         API_RETRY_COUNT: parseInt(document.getElementById("setting-api-retry-count").value, 10),
         API_RETRY_DELAY: parseFloat(document.getElementById("setting-api-retry-delay").value) * 1e3
       };
+    },
+updateSaveButtonState() {
+      const newSettings = this.getSettingsFromUI();
+      let needReload = false;
+      for (const key of Object.keys(newSettings)) {
+        if (SETTINGS[key] !== newSettings[key]) {
+          if (this.RELOAD_REQUIRED_KEYS.includes(key)) {
+            needReload = true;
+            break;
+          }
+        }
+      }
+      const saveBtn = document.getElementById("qmx-settings-save-btn");
+      if (saveBtn) {
+        if (saveBtn.textContent.includes("已保存")) return { newSettings, needReload };
+        if (needReload) {
+          saveBtn.textContent = "保存并刷新";
+        } else {
+          saveBtn.textContent = "保存";
+        }
+      }
+      return { newSettings, needReload };
+    },
+save() {
+      const { newSettings, needReload } = this.updateSaveButtonState();
       const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY, {});
       const finalSettingsToSave = Object.assign(existingUserSettings, newSettings);
       delete finalSettingsToSave.OPEN_TAB_DELAY;
       SettingsManager.save(finalSettingsToSave);
-      alert("设置已保存！页面将刷新以应用所有更改。");
-      window.location.reload();
+      if (needReload) {
+        window.location.reload();
+      } else {
+        SettingsManager.update(newSettings);
+        const saveBtn = document.getElementById("qmx-settings-save-btn");
+        if (saveBtn) {
+          const originalText = saveBtn.textContent;
+          saveBtn.textContent = "已保存~";
+          saveBtn.style.backgroundColor = "var(--status-color-success, #4CAF50)";
+          setTimeout(() => {
+            saveBtn.textContent = originalText;
+            saveBtn.style.backgroundColor = "";
+            this.hide();
+            this.updateSaveButtonState();
+          }, 600);
+        } else {
+          this.hide();
+        }
+      }
     },
 bindPanelEvents(modal) {
       modal.querySelector("#qmx-settings-cancel-btn").onclick = () => this.hide();
@@ -1147,6 +1212,17 @@ bindPanelEvents(modal) {
           window.location.reload();
         }
       };
+      const inputs = modal.querySelectorAll("input, select");
+      inputs.forEach((input) => {
+        input.addEventListener("change", () => this.updateSaveButtonState());
+        input.addEventListener("input", () => this.updateSaveButtonState());
+      });
+      const customOptions = modal.querySelectorAll(".qmx-select-options div");
+      customOptions.forEach((opt) => {
+        opt.addEventListener("click", () => {
+          setTimeout(() => this.updateSaveButtonState(), 10);
+        });
+      });
       modal.querySelectorAll(".tab-link").forEach((button) => {
         button.onclick = (e) => {
           const tabId = e.target.dataset.tab;
@@ -1161,6 +1237,7 @@ bindPanelEvents(modal) {
         themeToggle.addEventListener("change", (e) => {
           const newTheme = e.target.checked ? "dark" : "light";
           ThemeManager.applyTheme(newTheme);
+          this.updateSaveButtonState();
         });
       }
     }
@@ -1267,6 +1344,13 @@ updateInterval: function() {
       globalValue.updateIntervalID = setInterval(() => {
         this.checkUpdate();
       }, typedSettings.STATS_UPDATE_INTERVAL);
+    },
+destroy: function() {
+      if (globalValue.updateIntervalID) {
+        clearInterval(globalValue.updateIntervalID);
+        globalValue.updateIntervalID = void 0;
+      }
+      globalValue.statElements.clear();
     },
 ensureTodayDataExists: function() {
       const today = Utils.formatDateAsBeijing( new Date());
@@ -1506,942 +1590,6 @@ checkUpdate: function() {
           if (currentStatusText.includes("领取到")) {
             this.getCoinListUpdate();
           }
-        }
-      });
-    }
-  };
-  const ControlPage = {
-injectionTarget: null,
-isPanelInjected: false,
-commandChannel: null,
-init() {
-      Utils.log("当前是控制页面，开始设置UI...");
-      this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
-      ThemeManager.applyTheme(SETTINGS.THEME);
-      this.clearClosedTabs();
-      this.createHTML();
-      const qmxModalHeader = document.querySelector(".qmx-modal-header");
-      if (SETTINGS.SHOW_STATS_IN_PANEL) {
-        if (qmxModalHeader) {
-          qmxModalHeader.style.padding = "12px 20px 0px 20px;";
-        }
-        StatsInfo.init();
-      } else {
-        const statsContent = document.querySelector(".qmx-stats-container");
-        if (statsContent && qmxModalHeader) {
-          statsContent.remove();
-          qmxModalHeader.style.padding = "16px 24px";
-        }
-      }
-      this.applyModalMode();
-      this.bindEvents();
-      setInterval(() => {
-        this.renderDashboard();
-        this.cleanupAndMonitorWorkers();
-      }, 1e3);
-      FirstTimeNotice.showCalibrationNotice();
-      window.addEventListener("beforeunload", () => {
-        if (this.commandChannel) {
-          this.commandChannel.close();
-        }
-      });
-      window.addEventListener("resize", () => {
-        this.correctButtonPosition();
-        this.correctModalPosition();
-      });
-    },
-    createHTML() {
-      Utils.log("创建UI的HTML结构...");
-      const modalBackdrop = document.createElement("div");
-      modalBackdrop.id = "qmx-modal-backdrop";
-      const modalContainer = document.createElement("div");
-      modalContainer.id = "qmx-modal-container";
-      modalContainer.innerHTML = mainPanelTemplate(SETTINGS.MAX_WORKER_TABS);
-      document.body.appendChild(modalBackdrop);
-      document.body.appendChild(modalContainer);
-      const mainButton = document.createElement("button");
-      mainButton.id = SETTINGS.DRAGGABLE_BUTTON_ID;
-      mainButton.innerHTML = `<span class="icon">🎁</span>`;
-      document.body.appendChild(mainButton);
-      const settingsModal = document.createElement("div");
-      settingsModal.id = "qmx-settings-modal";
-      document.body.appendChild(settingsModal);
-      const globalTooltip = document.createElement("div");
-      globalTooltip.id = "qmx-global-tooltip";
-      document.body.appendChild(globalTooltip);
-    },
-cleanupAndMonitorWorkers() {
-      const state = GlobalState.get();
-      let stateModified = false;
-      for (const roomId in state.tabs) {
-        const tab = state.tabs[roomId];
-        const timeSinceLastUpdate = Date.now() - tab.lastUpdateTime;
-        if (tab.status === "DISCONNECTED" && timeSinceLastUpdate > SETTINGS.DISCONNECTED_GRACE_PERIOD) {
-          Utils.log(
-            `[监控] 任务 ${roomId} (已断开) 超过 ${SETTINGS.DISCONNECTED_GRACE_PERIOD / 1e3} 秒未重连，执行清理。`
-          );
-          delete state.tabs[roomId];
-          stateModified = true;
-          continue;
-        }
-        if (tab.status === "SWITCHING" && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
-          Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
-          delete state.tabs[roomId];
-          stateModified = true;
-          continue;
-        }
-        if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== "UNRESPONSIVE") {
-          Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`);
-          tab.status = "UNRESPONSIVE";
-          tab.statusText = "心跳失联，请点击激活或关闭此标签页";
-          stateModified = true;
-        }
-      }
-      if (stateModified) {
-        GlobalState.set(state);
-      }
-    },
-bindEvents() {
-      Utils.log("为UI元素绑定事件...");
-      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-      const modalContainer = document.getElementById("qmx-modal-container");
-      const modalBackdrop = document.getElementById("qmx-modal-backdrop");
-      const statsToggle = document.getElementById("qmx-stats-toggle");
-      const statsContent = document.getElementById("qmx-stats-content");
-      if (statsToggle && statsContent) {
-        statsToggle.addEventListener("click", () => {
-          const isExpanded = statsToggle.classList.contains("expanded");
-          if (isExpanded) {
-            statsToggle.classList.remove("expanded");
-            statsContent.classList.remove("expanded");
-          } else {
-            statsToggle.classList.add("expanded");
-            statsContent.classList.add("expanded");
-          }
-        });
-      }
-      this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
-      if (SETTINGS.MODAL_DISPLAY_MODE === "floating") {
-        const modalHeader = modalContainer.querySelector(".qmx-modal-header");
-        this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
-      }
-      document.getElementById("qmx-modal-close-btn").onclick = () => this.hidePanel();
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && modalContainer.classList.contains("visible")) {
-          this.hidePanel();
-        }
-      });
-      if (SETTINGS.MODAL_DISPLAY_MODE !== "inject-rank-list") {
-        modalBackdrop.onclick = () => this.hidePanel();
-      }
-      document.getElementById("qmx-modal-open-btn").onclick = () => this.openOneNewTab();
-      document.getElementById("qmx-modal-settings-btn").onclick = () => SettingsPanel.show();
-      document.getElementById("qmx-modal-close-all-btn").onclick = async () => {
-        if (confirm("确定要关闭所有工作标签页吗？")) {
-          Utils.log("用户请求关闭所有标签页。");
-          Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
-          this.commandChannel.postMessage({ action: "CLOSE_ALL", target: "*" });
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          Utils.log("强制清空全局状态中的标签页列表...");
-          let state = GlobalState.get();
-          if (Object.keys(state.tabs).length > 0) {
-            Utils.log(`清理前还有 ${Object.keys(state.tabs).length} 个标签页残留`);
-            state.tabs = {};
-            GlobalState.set(state);
-          }
-          this.renderDashboard();
-          setTimeout(() => {
-            state = GlobalState.get();
-            if (Object.keys(state.tabs).length > 0) {
-              Utils.log("检测到残留标签页，执行二次清理...");
-              state.tabs = {};
-              GlobalState.set(state);
-              this.renderDashboard();
-            }
-          }, 1e3);
-        }
-      };
-      document.getElementById("qmx-tab-list").addEventListener("click", (e) => {
-        const closeButton = e.target.closest(".qmx-tab-close-btn");
-        if (!closeButton) return;
-        const roomItem = e.target.closest("[data-room-id]");
-        const roomId = roomItem?.dataset.roomId;
-        if (!roomId) return;
-        Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
-        const state = GlobalState.get();
-        delete state.tabs[roomId];
-        GlobalState.set(state);
-        Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
-        this.commandChannel.postMessage({ action: "CLOSE", target: roomId });
-        roomItem.style.opacity = "0";
-        roomItem.style.transform = "scale(0.8)";
-        roomItem.style.transition = "all 0.3s ease";
-        setTimeout(() => roomItem.remove(), 300);
-      });
-    },
-renderDashboard() {
-      const state = GlobalState.get();
-      const tabList = document.getElementById("qmx-tab-list");
-      if (!tabList) return;
-      const tabIds = Object.keys(state.tabs);
-      document.getElementById("qmx-active-tabs-count").textContent = tabIds.length;
-      const statusDisplayMap = {
-        OPENING: "加载中",
-        WAITING: "等待中",
-        CLAIMING: "领取中",
-        SWITCHING: "切换中",
-        DORMANT: "休眠中",
-        ERROR: "出错了",
-        UNRESPONSIVE: "无响应",
-        DISCONNECTED: "已断开",
-        STALLED: "UI节流"
-      };
-      const existingRoomIds = new Set(
-        Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean)
-      );
-      tabIds.forEach((roomId) => {
-        const tabData = state.tabs[roomId];
-        let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
-        let currentStatusText = tabData.statusText;
-        if (tabData.status === "WAITING" && tabData.countdown?.endTime && (!currentStatusText || currentStatusText.startsWith("倒计时") || currentStatusText === "寻找任务中...")) {
-          const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1e3;
-          if (remainingSeconds > 0) {
-            currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
-          } else {
-            currentStatusText = "等待开抢...";
-          }
-        }
-        if (existingItem) {
-          const nicknameEl = existingItem.querySelector(".qmx-tab-nickname");
-          const statusNameEl = existingItem.querySelector(".qmx-tab-status-name");
-          const statusTextEl = existingItem.querySelector(".qmx-tab-status-text");
-          const dotEl = existingItem.querySelector(".qmx-tab-status-dot");
-          if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
-            nicknameEl.textContent = tabData.nickname;
-          }
-          const newStatusName = `[${statusDisplayMap[tabData.status] || tabData.status}]`;
-          if (statusNameEl.textContent !== newStatusName) {
-            statusNameEl.textContent = newStatusName;
-            dotEl.style.backgroundColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
-          }
-          if (statusTextEl.textContent !== currentStatusText) {
-            statusTextEl.textContent = currentStatusText;
-          }
-        } else {
-          const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
-          tabList.appendChild(newItem);
-          requestAnimationFrame(() => {
-            newItem.classList.add("qmx-item-enter-active");
-            setTimeout(() => newItem.classList.remove("qmx-item-enter"), 300);
-          });
-        }
-      });
-      existingRoomIds.forEach((roomId) => {
-        if (!state.tabs[roomId]) {
-          const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
-          if (itemToRemove && !itemToRemove.classList.contains("qmx-item-exit-active")) {
-            Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`);
-            itemToRemove.classList.add("qmx-item-exit-active");
-            setTimeout(() => itemToRemove.remove(), 300);
-          }
-        }
-      });
-      const emptyMsg = tabList.querySelector(".qmx-empty-list-msg");
-      if (tabIds.length === 0) {
-        if (!emptyMsg) {
-          tabList.innerHTML = '<div class="qmx-tab-list-item qmx-empty-list-msg">没有正在运行的任务</div>';
-        }
-      } else if (emptyMsg) {
-        emptyMsg.remove();
-      }
-      this.renderLimitStatus();
-    },
-renderLimitStatus() {
-      let limitState = GlobalState.getDailyLimit();
-      let limitMessageEl = document.getElementById("qmx-limit-message");
-      const openBtn = document.getElementById("qmx-modal-open-btn");
-      if (limitState?.reached && Utils.formatDateAsBeijing(new Date(limitState.timestamp)) !== Utils.formatDateAsBeijing( new Date())) {
-        Utils.log("[控制中心] 新的一天，重置每日上限旗标。");
-        GlobalState.setDailyLimit(false);
-        limitState = null;
-      }
-      if (limitState?.reached) {
-        if (!limitMessageEl) {
-          limitMessageEl = document.createElement("div");
-          limitMessageEl.id = "qmx-limit-message";
-          limitMessageEl.style.cssText = "padding: 10px 24px; background-color: var(--status-color-error); color: white; font-weight: 500; text-align: center;";
-          const header = document.querySelector(".qmx-modal-header");
-          header.parentNode.insertBefore(limitMessageEl, header.nextSibling);
-          document.querySelector(".qmx-modal-header").after(limitMessageEl);
-        }
-        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-          limitMessageEl.textContent = "今日已达上限。任务休眠中，可新增标签页为明日准备。";
-          openBtn.disabled = false;
-          openBtn.textContent = "新增休眠标签页";
-        } else {
-          limitMessageEl.textContent = "今日已达上限。任务已全部停止。";
-          openBtn.disabled = true;
-          openBtn.textContent = "今日已达上限";
-        }
-      } else {
-        if (limitMessageEl) limitMessageEl.remove();
-        openBtn.disabled = false;
-        openBtn.textContent = "打开新房间";
-      }
-    },
-async openOneNewTab() {
-      const openBtn = document.getElementById("qmx-modal-open-btn");
-      if (openBtn.disabled) return;
-      const state = GlobalState.get();
-      const openedCount = Object.keys(state.tabs).length;
-      if (openedCount >= SETTINGS.MAX_WORKER_TABS) {
-        Utils.log(`已达到最大标签页数量 (${SETTINGS.MAX_WORKER_TABS})。`);
-        return;
-      }
-      openBtn.disabled = true;
-      openBtn.textContent = "正在查找...";
-      try {
-        const openedRoomIds = new Set(Object.keys(state.tabs));
-        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
-        const newUrl = apiRoomUrls.find((url) => {
-          const rid = url.match(/\/(\d+)/)?.[1];
-          return rid && !openedRoomIds.has(rid);
-        });
-        if (newUrl) {
-          const newRoomId = newUrl.match(/\/(\d+)/)[1];
-          const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-          pendingWorkers.push(newRoomId);
-          GM_setValue("qmx_pending_workers", pendingWorkers);
-          Utils.log(`已将房间 ${newRoomId} 加入待处理列表。`);
-          GlobalState.updateWorker(newRoomId, "OPENING", "正在打开...");
-          if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
-            localStorage.setItem("newWebLive", "A");
-          }
-          GM_openInTab(newUrl, { active: false, setParent: true });
-          Utils.log(`打开指令已发送: ${newUrl}`);
-        } else {
-          Utils.log("未能找到新的、未打开的房间。");
-          openBtn.textContent = "无新房间";
-          await Utils.sleep(SETTINGS.UI_FEEDBACK_DELAY);
-        }
-      } catch (error) {
-        Utils.log(`查找或打开房间时出错: ${error.message}`);
-        openBtn.textContent = "查找出错";
-        await Utils.sleep(SETTINGS.UI_FEEDBACK_DELAY);
-      } finally {
-        openBtn.disabled = false;
-      }
-    },
-setupDrag(element, storageKey, onClick, handle = element) {
-      let isMouseDown = false;
-      let hasDragged = false;
-      let startX, startY, initialX, initialY;
-      const clickThreshold = 5;
-      const setPosition = (x, y) => {
-        element.style.setProperty("--tx", `${x}px`);
-        element.style.setProperty("--ty", `${y}px`);
-      };
-      const savedPos = GM_getValue(storageKey);
-      let currentRatio = null;
-      if (savedPos) {
-        if (typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
-          currentRatio = savedPos;
-        } else if (SETTINGS.CONVERT_LEGACY_POSITION && typeof savedPos.x === "number" && typeof savedPos.y === "number") {
-          Utils.log(`[位置迁移] 发现旧的像素位置，正在转换为比例位置...`);
-          const movableWidth = window.innerWidth - element.offsetWidth;
-          const movableHeight = window.innerHeight - element.offsetHeight;
-          currentRatio = {
-            ratioX: Math.max(0, Math.min(1, savedPos.x / movableWidth)),
-            ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight))
-          };
-          GM_setValue(storageKey, currentRatio);
-        }
-      }
-      if (currentRatio) {
-        const newX = currentRatio.ratioX * (window.innerWidth - element.offsetWidth);
-        const newY = currentRatio.ratioY * (window.innerHeight - element.offsetHeight);
-        setPosition(newX, newY);
-      } else {
-        if (element.id === SETTINGS.DRAGGABLE_BUTTON_ID) {
-          const padding = SETTINGS.DRAG_BUTTON_DEFAULT_PADDING;
-          const defaultX = window.innerWidth - element.offsetWidth - padding;
-          const defaultY = padding;
-          setPosition(defaultX, defaultY);
-        } else {
-          const defaultX = (window.innerWidth - element.offsetWidth) / 2;
-          const defaultY = (window.innerHeight - element.offsetHeight) / 2;
-          setPosition(defaultX, defaultY);
-        }
-      }
-      const onMouseDown = (e) => {
-        if (e.button !== 0) return;
-        isMouseDown = true;
-        hasDragged = false;
-        const rect = element.getBoundingClientRect();
-        startX = e.clientX;
-        startY = e.clientY;
-        initialX = rect.left;
-        initialY = rect.top;
-        element.classList.add("is-dragging");
-        handle.style.cursor = "grabbing";
-        document.addEventListener("mousemove", onMouseMove);
-        document.addEventListener("mouseup", onMouseUp, { once: true });
-      };
-      const onMouseMove = (e) => {
-        if (!isMouseDown) return;
-        e.preventDefault();
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        if (!hasDragged && Math.sqrt(dx * dx + dy * dy) > clickThreshold) {
-          hasDragged = true;
-        }
-        let newX = initialX + dx;
-        let newY = initialY + dy;
-        const maxX = window.innerWidth - element.offsetWidth;
-        const maxY = window.innerHeight - element.offsetHeight;
-        newX = Math.max(0, Math.min(newX, maxX));
-        newY = Math.max(0, Math.min(newY, maxY));
-        setPosition(newX, newY);
-      };
-      const onMouseUp = () => {
-        isMouseDown = false;
-        document.removeEventListener("mousemove", onMouseMove);
-        element.classList.remove("is-dragging");
-        handle.style.cursor = "grab";
-        if (hasDragged) {
-          const finalRect = element.getBoundingClientRect();
-          const movableWidth = window.innerWidth - element.offsetWidth;
-          const movableHeight = window.innerHeight - element.offsetHeight;
-          const ratioX = movableWidth > 0 ? Math.max(0, Math.min(1, finalRect.left / movableWidth)) : 0;
-          const ratioY = movableHeight > 0 ? Math.max(0, Math.min(1, finalRect.top / movableHeight)) : 0;
-          GM_setValue(storageKey, { ratioX, ratioY });
-        } else if (onClick && typeof onClick === "function") {
-          onClick();
-        }
-      };
-      handle.addEventListener("mousedown", onMouseDown);
-    },
-showPanel() {
-      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-      const modalContainer = document.getElementById("qmx-modal-container");
-      mainButton.classList.add("hidden");
-      if (this.isPanelInjected) {
-        this.injectionTarget.classList.add("qmx-hidden");
-        modalContainer.classList.remove("qmx-hidden");
-      } else {
-        modalContainer.classList.add("visible");
-        if (SETTINGS.MODAL_DISPLAY_MODE === "centered") {
-          document.getElementById("qmx-modal-backdrop").classList.add("visible");
-        }
-      }
-      Utils.log("控制面板已显示。");
-    },
-hidePanel() {
-      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-      const modalContainer = document.getElementById("qmx-modal-container");
-      mainButton.classList.remove("hidden");
-      if (this.isPanelInjected) {
-        modalContainer.classList.add("qmx-hidden");
-        if (this.injectionTarget) {
-          this.injectionTarget.classList.remove("qmx-hidden");
-        }
-      } else {
-        modalContainer.classList.remove("visible");
-        if (SETTINGS.MODAL_DISPLAY_MODE === "centered") {
-          document.getElementById("qmx-modal-backdrop").classList.remove("visible");
-        }
-      }
-      Utils.log("控制面板已隐藏。");
-    },
-createTaskItem(roomId, tabData, statusMap, statusText) {
-      const newItem = document.createElement("div");
-      newItem.className = "qmx-tab-list-item qmx-item-enter";
-      newItem.dataset.roomId = roomId;
-      const statusColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
-      const nickname = tabData.nickname || "加载中...";
-      const statusName = statusMap[tabData.status] || tabData.status;
-      newItem.innerHTML = `
-                <div class="qmx-tab-status-dot" style="background-color: ${statusColor};"></div>
-                <div class="qmx-tab-info">
-                    <div class="qmx-tab-header">
-                        <span class="qmx-tab-nickname">${nickname}</span>
-                        <span class="qmx-tab-room-id">${roomId}</span>
-                    </div>
-                    <div class="qmx-tab-details">
-                        <span class="qmx-tab-status-name">[${statusName}]</span>
-                        <span class="qmx-tab-status-text">${statusText}</span>
-                    </div>
-                </div>
-                <button class="qmx-tab-close-btn" title="关闭该标签页">×</button>
-            `;
-      return newItem;
-    },
-applyModalMode() {
-      const modalContainer = document.getElementById("qmx-modal-container");
-      if (!modalContainer) return;
-      const mode = SETTINGS.MODAL_DISPLAY_MODE;
-      Utils.log(`尝试应用模态框模式: ${mode}`);
-      if (mode === "inject-rank-list") {
-        const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
-          const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
-          if (target) {
-            Utils.log("注入目标已找到，开始注入...");
-            this.injectionTarget = target;
-            this.isPanelInjected = true;
-            target.parentNode.insertBefore(modalContainer, target.nextSibling);
-            modalContainer.classList.add("mode-inject-rank-list", "qmx-hidden");
-          } else if (retries > 0) {
-            setTimeout(() => waitForTarget(retries - 1, interval), interval);
-          } else {
-            Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
-            Utils.log("[降级] 自动切换到 'floating' 备用模式。");
-            SETTINGS.MODAL_DISPLAY_MODE = "floating";
-            this.applyModalMode();
-            SETTINGS.MODAL_DISPLAY_MODE = "inject-rank-list";
-          }
-        };
-        waitForTarget();
-        return;
-      }
-      this.isPanelInjected = false;
-      modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
-      modalContainer.classList.add(`mode-${mode}`);
-    },
-correctPosition(elementId, storageKey) {
-      const element = document.getElementById(elementId);
-      if (!element) return;
-      const savedPos = GM_getValue(storageKey);
-      if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
-        const newX = savedPos.ratioX * (window.innerWidth - element.offsetWidth);
-        const newY = savedPos.ratioY * (window.innerHeight - element.offsetHeight);
-        element.style.setProperty("--tx", `${newX}px`);
-        element.style.setProperty("--ty", `${newY}px`);
-      }
-    },
-correctButtonPosition() {
-      this.correctPosition(SETTINGS.DRAGGABLE_BUTTON_ID, SETTINGS.BUTTON_POS_STORAGE_KEY);
-    },
-correctModalPosition() {
-      if (SETTINGS.MODAL_DISPLAY_MODE !== "floating" || this.isPanelInjected) {
-        return;
-      }
-      this.correctPosition("qmx-modal-container", "douyu_qmx_modal_position");
-    },
-clearClosedTabs() {
-      const state = GlobalState.get();
-      if (state.tabs && Object.keys(state.tabs).length > 0) {
-        Utils.log("检测到残留的标签页状态，正在清空...");
-        state.tabs = {};
-        GlobalState.set(state);
-        Utils.log("已清空残留的标签页状态");
-      }
-    }
-  };
-  const DOM = {
-async findElement(selector, timeout = SETTINGS.PANEL_WAIT_TIMEOUT, parent = document) {
-      const startTime = Date.now();
-      while (Date.now() - startTime < timeout) {
-        const element = parent.querySelector(selector);
-        if (element && window.getComputedStyle(element).display !== "none") {
-          return element;
-        }
-        await Utils.sleep(300);
-      }
-      Utils.log(`查找元素超时: ${selector}`);
-      return null;
-    },
-async safeClick(element, description) {
-      if (!element) {
-        return false;
-      }
-      try {
-        if (window.getComputedStyle(element).display === "none") {
-          return false;
-        }
-        await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY / 2, SETTINGS.MAX_DELAY / 2));
-        element.click();
-        await Utils.sleep(Utils.getRandomDelay());
-        return true;
-      } catch (error) {
-        Utils.log(`[点击异常] ${description} 时发生错误: ${error.message}`);
-        return false;
-      }
-    },
-async checkForLimitPopup() {
-      const limitPopup = await this.findElement(SETTINGS.SELECTORS.limitReachedPopup, 3e3);
-      if (limitPopup && limitPopup.textContent.includes("已达上限")) {
-        Utils.log("捕获到“已达上限”弹窗！");
-        return true;
-      }
-      return false;
-    }
-  };
-  const WorkerPage = {
-healthCheckTimeoutId: null,
-    currentTaskEndTime: null,
-    lastHealthCheckTime: null,
-    lastPageCountdown: null,
-    stallLevel: 0,
-remainingTimeMap: new Map(),
-consecutiveStallCount: 0,
-    previousDeviation: 0,
-
-async init() {
-      Utils.log("混合模式工作单元初始化...");
-      const roomId = Utils.getCurrentRoomId();
-      if (!roomId) {
-        Utils.log("无法识别当前房间ID，脚本停止。");
-        return;
-      }
-      GlobalState.updateWorker(roomId, "OPENING", "页面加载中...", { countdown: null, nickname: null });
-      await Utils.sleep(1e3);
-      this.startCommandListener(roomId);
-      window.addEventListener("beforeunload", () => {
-        GlobalState.updateWorker(Utils.getCurrentRoomId(), "DISCONNECTED", "连接已断开...");
-        if (this.pauseSentinelInterval) {
-          clearInterval(this.pauseSentinelInterval);
-        }
-      });
-      Utils.log("正在等待页面关键元素 (#js-player-video) 加载...");
-      const criticalElement = await DOM.findElement(SETTINGS.SELECTORS.criticalElement, SETTINGS.ELEMENT_WAIT_TIMEOUT);
-      if (!criticalElement) {
-        Utils.log("页面关键元素加载超时，此标签页可能无法正常工作，即将关闭。");
-        await this.selfClose(roomId);
-        return;
-      }
-      Utils.log("页面关键元素已加载。");
-      Utils.log("开始检测 UI 版本 和红包活动...");
-      if (window.location.href.includes("/beta")) {
-        GlobalState.updateWorker(roomId, "OPENING", "切换旧版UI...");
-        localStorage.setItem("newWebLive", "A");
-        window.location.href = window.location.href.replace("/beta", "");
-      }
-      Utils.log("确认进入稳定工作状态，执行身份核销。");
-      const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-      const myIndex = pendingWorkers.indexOf(roomId);
-      if (myIndex > -1) {
-        pendingWorkers.splice(myIndex, 1);
-        GM_setValue("qmx_pending_workers", pendingWorkers);
-        Utils.log(`房间 ${roomId} 已从待处理列表中移除。`);
-      }
-      const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
-      const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
-      GlobalState.updateWorker(roomId, "WAITING", "寻找任务中...", { nickname, countdown: null });
-      const limitState = GlobalState.getDailyLimit();
-      if (limitState?.reached) {
-        Utils.log("初始化检查：检测到全局上限旗标。");
-        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-          await this.enterDormantMode();
-        } else {
-          await this.selfClose(roomId);
-        }
-        return;
-      }
-      this.findAndExecuteNextTask(roomId);
-      if (SETTINGS.AUTO_PAUSE_ENABLED) {
-        this.pauseSentinelInterval = setInterval(() => this.autoPauseVideo(), 8e3);
-      }
-    },
-    async findAndExecuteNextTask(roomId) {
-      if (this.healthCheckTimeoutId) {
-        clearTimeout(this.healthCheckTimeoutId);
-        this.healthCheckTimeoutId = null;
-      }
-      this.stallLevel = 0;
-      const limitState = GlobalState.getDailyLimit();
-      if (limitState?.reached) {
-        Utils.log(`[上限检查] 房间 ${roomId} 检测到已达每日上限。`);
-        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-          await this.enterDormantMode();
-        } else {
-          await this.selfClose(roomId);
-        }
-        return;
-      }
-      if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
-      const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
-      if (!redEnvelopeDiv) {
-        GlobalState.updateWorker(roomId, "SWITCHING", "无活动, 切换中", { countdown: null });
-        await this.switchRoom();
-        return;
-      }
-      const statusSpan = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-      const statusText = statusSpan ? statusSpan.textContent.trim() : "";
-      if (statusText.includes(":")) {
-        const [minutes, seconds] = statusText.split(":").map(Number);
-        const remainingSeconds = minutes * 60 + seconds;
-        const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
-        this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
-        if (Array.from(this.remainingTimeMap.values()).some((value) => value > 3)) {
-          GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
-          await this.switchRoom();
-          return;
-        }
-        this.currentTaskEndTime = Date.now() + remainingSeconds * 1e3;
-        this.lastHealthCheckTime = Date.now();
-        this.lastPageCountdown = remainingSeconds;
-        Utils.log(`发现新任务：倒计时 ${statusText}。`);
-        GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${statusText}`, {
-          countdown: { endTime: this.currentTaskEndTime }
-        });
-        const wakeUpDelay = Math.max(0, remainingSeconds * 1e3 - 1500);
-        Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1e3)} 秒后唤醒执行任务。`);
-        setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
-        this.startHealthChecks(roomId, redEnvelopeDiv);
-      } else if (statusText.includes("抢") || statusText.includes("领")) {
-        GlobalState.updateWorker(roomId, "CLAIMING", "立即领取中...");
-        await this.claimAndRecheck(roomId);
-      } else {
-        GlobalState.updateWorker(roomId, "WAITING", `状态未知, 稍后重试`, { countdown: null });
-        setTimeout(() => this.findAndExecuteNextTask(roomId), 3e4);
-      }
-    },
-startHealthChecks(roomId, redEnvelopeDiv) {
-      const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
-      const STALL_THRESHOLD = 4;
-      const check = () => {
-        const currentPageStatus = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer)?.textContent.trim();
-        if (!currentPageStatus || !currentPageStatus.includes(":")) {
-          return;
-        }
-        const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1e3;
-        const [pMin, pSec] = currentPageStatus.split(":").map(Number);
-        const pageRemainingSeconds = pMin * 60 + pSec;
-        const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
-        const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
-        const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
-        Utils.log(
-          `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
-        );
-        Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? "开启" : "关闭"}`);
-        if (SETTINGS.CALIBRATION_MODE_ENABLED) {
-          if (deviation <= STALL_THRESHOLD) {
-            const difference = scriptRemainingSeconds - pageRemainingSeconds;
-            this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1e3;
-            if (deviation > 0.1) {
-              const direction = difference > 0 ? "慢" : "快";
-              const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
-              Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
-              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, {
-                countdown: { endTime: this.currentTaskEndTime }
-              });
-              setTimeout(() => {
-                if (this.currentTaskEndTime > Date.now()) {
-                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
-                    countdown: { endTime: this.currentTaskEndTime }
-                  });
-                }
-              }, 2500);
-            } else {
-              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
-                countdown: { endTime: this.currentTaskEndTime }
-              });
-            }
-            this.consecutiveStallCount = 0;
-            this.previousDeviation = 0;
-            this.stallLevel = 0;
-          } else {
-            const deviationIncreasing = deviation > this.previousDeviation;
-            this.previousDeviation = deviation;
-            if (deviationIncreasing) {
-              this.consecutiveStallCount++;
-              Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
-            } else {
-              this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
-            }
-            if (this.consecutiveStallCount >= 3) {
-              Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
-              GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
-              clearTimeout(this.healthCheckTimeoutId);
-              this.switchRoom();
-              return;
-            }
-            this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, {
-              countdown: { endTime: this.currentTaskEndTime }
-            });
-          }
-        } else {
-          if (deviation > STALL_THRESHOLD) {
-            if (this.stallLevel === 0) {
-              Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
-            }
-            this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, {
-              countdown: { endTime: this.currentTaskEndTime }
-            });
-          } else {
-            if (this.stallLevel > 0) {
-              Utils.log("[哨兵] UI已从节流中恢复。");
-              this.stallLevel = 0;
-            }
-            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, {
-              countdown: { endTime: this.currentTaskEndTime }
-            });
-          }
-        }
-        if (scriptRemainingSeconds > CHECK_INTERVAL / 1e3 + 1) {
-          this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
-        }
-      };
-      this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
-    },
-async claimAndRecheck(roomId) {
-      if (this.healthCheckTimeoutId) {
-        clearTimeout(this.healthCheckTimeoutId);
-        this.healthCheckTimeoutId = null;
-      }
-      Utils.log("开始执行领取流程...");
-      GlobalState.updateWorker(roomId, "CLAIMING", "尝试打开红包...", { countdown: null });
-      const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
-      if (!await DOM.safeClick(redEnvelopeDiv, "右下角红包区域")) {
-        Utils.log("点击红包区域失败，重新寻找任务。");
-        await Utils.sleep(2e3);
-        this.findAndExecuteNextTask(roomId);
-        return;
-      }
-      const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
-      if (!popup) {
-        Utils.log("等待红包弹窗超时，重新寻找任务。");
-        await Utils.sleep(2e3);
-        this.findAndExecuteNextTask(roomId);
-        return;
-      }
-      const openBtn = popup.querySelector(SETTINGS.SELECTORS.openButton);
-      if (await DOM.safeClick(openBtn, "红包弹窗的打开按钮")) {
-        if (await DOM.checkForLimitPopup()) {
-          GlobalState.setDailyLimit(true);
-          Utils.log("检测到每日上限！");
-          if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-            await this.enterDormantMode();
-          } else {
-            await this.selfClose(roomId);
-          }
-          return;
-        }
-        await Utils.sleep(1500);
-        const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3e3, popup);
-        const reward = successIndicator ? "领取成功 " : "空包或失败";
-        Utils.log(`领取操作完成，结果: ${reward}`);
-        GlobalState.updateWorker(roomId, "WAITING", `领取到: ${reward}`, { countdown: null });
-        const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
-        await DOM.safeClick(closeBtn, "领取结果弹窗的关闭按钮");
-      } else {
-        Utils.log("点击打开按钮失败。");
-      }
-      STATE.lastActionTime = Date.now();
-      Utils.log("操作完成，2秒后在本房间内寻找下一个任务...");
-      await Utils.sleep(2e3);
-      this.findAndExecuteNextTask(roomId);
-    },
-async autoPauseVideo() {
-      if (STATE.isSwitchingRoom || Date.now() - STATE.lastActionTime < SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION) {
-        return;
-      }
-      Utils.log("正在寻找暂停按钮...");
-      const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5e3);
-      if (pauseBtn) {
-        if (await DOM.safeClick(pauseBtn, "暂停按钮")) {
-          Utils.log("视频已通过脚本暂停。");
-        }
-      }
-    },
-async switchRoom() {
-      if (this.healthCheckTimeoutId) {
-        clearTimeout(this.healthCheckTimeoutId);
-        this.healthCheckTimeoutId = null;
-      }
-      if (STATE.isSwitchingRoom) return;
-      STATE.isSwitchingRoom = true;
-      Utils.log("开始执行切换房间流程...");
-      const currentRoomId = Utils.getCurrentRoomId();
-      GlobalState.updateWorker(currentRoomId, "SWITCHING", "查找新房间...");
-      try {
-        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
-        const currentState = GlobalState.get();
-        const openedRoomIds = new Set(Object.keys(currentState.tabs));
-        const nextUrl = apiRoomUrls.find((url) => {
-          const rid = url.match(/\/(\d+)/)?.[1];
-          return rid && !openedRoomIds.has(rid);
-        });
-        if (nextUrl) {
-          Utils.log(`确定下一个房间链接: ${nextUrl}`);
-          const nextRoomId = nextUrl.match(/\/(\d+)/)[1];
-          const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-          pendingWorkers.push(nextRoomId);
-          GM_setValue("qmx_pending_workers", pendingWorkers);
-          Utils.log(`已将房间 ${nextRoomId} 加入待处理列表。`);
-          if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
-            localStorage.setItem("newWebLive", "A");
-          }
-          GM_openInTab(nextUrl, { active: false, setParent: true });
-          await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
-          await this.selfClose(currentRoomId);
-        } else {
-          Utils.log("API未能返回任何新的、未打开的房间，将关闭当前页。");
-          await this.selfClose(currentRoomId);
-        }
-      } catch (error) {
-        Utils.log(`切换房间时发生严重错误: ${error.message}`);
-        await this.selfClose(currentRoomId);
-      }
-    },
-async enterDormantMode() {
-      const roomId = Utils.getCurrentRoomId();
-      Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
-      GlobalState.updateWorker(roomId, "DORMANT", "休眠中 (等待北京时间0点)", { countdown: null });
-      const now = Utils.getBeijingTime();
-      const tomorrow = new Date(now.getTime());
-      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-      tomorrow.setUTCHours(0, 0, 30, 0);
-      const msUntilMidnight = tomorrow.getTime() - now.getTime();
-      Utils.log(`将在 ${Math.round(msUntilMidnight / 1e3 / 60)} 分钟后自动刷新页面 (基于北京时间)。`);
-      setTimeout(() => window.location.reload(), msUntilMidnight);
-    },
-async selfClose(roomId, fromCloseAll = false) {
-      Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
-      if (this.pauseSentinelInterval) {
-        clearInterval(this.pauseSentinelInterval);
-      }
-      if (fromCloseAll) {
-        Utils.log(`[关闭所有] 跳过状态更新，直接关闭标签页 (房间: ${roomId})`);
-        GlobalState.removeWorker(roomId);
-        await Utils.sleep(100);
-        this.closeTab();
-        return;
-      }
-      GlobalState.updateWorker(roomId, "SWITCHING", "任务结束，关闭中...");
-      await Utils.sleep(100);
-      GlobalState.removeWorker(roomId);
-      await Utils.sleep(300);
-      this.closeTab();
-    },
-closeTab() {
-      try {
-        window.close();
-      } catch (e) {
-        window.location.replace("about:blank");
-        Utils.log(`关闭失败，故障为: ${e.message}`);
-      }
-    },
-
-startCommandListener(roomId) {
-      this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
-      Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
-      this.commandChannel.onmessage = (event) => {
-        const { action, target } = event.data;
-        if (target === roomId || target === "*") {
-          Utils.log(`接收到广播指令: ${action} for target ${target}`);
-          if (action === "CLOSE") {
-            this.selfClose(roomId, false);
-          } else if (action === "CLOSE_ALL") {
-            this.selfClose(roomId, true);
-          }
-        }
-      };
-      window.addEventListener("beforeunload", () => {
-        if (this.commandChannel) {
-          this.commandChannel.close();
         }
       });
     }
@@ -6816,6 +5964,8 @@ activeIndex: -1,
 isInSelectionMode: false,
 debounceTimer: null,
 processedInputs: new WeakSet(),
+boundHandlers: {},
+valueWatcher: null,
 async init() {
       NativeSetter.init();
       await UIManager.init();
@@ -6827,14 +5977,21 @@ async init() {
       console.log("InputManager initialized");
     },
 bindInputEvents() {
-      document.addEventListener("focusin", this.handleFocusIn.bind(this));
-      document.addEventListener("focusout", this.handleFocusOut.bind(this));
-      document.addEventListener("keydown", this.handleKeyDown.bind(this), true);
-      document.addEventListener("input", this.handleInput.bind(this));
+      this.boundHandlers = {
+        focusin: this.handleFocusIn.bind(this),
+        focusout: this.handleFocusOut.bind(this),
+        keydown: this.handleKeyDown.bind(this),
+        input: this.handleInput.bind(this)
+      };
+      document.addEventListener("focusin", this.boundHandlers.focusin);
+      document.addEventListener("focusout", this.boundHandlers.focusout);
+      document.addEventListener("keydown", this.boundHandlers.keydown, true);
+      document.addEventListener("input", this.boundHandlers.input);
       this.startInputValueWatcher();
     },
 startInputValueWatcher() {
-      setInterval(() => {
+      if (this.valueWatcher) clearInterval(this.valueWatcher);
+      this.valueWatcher = setInterval(() => {
         if (this.currentInput && this.currentSuggestions.length > 0) {
           const currentValue = this.currentInput.value;
           if (currentValue.length === 0) {
@@ -6845,6 +6002,27 @@ startInputValueWatcher() {
           }
         }
       }, 100);
+    },
+destroy() {
+      if (this.boundHandlers.focusin) {
+        document.removeEventListener("focusin", this.boundHandlers.focusin);
+        document.removeEventListener("focusout", this.boundHandlers.focusout);
+        document.removeEventListener("keydown", this.boundHandlers.keydown, true);
+        document.removeEventListener("input", this.boundHandlers.input);
+        this.boundHandlers = {};
+      }
+      if (this.valueWatcher) {
+        clearInterval(this.valueWatcher);
+        this.valueWatcher = null;
+      }
+      UIManager.destroy();
+      InputDetector.destroy();
+      this.currentInput = null;
+      this.currentSuggestions = [];
+      this.activeIndex = -1;
+      this.isInSelectionMode = false;
+      this.processedInputs = new WeakSet();
+      console.log("InputManager destroyed");
     },
 handleInputDetected(input, type) {
       if (this.processedInputs.has(input)) return;
@@ -7235,6 +6413,16 @@ async init() {
         Utils.log(`[弹幕助手] 初始化失败: ${error.message}`, "error");
       }
     },
+destroy() {
+      if (!this.initialized) return;
+      try {
+        InputManager.destroy();
+        this.initialized = false;
+        Utils.log("[弹幕助手] 模块已关闭");
+      } catch (error) {
+        Utils.log(`[弹幕助手] 关闭失败: ${error.message}`, "error");
+      }
+    },
 async firstTimeImport() {
       try {
         const dataCount = await DanmukuDB.getDataCount();
@@ -7250,6 +6438,1011 @@ async firstTimeImport() {
       } catch (error) {
         Utils.log(`[弹幕助手] 检查首次导入时发生错误: ${error.message}`, "error");
       }
+    }
+  };
+  const ControlPage = {
+injectionTarget: null,
+isPanelInjected: false,
+commandChannel: null,
+init() {
+      Utils.log("当前是控制页面，开始设置UI...");
+      this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
+      ThemeManager.applyTheme(SETTINGS.THEME);
+      this.clearClosedTabs();
+      this.createHTML();
+      const qmxModalHeader = document.querySelector(".qmx-modal-header");
+      if (SETTINGS.SHOW_STATS_IN_PANEL) {
+        if (qmxModalHeader) {
+          qmxModalHeader.style.padding = "12px 20px 0px 20px;";
+        }
+        StatsInfo.init();
+      } else {
+        const statsContent = document.querySelector(".qmx-stats-container");
+        if (statsContent && qmxModalHeader) {
+          statsContent.remove();
+          qmxModalHeader.style.padding = "16px 24px";
+        }
+      }
+      this.applyModalMode();
+      this.bindEvents();
+      window.addEventListener("qmx-settings-update", (e) => {
+        this.handleSettingsUpdate(e.detail);
+      });
+      setInterval(() => {
+        this.renderDashboard();
+        this.cleanupAndMonitorWorkers();
+      }, 1e3);
+      FirstTimeNotice.showCalibrationNotice();
+      window.addEventListener("beforeunload", () => {
+        if (this.commandChannel) {
+          this.commandChannel.close();
+        }
+      });
+      window.addEventListener("resize", () => {
+        this.correctButtonPosition();
+        this.correctModalPosition();
+      });
+    },
+handleSettingsUpdate(newSettings) {
+      Utils.log("[ControlPage] 检测到设置更新，正在应用...");
+      if (newSettings.MODAL_DISPLAY_MODE) {
+        this.applyModalMode();
+        this.correctModalPosition();
+      }
+      if (typeof newSettings.ENABLE_DANMU_PRO !== "undefined") {
+        if (newSettings.ENABLE_DANMU_PRO) {
+          DanmuPro.init();
+        } else {
+          DanmuPro.destroy();
+        }
+      }
+      if (typeof newSettings.SHOW_STATS_IN_PANEL !== "undefined") {
+        this.toggleStatsPanel(newSettings.SHOW_STATS_IN_PANEL);
+      }
+      if (newSettings.STATS_UPDATE_INTERVAL && SETTINGS.SHOW_STATS_IN_PANEL) {
+        StatsInfo.updateInterval();
+      }
+    },
+toggleStatsPanel(show) {
+      const qmxModalHeader = document.querySelector(".qmx-modal-header");
+      let statsContent = document.querySelector(".qmx-stats-container");
+      if (show) {
+        if (!statsContent) {
+          const tempDiv = document.createElement("div");
+          tempDiv.innerHTML = statsPanelTemplate;
+          statsContent = tempDiv.firstElementChild;
+          qmxModalHeader.after(statsContent);
+          const statsToggle = document.getElementById("qmx-stats-toggle");
+          const statsContentEl = document.getElementById("qmx-stats-content");
+          if (statsToggle && statsContentEl) {
+            statsToggle.addEventListener("click", () => {
+              const isExpanded = statsToggle.classList.contains("expanded");
+              if (isExpanded) {
+                statsToggle.classList.remove("expanded");
+                statsContentEl.classList.remove("expanded");
+              } else {
+                statsToggle.classList.add("expanded");
+                statsContentEl.classList.add("expanded");
+              }
+            });
+          }
+        }
+        if (qmxModalHeader) {
+          qmxModalHeader.style.padding = "12px 20px 0px 20px;";
+        }
+        StatsInfo.init();
+      } else {
+        if (statsContent) {
+          statsContent.remove();
+        }
+        if (qmxModalHeader) {
+          qmxModalHeader.style.padding = "16px 24px";
+        }
+        StatsInfo.destroy();
+      }
+    },
+    createHTML() {
+      Utils.log("创建UI的HTML结构...");
+      const modalBackdrop = document.createElement("div");
+      modalBackdrop.id = "qmx-modal-backdrop";
+      const modalContainer = document.createElement("div");
+      modalContainer.id = "qmx-modal-container";
+      modalContainer.innerHTML = mainPanelTemplate(SETTINGS.MAX_WORKER_TABS);
+      document.body.appendChild(modalBackdrop);
+      document.body.appendChild(modalContainer);
+      const mainButton = document.createElement("button");
+      mainButton.id = SETTINGS.DRAGGABLE_BUTTON_ID;
+      mainButton.innerHTML = `<span class="icon">🎁</span>`;
+      document.body.appendChild(mainButton);
+      const settingsModal = document.createElement("div");
+      settingsModal.id = "qmx-settings-modal";
+      document.body.appendChild(settingsModal);
+      const globalTooltip = document.createElement("div");
+      globalTooltip.id = "qmx-global-tooltip";
+      document.body.appendChild(globalTooltip);
+    },
+cleanupAndMonitorWorkers() {
+      const state = GlobalState.get();
+      let stateModified = false;
+      for (const roomId in state.tabs) {
+        const tab = state.tabs[roomId];
+        const timeSinceLastUpdate = Date.now() - tab.lastUpdateTime;
+        if (tab.status === "DISCONNECTED" && timeSinceLastUpdate > SETTINGS.DISCONNECTED_GRACE_PERIOD) {
+          Utils.log(
+            `[监控] 任务 ${roomId} (已断开) 超过 ${SETTINGS.DISCONNECTED_GRACE_PERIOD / 1e3} 秒未重连，执行清理。`
+          );
+          delete state.tabs[roomId];
+          stateModified = true;
+          continue;
+        }
+        if (tab.status === "SWITCHING" && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
+          Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
+          delete state.tabs[roomId];
+          stateModified = true;
+          continue;
+        }
+        if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== "UNRESPONSIVE") {
+          Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`);
+          tab.status = "UNRESPONSIVE";
+          tab.statusText = "心跳失联，请点击激活或关闭此标签页";
+          stateModified = true;
+        }
+      }
+      if (stateModified) {
+        GlobalState.set(state);
+      }
+    },
+bindEvents() {
+      Utils.log("为UI元素绑定事件...");
+      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+      const modalContainer = document.getElementById("qmx-modal-container");
+      const modalBackdrop = document.getElementById("qmx-modal-backdrop");
+      const statsToggle = document.getElementById("qmx-stats-toggle");
+      const statsContent = document.getElementById("qmx-stats-content");
+      if (statsToggle && statsContent) {
+        statsToggle.addEventListener("click", () => {
+          const isExpanded = statsToggle.classList.contains("expanded");
+          if (isExpanded) {
+            statsToggle.classList.remove("expanded");
+            statsContent.classList.remove("expanded");
+          } else {
+            statsToggle.classList.add("expanded");
+            statsContent.classList.add("expanded");
+          }
+        });
+      }
+      this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
+      if (SETTINGS.MODAL_DISPLAY_MODE === "floating") {
+        const modalHeader = modalContainer.querySelector(".qmx-modal-header");
+        this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
+      }
+      document.getElementById("qmx-modal-close-btn").onclick = () => this.hidePanel();
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modalContainer.classList.contains("visible")) {
+          this.hidePanel();
+        }
+      });
+      if (SETTINGS.MODAL_DISPLAY_MODE !== "inject-rank-list") {
+        modalBackdrop.onclick = () => this.hidePanel();
+      }
+      document.getElementById("qmx-modal-open-btn").onclick = () => this.openOneNewTab();
+      document.getElementById("qmx-modal-settings-btn").onclick = () => SettingsPanel.show();
+      document.getElementById("qmx-modal-close-all-btn").onclick = async () => {
+        if (confirm("确定要关闭所有工作标签页吗？")) {
+          Utils.log("用户请求关闭所有标签页。");
+          Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
+          this.commandChannel.postMessage({ action: "CLOSE_ALL", target: "*" });
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          Utils.log("强制清空全局状态中的标签页列表...");
+          let state = GlobalState.get();
+          if (Object.keys(state.tabs).length > 0) {
+            Utils.log(`清理前还有 ${Object.keys(state.tabs).length} 个标签页残留`);
+            state.tabs = {};
+            GlobalState.set(state);
+          }
+          this.renderDashboard();
+          setTimeout(() => {
+            state = GlobalState.get();
+            if (Object.keys(state.tabs).length > 0) {
+              Utils.log("检测到残留标签页，执行二次清理...");
+              state.tabs = {};
+              GlobalState.set(state);
+              this.renderDashboard();
+            }
+          }, 1e3);
+        }
+      };
+      document.getElementById("qmx-tab-list").addEventListener("click", (e) => {
+        const closeButton = e.target.closest(".qmx-tab-close-btn");
+        if (!closeButton) return;
+        const roomItem = e.target.closest("[data-room-id]");
+        const roomId = roomItem?.dataset.roomId;
+        if (!roomId) return;
+        Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
+        const state = GlobalState.get();
+        delete state.tabs[roomId];
+        GlobalState.set(state);
+        Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
+        this.commandChannel.postMessage({ action: "CLOSE", target: roomId });
+        roomItem.style.opacity = "0";
+        roomItem.style.transform = "scale(0.8)";
+        roomItem.style.transition = "all 0.3s ease";
+        setTimeout(() => roomItem.remove(), 300);
+      });
+    },
+renderDashboard() {
+      const state = GlobalState.get();
+      const tabList = document.getElementById("qmx-tab-list");
+      if (!tabList) return;
+      const tabIds = Object.keys(state.tabs);
+      document.getElementById("qmx-active-tabs-count").textContent = tabIds.length;
+      const statusDisplayMap = {
+        OPENING: "加载中",
+        WAITING: "等待中",
+        CLAIMING: "领取中",
+        SWITCHING: "切换中",
+        DORMANT: "休眠中",
+        ERROR: "出错了",
+        UNRESPONSIVE: "无响应",
+        DISCONNECTED: "已断开",
+        STALLED: "UI节流"
+      };
+      const existingRoomIds = new Set(
+        Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean)
+      );
+      tabIds.forEach((roomId) => {
+        const tabData = state.tabs[roomId];
+        let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
+        let currentStatusText = tabData.statusText;
+        if (tabData.status === "WAITING" && tabData.countdown?.endTime && (!currentStatusText || currentStatusText.startsWith("倒计时") || currentStatusText === "寻找任务中...")) {
+          const remainingSeconds = (tabData.countdown.endTime - Date.now()) / 1e3;
+          if (remainingSeconds > 0) {
+            currentStatusText = `倒计时 ${Utils.formatTime(remainingSeconds)}`;
+          } else {
+            currentStatusText = "等待开抢...";
+          }
+        }
+        if (existingItem) {
+          const nicknameEl = existingItem.querySelector(".qmx-tab-nickname");
+          const statusNameEl = existingItem.querySelector(".qmx-tab-status-name");
+          const statusTextEl = existingItem.querySelector(".qmx-tab-status-text");
+          const dotEl = existingItem.querySelector(".qmx-tab-status-dot");
+          if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
+            nicknameEl.textContent = tabData.nickname;
+          }
+          const newStatusName = `[${statusDisplayMap[tabData.status] || tabData.status}]`;
+          if (statusNameEl.textContent !== newStatusName) {
+            statusNameEl.textContent = newStatusName;
+            dotEl.style.backgroundColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
+          }
+          if (statusTextEl.textContent !== currentStatusText) {
+            statusTextEl.textContent = currentStatusText;
+          }
+        } else {
+          const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
+          tabList.appendChild(newItem);
+          requestAnimationFrame(() => {
+            newItem.classList.add("qmx-item-enter-active");
+            setTimeout(() => newItem.classList.remove("qmx-item-enter"), 300);
+          });
+        }
+      });
+      existingRoomIds.forEach((roomId) => {
+        if (!state.tabs[roomId]) {
+          const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
+          if (itemToRemove && !itemToRemove.classList.contains("qmx-item-exit-active")) {
+            Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`);
+            itemToRemove.classList.add("qmx-item-exit-active");
+            setTimeout(() => itemToRemove.remove(), 300);
+          }
+        }
+      });
+      const emptyMsg = tabList.querySelector(".qmx-empty-list-msg");
+      if (tabIds.length === 0) {
+        if (!emptyMsg) {
+          tabList.innerHTML = '<div class="qmx-tab-list-item qmx-empty-list-msg">没有正在运行的任务</div>';
+        }
+      } else if (emptyMsg) {
+        emptyMsg.remove();
+      }
+      this.renderLimitStatus();
+    },
+renderLimitStatus() {
+      let limitState = GlobalState.getDailyLimit();
+      let limitMessageEl = document.getElementById("qmx-limit-message");
+      const openBtn = document.getElementById("qmx-modal-open-btn");
+      if (limitState?.reached && Utils.formatDateAsBeijing(new Date(limitState.timestamp)) !== Utils.formatDateAsBeijing( new Date())) {
+        Utils.log("[控制中心] 新的一天，重置每日上限旗标。");
+        GlobalState.setDailyLimit(false);
+        limitState = null;
+      }
+      if (limitState?.reached) {
+        if (!limitMessageEl) {
+          limitMessageEl = document.createElement("div");
+          limitMessageEl.id = "qmx-limit-message";
+          limitMessageEl.style.cssText = "padding: 10px 24px; background-color: var(--status-color-error); color: white; font-weight: 500; text-align: center;";
+          const header = document.querySelector(".qmx-modal-header");
+          header.parentNode.insertBefore(limitMessageEl, header.nextSibling);
+          document.querySelector(".qmx-modal-header").after(limitMessageEl);
+        }
+        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
+          limitMessageEl.textContent = "今日已达上限。任务休眠中，可新增标签页为明日准备。";
+          openBtn.disabled = false;
+          openBtn.textContent = "新增休眠标签页";
+        } else {
+          limitMessageEl.textContent = "今日已达上限。任务已全部停止。";
+          openBtn.disabled = true;
+          openBtn.textContent = "今日已达上限";
+        }
+      } else {
+        if (limitMessageEl) limitMessageEl.remove();
+        openBtn.disabled = false;
+        openBtn.textContent = "打开新房间";
+      }
+    },
+async openOneNewTab() {
+      const openBtn = document.getElementById("qmx-modal-open-btn");
+      if (openBtn.disabled) return;
+      const state = GlobalState.get();
+      const openedCount = Object.keys(state.tabs).length;
+      if (openedCount >= SETTINGS.MAX_WORKER_TABS) {
+        Utils.log(`已达到最大标签页数量 (${SETTINGS.MAX_WORKER_TABS})。`);
+        return;
+      }
+      openBtn.disabled = true;
+      openBtn.textContent = "正在查找...";
+      try {
+        const openedRoomIds = new Set(Object.keys(state.tabs));
+        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
+        const newUrl = apiRoomUrls.find((url) => {
+          const rid = url.match(/\/(\d+)/)?.[1];
+          return rid && !openedRoomIds.has(rid);
+        });
+        if (newUrl) {
+          const newRoomId = newUrl.match(/\/(\d+)/)[1];
+          const pendingWorkers = GM_getValue("qmx_pending_workers", []);
+          pendingWorkers.push(newRoomId);
+          GM_setValue("qmx_pending_workers", pendingWorkers);
+          Utils.log(`已将房间 ${newRoomId} 加入待处理列表。`);
+          GlobalState.updateWorker(newRoomId, "OPENING", "正在打开...");
+          if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
+            localStorage.setItem("newWebLive", "A");
+          }
+          GM_openInTab(newUrl, { active: false, setParent: true });
+          Utils.log(`打开指令已发送: ${newUrl}`);
+        } else {
+          Utils.log("未能找到新的、未打开的房间。");
+          openBtn.textContent = "无新房间";
+          await Utils.sleep(SETTINGS.UI_FEEDBACK_DELAY);
+        }
+      } catch (error) {
+        Utils.log(`查找或打开房间时出错: ${error.message}`);
+        openBtn.textContent = "查找出错";
+        await Utils.sleep(SETTINGS.UI_FEEDBACK_DELAY);
+      } finally {
+        openBtn.disabled = false;
+      }
+    },
+setupDrag(element, storageKey, onClick, handle = element) {
+      let isMouseDown = false;
+      let hasDragged = false;
+      let startX, startY, initialX, initialY;
+      const clickThreshold = 5;
+      const setPosition = (x, y) => {
+        element.style.setProperty("--tx", `${x}px`);
+        element.style.setProperty("--ty", `${y}px`);
+      };
+      const savedPos = GM_getValue(storageKey);
+      let currentRatio = null;
+      if (savedPos) {
+        if (typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
+          currentRatio = savedPos;
+        } else if (SETTINGS.CONVERT_LEGACY_POSITION && typeof savedPos.x === "number" && typeof savedPos.y === "number") {
+          Utils.log(`[位置迁移] 发现旧的像素位置，正在转换为比例位置...`);
+          const movableWidth = window.innerWidth - element.offsetWidth;
+          const movableHeight = window.innerHeight - element.offsetHeight;
+          currentRatio = {
+            ratioX: Math.max(0, Math.min(1, savedPos.x / movableWidth)),
+            ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight))
+          };
+          GM_setValue(storageKey, currentRatio);
+        }
+      }
+      if (currentRatio) {
+        const newX = currentRatio.ratioX * (window.innerWidth - element.offsetWidth);
+        const newY = currentRatio.ratioY * (window.innerHeight - element.offsetHeight);
+        setPosition(newX, newY);
+      } else {
+        if (element.id === SETTINGS.DRAGGABLE_BUTTON_ID) {
+          const padding = SETTINGS.DRAG_BUTTON_DEFAULT_PADDING;
+          const defaultX = window.innerWidth - element.offsetWidth - padding;
+          const defaultY = padding;
+          setPosition(defaultX, defaultY);
+        } else {
+          const defaultX = (window.innerWidth - element.offsetWidth) / 2;
+          const defaultY = (window.innerHeight - element.offsetHeight) / 2;
+          setPosition(defaultX, defaultY);
+        }
+      }
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        isMouseDown = true;
+        hasDragged = false;
+        const rect = element.getBoundingClientRect();
+        startX = e.clientX;
+        startY = e.clientY;
+        initialX = rect.left;
+        initialY = rect.top;
+        element.classList.add("is-dragging");
+        handle.style.cursor = "grabbing";
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp, { once: true });
+      };
+      const onMouseMove = (e) => {
+        if (!isMouseDown) return;
+        e.preventDefault();
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!hasDragged && Math.sqrt(dx * dx + dy * dy) > clickThreshold) {
+          hasDragged = true;
+        }
+        let newX = initialX + dx;
+        let newY = initialY + dy;
+        const maxX = window.innerWidth - element.offsetWidth;
+        const maxY = window.innerHeight - element.offsetHeight;
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        setPosition(newX, newY);
+      };
+      const onMouseUp = () => {
+        isMouseDown = false;
+        document.removeEventListener("mousemove", onMouseMove);
+        element.classList.remove("is-dragging");
+        handle.style.cursor = "grab";
+        if (hasDragged) {
+          const finalRect = element.getBoundingClientRect();
+          const movableWidth = window.innerWidth - element.offsetWidth;
+          const movableHeight = window.innerHeight - element.offsetHeight;
+          const ratioX = movableWidth > 0 ? Math.max(0, Math.min(1, finalRect.left / movableWidth)) : 0;
+          const ratioY = movableHeight > 0 ? Math.max(0, Math.min(1, finalRect.top / movableHeight)) : 0;
+          GM_setValue(storageKey, { ratioX, ratioY });
+        } else if (onClick && typeof onClick === "function") {
+          onClick();
+        }
+      };
+      handle.addEventListener("mousedown", onMouseDown);
+    },
+showPanel() {
+      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+      const modalContainer = document.getElementById("qmx-modal-container");
+      mainButton.classList.add("hidden");
+      if (this.isPanelInjected) {
+        this.injectionTarget.classList.add("qmx-hidden");
+        modalContainer.classList.remove("qmx-hidden");
+      } else {
+        modalContainer.classList.add("visible");
+        if (SETTINGS.MODAL_DISPLAY_MODE === "centered") {
+          document.getElementById("qmx-modal-backdrop").classList.add("visible");
+        }
+      }
+      Utils.log("控制面板已显示。");
+    },
+hidePanel() {
+      const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+      const modalContainer = document.getElementById("qmx-modal-container");
+      mainButton.classList.remove("hidden");
+      if (this.isPanelInjected) {
+        modalContainer.classList.add("qmx-hidden");
+        if (this.injectionTarget) {
+          this.injectionTarget.classList.remove("qmx-hidden");
+        }
+      } else {
+        modalContainer.classList.remove("visible");
+        if (SETTINGS.MODAL_DISPLAY_MODE === "centered") {
+          document.getElementById("qmx-modal-backdrop").classList.remove("visible");
+        }
+      }
+      Utils.log("控制面板已隐藏。");
+    },
+createTaskItem(roomId, tabData, statusMap, statusText) {
+      const newItem = document.createElement("div");
+      newItem.className = "qmx-tab-list-item qmx-item-enter";
+      newItem.dataset.roomId = roomId;
+      const statusColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
+      const nickname = tabData.nickname || "加载中...";
+      const statusName = statusMap[tabData.status] || tabData.status;
+      newItem.innerHTML = `
+                <div class="qmx-tab-status-dot" style="background-color: ${statusColor};"></div>
+                <div class="qmx-tab-info">
+                    <div class="qmx-tab-header">
+                        <span class="qmx-tab-nickname">${nickname}</span>
+                        <span class="qmx-tab-room-id">${roomId}</span>
+                    </div>
+                    <div class="qmx-tab-details">
+                        <span class="qmx-tab-status-name">[${statusName}]</span>
+                        <span class="qmx-tab-status-text">${statusText}</span>
+                    </div>
+                </div>
+                <button class="qmx-tab-close-btn" title="关闭该标签页">×</button>
+            `;
+      return newItem;
+    },
+applyModalMode() {
+      const modalContainer = document.getElementById("qmx-modal-container");
+      if (!modalContainer) return;
+      const mode = SETTINGS.MODAL_DISPLAY_MODE;
+      Utils.log(`尝试应用模态框模式: ${mode}`);
+      if (this.isPanelInjected && mode !== "inject-rank-list") {
+        document.body.appendChild(modalContainer);
+        this.isPanelInjected = false;
+        this.injectionTarget = null;
+        modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
+        const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
+        if (mainButton) mainButton.classList.remove("hidden");
+      }
+      if (mode === "inject-rank-list") {
+        const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
+          const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
+          if (target) {
+            Utils.log("注入目标已找到，开始注入...");
+            this.injectionTarget = target;
+            this.isPanelInjected = true;
+            target.parentNode.insertBefore(modalContainer, target.nextSibling);
+            modalContainer.classList.add("mode-inject-rank-list", "qmx-hidden");
+          } else if (retries > 0) {
+            setTimeout(() => waitForTarget(retries - 1, interval), interval);
+          } else {
+            Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
+            Utils.log("[降级] 自动切换到 'floating' 备用模式。");
+            SETTINGS.MODAL_DISPLAY_MODE = "floating";
+            this.applyModalMode();
+            SETTINGS.MODAL_DISPLAY_MODE = "inject-rank-list";
+          }
+        };
+        waitForTarget();
+        return;
+      }
+      this.isPanelInjected = false;
+      modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
+      modalContainer.classList.add(`mode-${mode}`);
+    },
+correctPosition(elementId, storageKey) {
+      const element = document.getElementById(elementId);
+      if (!element) return;
+      const savedPos = GM_getValue(storageKey);
+      if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
+        const newX = savedPos.ratioX * (window.innerWidth - element.offsetWidth);
+        const newY = savedPos.ratioY * (window.innerHeight - element.offsetHeight);
+        element.style.setProperty("--tx", `${newX}px`);
+        element.style.setProperty("--ty", `${newY}px`);
+      }
+    },
+correctButtonPosition() {
+      this.correctPosition(SETTINGS.DRAGGABLE_BUTTON_ID, SETTINGS.BUTTON_POS_STORAGE_KEY);
+    },
+correctModalPosition() {
+      if (SETTINGS.MODAL_DISPLAY_MODE !== "floating" || this.isPanelInjected) {
+        return;
+      }
+      this.correctPosition("qmx-modal-container", "douyu_qmx_modal_position");
+    },
+clearClosedTabs() {
+      const state = GlobalState.get();
+      if (state.tabs && Object.keys(state.tabs).length > 0) {
+        Utils.log("检测到残留的标签页状态，正在清空...");
+        state.tabs = {};
+        GlobalState.set(state);
+        Utils.log("已清空残留的标签页状态");
+      }
+    }
+  };
+  const DOM = {
+async findElement(selector, timeout = SETTINGS.PANEL_WAIT_TIMEOUT, parent = document) {
+      const startTime = Date.now();
+      while (Date.now() - startTime < timeout) {
+        const element = parent.querySelector(selector);
+        if (element && window.getComputedStyle(element).display !== "none") {
+          return element;
+        }
+        await Utils.sleep(300);
+      }
+      Utils.log(`查找元素超时: ${selector}`);
+      return null;
+    },
+async safeClick(element, description) {
+      if (!element) {
+        return false;
+      }
+      try {
+        if (window.getComputedStyle(element).display === "none") {
+          return false;
+        }
+        await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY / 2, SETTINGS.MAX_DELAY / 2));
+        element.click();
+        await Utils.sleep(Utils.getRandomDelay());
+        return true;
+      } catch (error) {
+        Utils.log(`[点击异常] ${description} 时发生错误: ${error.message}`);
+        return false;
+      }
+    },
+async checkForLimitPopup() {
+      const limitPopup = await this.findElement(SETTINGS.SELECTORS.limitReachedPopup, 3e3);
+      if (limitPopup && limitPopup.textContent.includes("已达上限")) {
+        Utils.log("捕获到“已达上限”弹窗！");
+        return true;
+      }
+      return false;
+    }
+  };
+  const WorkerPage = {
+healthCheckTimeoutId: null,
+    currentTaskEndTime: null,
+    lastHealthCheckTime: null,
+    lastPageCountdown: null,
+    stallLevel: 0,
+remainingTimeMap: new Map(),
+consecutiveStallCount: 0,
+    previousDeviation: 0,
+
+async init() {
+      Utils.log("混合模式工作单元初始化...");
+      const roomId = Utils.getCurrentRoomId();
+      if (!roomId) {
+        Utils.log("无法识别当前房间ID，脚本停止。");
+        return;
+      }
+      GlobalState.updateWorker(roomId, "OPENING", "页面加载中...", { countdown: null, nickname: null });
+      await Utils.sleep(1e3);
+      this.startCommandListener(roomId);
+      window.addEventListener("beforeunload", () => {
+        GlobalState.updateWorker(Utils.getCurrentRoomId(), "DISCONNECTED", "连接已断开...");
+        if (this.pauseSentinelInterval) {
+          clearInterval(this.pauseSentinelInterval);
+        }
+      });
+      Utils.log("正在等待页面关键元素 (#js-player-video) 加载...");
+      const criticalElement = await DOM.findElement(SETTINGS.SELECTORS.criticalElement, SETTINGS.ELEMENT_WAIT_TIMEOUT);
+      if (!criticalElement) {
+        Utils.log("页面关键元素加载超时，此标签页可能无法正常工作，即将关闭。");
+        await this.selfClose(roomId);
+        return;
+      }
+      Utils.log("页面关键元素已加载。");
+      Utils.log("开始检测 UI 版本 和红包活动...");
+      if (window.location.href.includes("/beta")) {
+        GlobalState.updateWorker(roomId, "OPENING", "切换旧版UI...");
+        localStorage.setItem("newWebLive", "A");
+        window.location.href = window.location.href.replace("/beta", "");
+      }
+      Utils.log("确认进入稳定工作状态，执行身份核销。");
+      const pendingWorkers = GM_getValue("qmx_pending_workers", []);
+      const myIndex = pendingWorkers.indexOf(roomId);
+      if (myIndex > -1) {
+        pendingWorkers.splice(myIndex, 1);
+        GM_setValue("qmx_pending_workers", pendingWorkers);
+        Utils.log(`房间 ${roomId} 已从待处理列表中移除。`);
+      }
+      const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
+      const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
+      GlobalState.updateWorker(roomId, "WAITING", "寻找任务中...", { nickname, countdown: null });
+      const limitState = GlobalState.getDailyLimit();
+      if (limitState?.reached) {
+        Utils.log("初始化检查：检测到全局上限旗标。");
+        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
+          await this.enterDormantMode();
+        } else {
+          await this.selfClose(roomId);
+        }
+        return;
+      }
+      this.findAndExecuteNextTask(roomId);
+      if (SETTINGS.AUTO_PAUSE_ENABLED) {
+        this.pauseSentinelInterval = setInterval(() => this.autoPauseVideo(), 8e3);
+      }
+    },
+    async findAndExecuteNextTask(roomId) {
+      if (this.healthCheckTimeoutId) {
+        clearTimeout(this.healthCheckTimeoutId);
+        this.healthCheckTimeoutId = null;
+      }
+      this.stallLevel = 0;
+      const limitState = GlobalState.getDailyLimit();
+      if (limitState?.reached) {
+        Utils.log(`[上限检查] 房间 ${roomId} 检测到已达每日上限。`);
+        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
+          await this.enterDormantMode();
+        } else {
+          await this.selfClose(roomId);
+        }
+        return;
+      }
+      if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
+      const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
+      if (!redEnvelopeDiv) {
+        GlobalState.updateWorker(roomId, "SWITCHING", "无活动, 切换中", { countdown: null });
+        await this.switchRoom();
+        return;
+      }
+      const statusSpan = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
+      const statusText = statusSpan ? statusSpan.textContent.trim() : "";
+      if (statusText.includes(":")) {
+        const [minutes, seconds] = statusText.split(":").map(Number);
+        const remainingSeconds = minutes * 60 + seconds;
+        const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
+        this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
+        if (Array.from(this.remainingTimeMap.values()).some((value) => value > 3)) {
+          GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
+          await this.switchRoom();
+          return;
+        }
+        this.currentTaskEndTime = Date.now() + remainingSeconds * 1e3;
+        this.lastHealthCheckTime = Date.now();
+        this.lastPageCountdown = remainingSeconds;
+        Utils.log(`发现新任务：倒计时 ${statusText}。`);
+        GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${statusText}`, {
+          countdown: { endTime: this.currentTaskEndTime }
+        });
+        const wakeUpDelay = Math.max(0, remainingSeconds * 1e3 - 1500);
+        Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1e3)} 秒后唤醒执行任务。`);
+        setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
+        this.startHealthChecks(roomId, redEnvelopeDiv);
+      } else if (statusText.includes("抢") || statusText.includes("领")) {
+        GlobalState.updateWorker(roomId, "CLAIMING", "立即领取中...");
+        await this.claimAndRecheck(roomId);
+      } else {
+        GlobalState.updateWorker(roomId, "WAITING", `状态未知, 稍后重试`, { countdown: null });
+        setTimeout(() => this.findAndExecuteNextTask(roomId), 3e4);
+      }
+    },
+startHealthChecks(roomId, redEnvelopeDiv) {
+      const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
+      const STALL_THRESHOLD = 4;
+      const check = () => {
+        const currentPageStatus = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer)?.textContent.trim();
+        if (!currentPageStatus || !currentPageStatus.includes(":")) {
+          return;
+        }
+        const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1e3;
+        const [pMin, pSec] = currentPageStatus.split(":").map(Number);
+        const pageRemainingSeconds = pMin * 60 + pSec;
+        const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
+        const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
+        const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
+        Utils.log(
+          `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
+        );
+        Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? "开启" : "关闭"}`);
+        if (SETTINGS.CALIBRATION_MODE_ENABLED) {
+          if (deviation <= STALL_THRESHOLD) {
+            const difference = scriptRemainingSeconds - pageRemainingSeconds;
+            this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1e3;
+            if (deviation > 0.1) {
+              const direction = difference > 0 ? "慢" : "快";
+              const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
+              Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
+              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, {
+                countdown: { endTime: this.currentTaskEndTime }
+              });
+              setTimeout(() => {
+                if (this.currentTaskEndTime > Date.now()) {
+                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
+                    countdown: { endTime: this.currentTaskEndTime }
+                  });
+                }
+              }, 2500);
+            } else {
+              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
+                countdown: { endTime: this.currentTaskEndTime }
+              });
+            }
+            this.consecutiveStallCount = 0;
+            this.previousDeviation = 0;
+            this.stallLevel = 0;
+          } else {
+            const deviationIncreasing = deviation > this.previousDeviation;
+            this.previousDeviation = deviation;
+            if (deviationIncreasing) {
+              this.consecutiveStallCount++;
+              Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
+            } else {
+              this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
+            }
+            if (this.consecutiveStallCount >= 3) {
+              Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
+              GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
+              clearTimeout(this.healthCheckTimeoutId);
+              this.switchRoom();
+              return;
+            }
+            this.stallLevel = 1;
+            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
+          }
+        } else {
+          if (deviation > STALL_THRESHOLD) {
+            if (this.stallLevel === 0) {
+              Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
+            }
+            this.stallLevel = 1;
+            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
+          } else {
+            if (this.stallLevel > 0) {
+              Utils.log("[哨兵] UI已从节流中恢复。");
+              this.stallLevel = 0;
+            }
+            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, {
+              countdown: { endTime: this.currentTaskEndTime }
+            });
+          }
+        }
+        if (scriptRemainingSeconds > CHECK_INTERVAL / 1e3 + 1) {
+          this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
+        }
+      };
+      this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
+    },
+async claimAndRecheck(roomId) {
+      if (this.healthCheckTimeoutId) {
+        clearTimeout(this.healthCheckTimeoutId);
+        this.healthCheckTimeoutId = null;
+      }
+      Utils.log("开始执行领取流程...");
+      GlobalState.updateWorker(roomId, "CLAIMING", "尝试打开红包...", { countdown: null });
+      const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
+      if (!await DOM.safeClick(redEnvelopeDiv, "右下角红包区域")) {
+        Utils.log("点击红包区域失败，重新寻找任务。");
+        await Utils.sleep(2e3);
+        this.findAndExecuteNextTask(roomId);
+        return;
+      }
+      const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
+      if (!popup) {
+        Utils.log("等待红包弹窗超时，重新寻找任务。");
+        await Utils.sleep(2e3);
+        this.findAndExecuteNextTask(roomId);
+        return;
+      }
+      const openBtn = popup.querySelector(SETTINGS.SELECTORS.openButton);
+      if (await DOM.safeClick(openBtn, "红包弹窗的打开按钮")) {
+        if (await DOM.checkForLimitPopup()) {
+          GlobalState.setDailyLimit(true);
+          Utils.log("检测到每日上限！");
+          if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
+            await this.enterDormantMode();
+          } else {
+            await this.selfClose(roomId);
+          }
+          return;
+        }
+        await Utils.sleep(1500);
+        const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3e3, popup);
+        const reward = successIndicator ? "领取成功 " : "空包或失败";
+        Utils.log(`领取操作完成，结果: ${reward}`);
+        GlobalState.updateWorker(roomId, "WAITING", `领取到: ${reward}`, { countdown: null });
+        const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
+        await DOM.safeClick(closeBtn, "领取结果弹窗的关闭按钮");
+      } else {
+        Utils.log("点击打开按钮失败。");
+      }
+      STATE.lastActionTime = Date.now();
+      Utils.log("操作完成，2秒后在本房间内寻找下一个任务...");
+      await Utils.sleep(2e3);
+      this.findAndExecuteNextTask(roomId);
+    },
+async autoPauseVideo() {
+      if (STATE.isSwitchingRoom || Date.now() - STATE.lastActionTime < SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION) {
+        return;
+      }
+      Utils.log("正在寻找暂停按钮...");
+      const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5e3);
+      if (pauseBtn) {
+        if (await DOM.safeClick(pauseBtn, "暂停按钮")) {
+          Utils.log("视频已通过脚本暂停。");
+        }
+      }
+    },
+async switchRoom() {
+      if (this.healthCheckTimeoutId) {
+        clearTimeout(this.healthCheckTimeoutId);
+        this.healthCheckTimeoutId = null;
+      }
+      if (STATE.isSwitchingRoom) return;
+      STATE.isSwitchingRoom = true;
+      Utils.log("开始执行切换房间流程...");
+      const currentRoomId = Utils.getCurrentRoomId();
+      GlobalState.updateWorker(currentRoomId, "SWITCHING", "查找新房间...");
+      try {
+        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
+        const currentState = GlobalState.get();
+        const openedRoomIds = new Set(Object.keys(currentState.tabs));
+        const nextUrl = apiRoomUrls.find((url) => {
+          const rid = url.match(/\/(\d+)/)?.[1];
+          return rid && !openedRoomIds.has(rid);
+        });
+        if (nextUrl) {
+          Utils.log(`确定下一个房间链接: ${nextUrl}`);
+          const nextRoomId = nextUrl.match(/\/(\d+)/)[1];
+          const pendingWorkers = GM_getValue("qmx_pending_workers", []);
+          pendingWorkers.push(nextRoomId);
+          GM_setValue("qmx_pending_workers", pendingWorkers);
+          Utils.log(`已将房间 ${nextRoomId} 加入待处理列表。`);
+          if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
+            localStorage.setItem("newWebLive", "A");
+          }
+          GM_openInTab(nextUrl, { active: false, setParent: true });
+          await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
+          await this.selfClose(currentRoomId);
+        } else {
+          Utils.log("API未能返回任何新的、未打开的房间，将关闭当前页。");
+          await this.selfClose(currentRoomId);
+        }
+      } catch (error) {
+        Utils.log(`切换房间时发生严重错误: ${error.message}`);
+        await this.selfClose(currentRoomId);
+      }
+    },
+async enterDormantMode() {
+      const roomId = Utils.getCurrentRoomId();
+      Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
+      GlobalState.updateWorker(roomId, "DORMANT", "休眠中 (等待北京时间0点)", { countdown: null });
+      const now = Utils.getBeijingTime();
+      const tomorrow = new Date(now.getTime());
+      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+      tomorrow.setUTCHours(0, 0, 30, 0);
+      const msUntilMidnight = tomorrow.getTime() - now.getTime();
+      Utils.log(`将在 ${Math.round(msUntilMidnight / 1e3 / 60)} 分钟后自动刷新页面 (基于北京时间)。`);
+      setTimeout(() => window.location.reload(), msUntilMidnight);
+    },
+async selfClose(roomId, fromCloseAll = false) {
+      Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
+      if (this.pauseSentinelInterval) {
+        clearInterval(this.pauseSentinelInterval);
+      }
+      if (fromCloseAll) {
+        Utils.log(`[关闭所有] 跳过状态更新，直接关闭标签页 (房间: ${roomId})`);
+        GlobalState.removeWorker(roomId);
+        await Utils.sleep(100);
+        this.closeTab();
+        return;
+      }
+      GlobalState.updateWorker(roomId, "SWITCHING", "任务结束，关闭中...");
+      await Utils.sleep(100);
+      GlobalState.removeWorker(roomId);
+      await Utils.sleep(300);
+      this.closeTab();
+    },
+closeTab() {
+      try {
+        window.close();
+      } catch (e) {
+        window.location.replace("about:blank");
+        Utils.log(`关闭失败，故障为: ${e.message}`);
+      }
+    },
+
+startCommandListener(roomId) {
+      this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
+      Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
+      this.commandChannel.onmessage = (event) => {
+        const { action, target } = event.data;
+        if (target === roomId || target === "*") {
+          Utils.log(`接收到广播指令: ${action} for target ${target}`);
+          if (action === "CLOSE") {
+            this.selfClose(roomId, false);
+          } else if (action === "CLOSE_ALL") {
+            this.selfClose(roomId, true);
+          }
+        }
+      };
+      window.addEventListener("beforeunload", () => {
+        if (this.commandChannel) {
+          this.commandChannel.close();
+        }
+      });
     }
   };
   (function() {
