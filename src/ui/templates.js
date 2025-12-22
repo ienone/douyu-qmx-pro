@@ -129,7 +129,11 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
                         <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS.CONTROL_ROOM_ID}">
                     </div>
-                    <div class="qmx-settings-item"></div>
+                    <!-- 新增：第二房间号设置 -->
+                    <div class="qmx-settings-item">
+                        <label for="setting-temp-control-room-id">第二房间号(RID) <span class="qmx-tooltip-icon" data-tooltip-key="temp-control-room">?</span></label>
+                        <input type="number" class="qmx-input" id="setting-temp-control-room-id" value="${SETTINGS.TEMP_CONTROL_ROOM_RID}">
+                    </div>
                     <div class="qmx-settings-item">
                         <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                         <label class="qmx-toggle">

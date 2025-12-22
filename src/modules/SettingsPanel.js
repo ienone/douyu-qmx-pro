@@ -24,6 +24,7 @@ export const SettingsPanel = {
         // 1. 所有工具提示的文本
         const allTooltips = {
             'control-room': '只有在此房间号的直播间中才能看到插件面板，看准了再改！',
+            'temp-control-room': '备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。', // 新增提示
             'auto-pause': '自动暂停非控制直播间的视频播放，大幅降低资源占用。',
             'initial-script-delay': '页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。',
             'auto-pause-delay': '领取红包后等待多久再次尝试暂停视频。',
@@ -88,6 +89,7 @@ export const SettingsPanel = {
         const newSettings = {
             // Tab 1: 基本设置
             CONTROL_ROOM_ID: document.getElementById('setting-control-room-id').value,
+            TEMP_CONTROL_ROOM_RID: document.getElementById('setting-temp-control-room-id').value, // 新增保存逻辑
             AUTO_PAUSE_ENABLED: document.getElementById('setting-auto-pause').checked,
             ENABLE_DANMU_PRO: document.getElementById('setting-danmupro-mode').checked,
             DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
