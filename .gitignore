@@ -15,4 +15,7 @@ src/test/
 .idea/
 .vscode/
 .vs/
+
+# Build output
 dist/
+

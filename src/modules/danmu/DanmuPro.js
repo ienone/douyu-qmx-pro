@@ -57,6 +57,23 @@ export const DanmuPro = {
     },
 
     /**
+     * 销毁弹幕助手功能
+     */
+    destroy() {
+        if (!this.initialized) return;
+
+        try {
+            // 销毁输入管理器（它会负责销毁 UIManager 和 InputDetector）
+            InputManager.destroy();
+            
+            this.initialized = false;
+            Utils.log('[弹幕助手] 模块已关闭');
+        } catch (error) {
+            Utils.log(`[弹幕助手] 关闭失败: ${error.message}`, 'error');
+        }
+    },
+
+    /**
      * 检查并执行首次数据导入
      */
     async firstTimeImport() {

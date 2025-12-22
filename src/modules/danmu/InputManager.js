@@ -48,6 +48,12 @@ export const InputManager = {
     // 已处理的输入框
     processedInputs: new WeakSet(),
     
+    // 事件监听器引用
+    boundHandlers: {},
+    
+    // 值监听定时器
+    valueWatcher: null,
+    
     /**
      * 初始化输入管理器
      */
@@ -72,13 +78,21 @@ export const InputManager = {
      * 绑定输入框事件
      */
     bindInputEvents() {
+        // 保存绑定后的函数引用以便移除
+        this.boundHandlers = {
+            focusin: this.handleFocusIn.bind(this),
+            focusout: this.handleFocusOut.bind(this),
+            keydown: this.handleKeyDown.bind(this),
+            input: this.handleInput.bind(this)
+        };
+
         // 监听所有输入框的焦点事件
-        document.addEventListener('focusin', this.handleFocusIn.bind(this));
-        document.addEventListener('focusout', this.handleFocusOut.bind(this));
+        document.addEventListener('focusin', this.boundHandlers.focusin);
+        document.addEventListener('focusout', this.boundHandlers.focusout);
         
         // 监听键盘事件（使用捕获阶段，以便更早拦截）
-        document.addEventListener('keydown', this.handleKeyDown.bind(this), true);
-        document.addEventListener('input', this.handleInput.bind(this));
+        document.addEventListener('keydown', this.boundHandlers.keydown, true);
+        document.addEventListener('input', this.boundHandlers.input);
         
         // 监听输入框值的变化（包括程序化的清空）
         this.startInputValueWatcher();
@@ -88,7 +102,9 @@ export const InputManager = {
      * 启动输入框值监听器
      */
     startInputValueWatcher() {
-        setInterval(() => {
+        if (this.valueWatcher) clearInterval(this.valueWatcher);
+        
+        this.valueWatcher = setInterval(() => {
             if (this.currentInput && this.currentSuggestions.length > 0) {
                 const currentValue = this.currentInput.value;
                 if (currentValue.length === 0) {
@@ -102,6 +118,39 @@ export const InputManager = {
         }, 100); // 每100ms检查一次
     },
     
+    /**
+     * 销毁输入管理器
+     */
+    destroy() {
+        // 移除事件监听器
+        if (this.boundHandlers.focusin) {
+            document.removeEventListener('focusin', this.boundHandlers.focusin);
+            document.removeEventListener('focusout', this.boundHandlers.focusout);
+            document.removeEventListener('keydown', this.boundHandlers.keydown, true);
+            document.removeEventListener('input', this.boundHandlers.input);
+            this.boundHandlers = {};
+        }
+
+        // 停止值监听器
+        if (this.valueWatcher) {
+            clearInterval(this.valueWatcher);
+            this.valueWatcher = null;
+        }
+
+        // 销毁子模块
+        UIManager.destroy();
+        InputDetector.destroy();
+
+        // 重置状态
+        this.currentInput = null;
+        this.currentSuggestions = [];
+        this.activeIndex = -1;
+        this.isInSelectionMode = false;
+        this.processedInputs = new WeakSet();
+        
+        console.log('InputManager destroyed');
+    },
+
     /**
      * 处理检测到新输入框
      * @param {HTMLElement} input - 输入框元素

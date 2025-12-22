@@ -4,15 +4,9 @@
  */
 
 /**
- * 控制面板模板
- * @param {number} maxTabs - 最大标签页数量
- * @returns {string} - 控制面板的HTML模板
+ * 统计面板模板
  */
-export const mainPanelTemplate = (maxTabs) => `
-    <div class="qmx-modal-header">
-        <span>控制中心</span>
-        <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
-    </div>
+export const statsPanelTemplate = `
     <div class="qmx-stats-container">
         <div class="qmx-stats-toggle" id="qmx-stats-toggle">
             <button id="qmx-stats-left" class="qmx-stats-switcher"><</button>
@@ -25,6 +19,19 @@ export const mainPanelTemplate = (maxTabs) => `
             <div class="qmx-modal-stats" id="qmx-stats-panel"></div>
         </div>
     </div>
+`;
+
+/**
+ * 控制面板模板
+ * @param {number} maxTabs - 最大标签页数量
+ * @returns {string} - 控制面板的HTML模板
+ */
+export const mainPanelTemplate = (maxTabs) => `
+    <div class="qmx-modal-header">
+        <span>控制中心</span>
+        <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
+    </div>
+    ${statsPanelTemplate}
     <div class="qmx-modal-content">
         <h3>监控面板 (<span id="qmx-active-tabs-count">0</span>/${maxTabs})</h3>
         <div id="qmx-tab-list"></div>
@@ -336,7 +343,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
         <div class="qmx-settings-footer">
             <button id="qmx-settings-cancel-btn" class="qmx-modal-btn">取消</button>
             <button id="qmx-settings-reset-btn" class="qmx-modal-btn danger">恢复默认</button>
-            <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存并刷新</button>
+            <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存</button>
         </div>
         `;
 };

@@ -89,6 +89,17 @@ export const StatsInfo = {
     },
 
     /**
+     * 销毁组件，清理定时器
+     */
+    destroy: function () {
+        if (globalValue.updateIntervalID) {
+            clearInterval(globalValue.updateIntervalID);
+            globalValue.updateIntervalID = undefined;
+        }
+        globalValue.statElements.clear();
+    },
+
+    /**
      * 统一初始化和校验今日数据
      * @returns {allData: AllStatsData; todayData: DailyStatsData; today: string;} 包含所有数据和今日数据的对象
      */
