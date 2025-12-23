@@ -71,6 +71,14 @@ export interface Config {
         limitReachedPopup: string;
         rankListContainer: string;
         anchorName: string;
+        boxIcon: string;
+        statusHeadline: string;
+        clickableContainer: string;
+        singleBag: string;
+        prizeContainer: string;
+        prizeItem: string;
+        prizeImage: string;
+        prizeCount: string;
     };
     
     // =======================================================

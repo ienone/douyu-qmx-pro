@@ -333,6 +333,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 <ul class="qmx-styled-list">
                     <li>【修复】适配斗鱼星推荐API变动</li>
                     <li>【新增】在控制面板中显示统计信息，记录每日领取的红包数量和金币总额。</li>
+                    <li>【新增】控制面板现在会显示每个红包的具体奖励信息。</li>
                 </ul>
                 <h4>源码与社区</h4>
                 <ul class="qmx-styled-list">

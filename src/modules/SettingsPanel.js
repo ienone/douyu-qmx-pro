@@ -30,13 +30,13 @@ export const SettingsPanel = {
         // 1. 所有工具提示的文本
         const allTooltips = {
             'control-room': '只有在此房间号的直播间中才能看到插件面板，看准了再改！(修改后不会立即刷新，下次进入该房间生效)',
-            'temp-control-room': '备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。', // 新增提示
+            'temp-control-room': '备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。',
             'auto-pause': '自动暂停非控制直播间的视频播放，大幅降低资源占用。',
             'initial-script-delay': '页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。',
             'auto-pause-delay': '领取红包后等待多久再次尝试暂停视频。',
-            'unresponsive-timeout': '工作页多久未汇报任何状态后，在面板上标记为“无响应”。',
-            'red-envelope-timeout': '进入直播间后，最长等待多久来寻找红包活动，超时后将切换房间。',
-            'popup-wait-timeout': '点击红包后，等待领取弹窗出现的最长时间。',
+            'unresponsive-timeout': '工作页多久未汇报任何状态后，在面板上标记为"无响应"。',
+            'red-envelope-timeout': '进入直播间后，最长等待多久来寻找红包活动，超时后将切换房间。（默认15秒）',
+            'popup-wait-timeout': '点击红包后，等待领取弹窗出现的最长时间。注意：系统会在发现新红包时提前提取奖励信息。',
             'worker-loading-timeout': '新开的直播间卡在加载状态多久还没显示播放组件，被判定为加载失败或缓慢。',
             'range-delay': '脚本在每次点击等操作前后随机等待的时间范围，模拟真人行为。',
             'close-tab-delay': '旧页面在打开新页面后，等待多久再关闭自己，确保新页面已接管。',

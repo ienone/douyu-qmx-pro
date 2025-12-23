@@ -24,9 +24,10 @@ export const FirstTimeNotice = {
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <p>新增弹幕助手功能😋，助力畅快发弹幕，使用方法详见设置->弹幕助手</p>
-                    <p>如需关闭此功能，关闭‘设置->基本设置->启用弹幕助手😋’即可</p>
-                    <h4> 项目地址<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer">douyu-qmx-pro</a>，求个star🌟~~</h4>
+                    <p>新增功能：控制面板现在会显示每个红包的具体奖励信息🎁</p>
+                    <p>弹幕助手功能持续优化中😋，使用方法详见设置->弹幕助手</p>
+                    <p>如需关闭弹幕助手，关闭'设置->基本设置->启用弹幕助手😋'即可</p>
+                    <h4>项目地址<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer">douyu-qmx-pro</a>，求个star🌟~~</h4>
                 </div>
                 <div class="qmx-modal-footer">
                     <button id="qmx-notice-settings-btn" class="qmx-modal-btn">前往设置</button>
