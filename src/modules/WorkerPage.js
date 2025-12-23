@@ -109,15 +109,12 @@ export const WorkerPage = {
     },
 
     async findAndExecuteNextTask(roomId) {
-        // 在每次寻找新任务时，确保取消上一个任务的哨兵
         if (this.healthCheckTimeoutId) {
             clearTimeout(this.healthCheckTimeoutId);
             this.healthCheckTimeoutId = null;
         }
-        // 为每个新任务重置卡顿等级
         this.stallLevel = 0;
 
-        // 检查每日上限状态
         const limitState = GlobalState.getDailyLimit();
         if (limitState?.reached) {
             Utils.log(`[上限检查] 房间 ${roomId} 检测到已达每日上限。`);
@@ -131,53 +128,228 @@ export const WorkerPage = {
 
         if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
 
-        const redEnvelopeDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
+        Utils.log(`[调试] 开始在房间 ${roomId} 寻找红包...`);
 
-        if (!redEnvelopeDiv) {
-            GlobalState.updateWorker(roomId, 'SWITCHING', '无活动, 切换中', { countdown: null });
-            await this.switchRoom();
-            return;
+        // 1. 查找所有红包外层容器
+        const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
+        let redEnvelopeDiv = null;
+        let statusText = '';
+        let countdownText = '';
+        let foundValidContainer = false; // 新增：标记是否找到有效的红包容器
+
+        for (let i = 0; i < outerContainers.length; i++) {
+            const outer = outerContainers[i];
+            
+            // 确认是红包容器（包含红包图标）
+            const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
+            if (!hasBoxIcon) {
+                continue;
+            }
+            
+            // 找到了红包容器
+            foundValidContainer = true;
+            
+            // 获取状态标题（"倒计时" 或 "可领取"）
+            const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
+            const headline = headlineElem ? headlineElem.textContent.trim() : '';
+            
+            // 获取内容（时间或其他）
+            const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
+            const content = contentElem ? contentElem.textContent.trim() : '';
+            
+            Utils.log(`[调试] 容器 #${i} 标题: "${headline}" | 内容: "${content}"`);
+            
+            // 判断是否为有效的红包容器
+            if (headline.includes('倒计时') && content.includes(':')) {
+                // 倒计时状态
+                redEnvelopeDiv = outer;
+                statusText = headline;
+                countdownText = content;
+                break;
+            } else if (headline.includes('可领取') || headline.includes('立即')) {
+                // 可领取状态
+                redEnvelopeDiv = outer;
+                statusText = headline;
+                countdownText = '';
+                break;
+            }
+            // 如果找到了红包容器但状态不符合，继续保存信息用于后续判断
+            if (!redEnvelopeDiv) {
+                redEnvelopeDiv = outer;
+                statusText = headline;
+                countdownText = content;
+            }
         }
 
-        const statusSpan = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-        const statusText = statusSpan ? statusSpan.textContent.trim() : '';
-
-        if (statusText.includes(':')) {
-            const [minutes, seconds] = statusText.split(':').map(Number);
-            const remainingSeconds = minutes * 60 + seconds;
-            // 维护获得的剩余时间表
-            const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
-            this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
-            //console.log(this.remainingTimeMap)
-            // 判断是否卡死
-            if (Array.from(this.remainingTimeMap.values()).some((value) => value > 3)) {
-                GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', { countdown: null });
+        // 2. 如果没有找到任何红包容器，等待一次后再判断
+        if (!foundValidContainer) {
+            Utils.log(`[调试] 初次查找未发现红包容器，等待 ${SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT / 1000} 秒后重新检查...`);
+            
+            // 核心修复：使用专门的等待逻辑，确保找到的是红包容器
+            const waitedDiv = await this.waitForRedEnvelopeContainer(SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
+            
+            if (!waitedDiv) {
+                // 超时后仍未找到红包容器
+                Utils.log('[判断] 超时未找到红包容器，判定活动已结束。');
+                GlobalState.updateWorker(roomId, 'SWITCHING', '活动已结束, 切换中', { countdown: null });
                 await this.switchRoom();
                 return;
             }
+            
+            // 找到了红包容器，提取信息
+            foundValidContainer = true;
+            const headlineElem = waitedDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
+            const contentElem = waitedDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
+            statusText = headlineElem ? headlineElem.textContent.trim() : '';
+            countdownText = contentElem ? contentElem.textContent.trim() : '';
+            redEnvelopeDiv = waitedDiv;
+        }
 
-            this.currentTaskEndTime = Date.now() + remainingSeconds * 1000;
+        // 3. 此时确认找到了红包容器，执行状态判断逻辑
+        if (countdownText.includes(':')) {
+            // 倒计时状态
+            const timeMatch = countdownText.match(/(\d+):(\d+)/);
+            if (timeMatch) {
+                const minutes = parseInt(timeMatch[1]);
+                const seconds = parseInt(timeMatch[2]);
+                const remainingSeconds = minutes * 60 + seconds;
+                
+                // 防止倒计时卡死检测
+                const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
+                this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
+                if (Array.from(this.remainingTimeMap.values()).some((value) => value > 3)) {
+                    GlobalState.updateWorker(roomId, 'SWITCHING', '倒计时卡死, 切换中', { countdown: null });
+                    await this.switchRoom();
+                    return;
+                }
 
-            // 为新的哨兵逻辑设置初始状态
-            this.lastHealthCheckTime = Date.now();
-            this.lastPageCountdown = remainingSeconds;
+                this.currentTaskEndTime = Date.now() + remainingSeconds * 1000;
+                Utils.log(`[任务] 识别到倒计时: ${timeMatch[0]}`);
+                
+                // 新增：提取奖励信息
+                const prizes = await this.extractPrizeInfo(redEnvelopeDiv);
+                
+                GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${timeMatch[0]}`, {
+                    countdown: { endTime: this.currentTaskEndTime },
+                    prizes: prizes
+                });
 
-            Utils.log(`发现新任务：倒计时 ${statusText}。`);
-            GlobalState.updateWorker(roomId, 'WAITING', `倒计时 ${statusText}`, {
-                countdown: { endTime: this.currentTaskEndTime },
-            });
-
-            const wakeUpDelay = Math.max(0, remainingSeconds * 1000 - 1500);
-            Utils.log(`本单元将在约 ${Math.round(wakeUpDelay / 1000)} 秒后唤醒执行任务。`);
-            setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
-
-            this.startHealthChecks(roomId, redEnvelopeDiv);
-        } else if (statusText.includes('抢') || statusText.includes('领')) {
+                const wakeUpDelay = Math.max(0, remainingSeconds * 1000 - 1500);
+                setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
+                this.startHealthChecks(roomId, redEnvelopeDiv);
+            } else {
+                Utils.log(`[错误] 无法解析时间: "${countdownText}"`);
+                setTimeout(() => this.findAndExecuteNextTask(roomId), 5000);
+            }
+        } else if (/可领取|立即/.test(statusText)) {
+            // 可领取状态
+            Utils.log(`[任务] 检测到可领取状态: ${statusText}`);
             GlobalState.updateWorker(roomId, 'CLAIMING', '立即领取中...');
             await this.claimAndRecheck(roomId);
         } else {
-            GlobalState.updateWorker(roomId, 'WAITING', `状态未知, 稍后重试`, { countdown: null });
-            setTimeout(() => this.findAndExecuteNextTask(roomId), 30000);
+            // 找到了红包容器，但状态无法识别
+            Utils.log(`[警告] 红包容器存在但状态无法识别 - 标题: "${statusText}" | 内容: "${countdownText}"`);
+            
+            // 检查是否是"已领完"等结束状态
+            if (statusText.includes('已领完') || statusText.includes('已结束') || statusText.includes('已抢完')) {
+                Utils.log('[判断] 红包已领完或活动已结束。');
+                GlobalState.updateWorker(roomId, 'SWITCHING', '红包已领完, 切换中', { countdown: null });
+                await this.switchRoom();
+            } else {
+                // 其他未知状态，短暂等待后重试
+                GlobalState.updateWorker(roomId, 'WAITING', `状态未知, 重试中...`, { countdown: null });
+                setTimeout(() => this.findAndExecuteNextTask(roomId), 5000);
+            }
+        }
+    },
+
+    /**
+     * 提取奖励信息
+     * @param {HTMLElement} redEnvelopeDiv - 红包外层容器
+     * @returns {Promise<Array>} - 奖励信息数组
+     */
+    async extractPrizeInfo(redEnvelopeDiv) {
+        try {
+            Utils.log('[奖励提取] 开始提取奖励信息...');
+            
+            // 1. 点击红包容器打开弹窗
+            const clickableContainer = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.clickableContainer);
+            if (!clickableContainer) {
+                Utils.log('[奖励提取] 未找到可点击容器');
+                return null;
+            }
+
+            if (!(await DOM.safeClick(clickableContainer, '红包容器（提取奖励）'))) {
+                Utils.log('[奖励提取] 点击失败');
+                return null;
+            }
+
+            // 2. 等待弹窗出现
+            const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, 3000);
+            if (!popup) {
+                Utils.log('[奖励提取] 弹窗未出现');
+                return null;
+            }
+
+            await Utils.sleep(500); // 等待弹窗内容加载
+
+            // 3. 提取奖励信息
+            const prizes = [];
+            const prizeContainer = popup.querySelector(SETTINGS.SELECTORS.prizeContainer);
+            
+            if (prizeContainer) {
+                const prizeItems = prizeContainer.querySelectorAll(SETTINGS.SELECTORS.prizeItem);
+                
+                Utils.log(`[奖励提取] 找到 ${prizeItems.length} 个奖励项容器`);
+                
+                for (const item of prizeItems) {
+                    // 核心修复：只提取包含完整信息（图片+数量）的奖励项
+                    // 跳过已领取的或不完整的项
+                    const imgElement = item.querySelector(SETTINGS.SELECTORS.prizeImage);
+                    const countElement = item.querySelector(SETTINGS.SELECTORS.prizeCount);
+                    
+                    // 只有同时存在图片和数量文本的才是有效奖励
+                    if (imgElement && countElement && countElement.textContent.trim()) {
+                        const prizeData = {
+                            img: imgElement.src,
+                            text: countElement.textContent.trim(),
+                            name: imgElement.getAttribute('alt') || ''
+                        };
+                        
+                        Utils.log(`[奖励提取] ✓ 提取到奖励: ${prizeData.text}, 名称: ${prizeData.name}`);
+                        prizes.push(prizeData);
+                    } else {
+                        Utils.log(`[奖励提取] ✗ 跳过不完整项 - 图片: ${!!imgElement}, 数量: ${countElement ? `"${countElement.textContent.trim()}"` : 'null'}`);
+                    }
+                }
+            } else {
+                Utils.log('[奖励提取] 未找到奖励容器');
+            }
+
+            Utils.log(`[奖励提取] 成功提取 ${prizes.length} 个有效奖励`);
+
+            // 4. 关闭弹窗
+            const closeBtn = popup.querySelector(SETTINGS.SELECTORS.closeButton);
+            if (closeBtn) {
+                await DOM.safeClick(closeBtn, '关闭按钮（提取奖励）');
+                await Utils.sleep(300);
+            }
+
+            return prizes.length > 0 ? prizes : null;
+        } catch (error) {
+            Utils.log(`[奖励提取] 提取失败: ${error.message}`);
+            
+            // 确保关闭任何可能打开的弹窗
+            try {
+                const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
+                if (closeBtn) {
+                    await DOM.safeClick(closeBtn, '关闭按钮（异常）');
+                }
+            } catch {
+                // 忽略关闭错误
+            }
+            
+            return null;
         }
     },
 
@@ -188,29 +360,40 @@ export const WorkerPage = {
      */
     startHealthChecks(roomId, redEnvelopeDiv) {
         const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
-        const STALL_THRESHOLD = 4; // UI显示与脚本计时允许的最大偏差
+        const STALL_THRESHOLD = 4;
 
         const check = () => {
-            const currentPageStatus = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer)?.textContent.trim();
-
-            if (!currentPageStatus || !currentPageStatus.includes(':')) {
-                return; // UI消失，观察结束
+            // 获取当前倒计时文本
+            const contentElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
+            const headlineElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
+            
+            const currentPageContent = contentElem ? contentElem.textContent.trim() : '';
+            const currentPageHeadline = headlineElem ? headlineElem.textContent.trim() : '';
+            
+            // 检查是否还在倒计时状态
+            if (!currentPageHeadline.includes('倒计时') || !currentPageContent.includes(':')) {
+                Utils.log('[哨兵] 检测到状态变化，停止监控。');
+                return;
             }
 
-            // 1. 计算脚本的精确剩余时间 (这是我们的"真实"时间)
             const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1000;
 
-            // 2. 获取页面UI显示的剩余时间 (这是"可能不准"的显示时间)
-            const [pMin, pSec] = currentPageStatus.split(':').map(Number);
+            // 解析UI显示的时间
+            const timeMatch = currentPageContent.match(/(\d+):(\d+)/);
+            if (!timeMatch) {
+                Utils.log('[哨兵] 无法解析UI倒计时，跳过本次检查。');
+                return;
+            }
+
+            const pMin = parseInt(timeMatch[1]);
+            const pSec = parseInt(timeMatch[2]);
             const pageRemainingSeconds = pMin * 60 + pSec;
 
-            // 3. 计算两者偏差
             const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
 
             const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
             const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
 
-            // 每次都打印脚本倒计时、UI显示倒计时和差值
             Utils.log(
                 `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
             );
@@ -325,17 +508,58 @@ export const WorkerPage = {
             this.healthCheckTimeoutId = null;
         }
 
-        Utils.log('开始执行领取流程...');
+        Utils.log(`[领取] 房间 ${roomId} 准备触发红包弹窗...`);
         GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...', { countdown: null });
 
-        const redEnvelopeDiv = document.querySelector(SETTINGS.SELECTORS.redEnvelopeContainer);
-        if (!(await DOM.safeClick(redEnvelopeDiv, '右下角红包区域'))) {
-            Utils.log('点击红包区域失败，重新寻找任务。');
+        // 1. 查找正确的点击目标
+        const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
+        let targetBtn = null;
+
+        for (const outer of outerContainers) {
+            // 确认是红包容器
+            const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
+            if (!hasBoxIcon) {
+                continue;
+            }
+            
+            // 获取内层可点击容器
+            const innerContainer = outer.querySelector(SETTINGS.SELECTORS.clickableContainer);
+            if (!innerContainer) {
+                continue;
+            }
+            
+            // 检查是否为有效状态
+            const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
+            const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
+            const headline = headlineElem ? headlineElem.textContent.trim() : '';
+            const content = contentElem ? contentElem.textContent.trim() : '';
+            
+            // 只点击倒计时或可领取状态的红包
+            if ((headline.includes('倒计时') && content.includes(':')) || 
+                headline.includes('可领取') || 
+                headline.includes('立即')) {
+                targetBtn = innerContainer; // 点击内层容器
+                Utils.log(`[领取] 锁定点击目标 - 标题: "${headline}" | 内容: "${content}"`);
+                break;
+            }
+        }
+
+        if (!targetBtn) {
+            Utils.log('[领取] 未能锁定有效的点击目标，尝试兜底查找...');
+            const outerDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, 3000);
+            if (outerDiv) {
+                targetBtn = outerDiv.querySelector(SETTINGS.SELECTORS.clickableContainer) || outerDiv;
+            }
+        }
+
+        if (!(await DOM.safeClick(targetBtn, '红包内层容器'))) {
+            Utils.log('[领取] 点击失败，重新寻找任务。');
             await Utils.sleep(2000);
             this.findAndExecuteNextTask(roomId);
             return;
         }
 
+        // 2. 等待弹窗出现
         const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
         if (!popup) {
             Utils.log('等待红包弹窗超时，重新寻找任务。');
@@ -344,9 +568,32 @@ export const WorkerPage = {
             return;
         }
 
-        const openBtn = popup.querySelector(SETTINGS.SELECTORS.openButton);
-        if (await DOM.safeClick(openBtn, '红包弹窗的打开按钮')) {
-            // 检查是否触发上限
+        // 3. 查找打开按钮
+        const singleBag = popup.querySelector(SETTINGS.SELECTORS.singleBag);
+        const openBtn = singleBag ? singleBag.querySelector(SETTINGS.SELECTORS.openButton) : null;
+        
+        if (openBtn) {
+            const btnText = openBtn.textContent.trim();
+            Utils.log(`[领取] 找到打开按钮，文本: "${btnText}"`);
+            
+            // 检查是否还需要等待
+            if (/(\d+)秒后/.test(btnText)) {
+                const waitMatch = btnText.match(/(\d+)秒后/);
+                if (waitMatch) {
+                    const waitSeconds = parseInt(waitMatch[1]);
+                    Utils.log(`[领取] 按钮显示还需等待 ${waitSeconds} 秒，等待中...`);
+                    GlobalState.updateWorker(roomId, 'CLAIMING', `等待 ${waitSeconds} 秒...`, { countdown: null });
+                    await Utils.sleep((waitSeconds + 1) * 1000);
+                }
+            }
+        }
+        
+        // 4. 执行点击（优先点击按钮，否则点击弹窗）
+        const clickTarget = openBtn || singleBag || popup;
+        const targetName = openBtn ? '红包打开按钮' : (singleBag ? '红包主体' : '红包弹窗');
+
+        if (await DOM.safeClick(clickTarget, targetName)) {
+            // 检查上限
             if (await DOM.checkForLimitPopup()) {
                 GlobalState.setDailyLimit(true);
                 Utils.log('检测到每日上限！');
@@ -355,27 +602,26 @@ export const WorkerPage = {
                 } else {
                     await this.selfClose(roomId);
                 }
-                return; // 达到上限，终止任务链
+                return;
             }
 
-            await Utils.sleep(1500); // 等待奖励动画
-            // 不再查找具体的奖励文本，而是查找代表“成功”的容器
+            await Utils.sleep(1500);
+            
+            // 5. 识别结果
             const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3000, popup);
-
-            // 根据是否找到成功标志来确定奖励信息
             const reward = successIndicator ? '领取成功 ' : '空包或失败';
             Utils.log(`领取操作完成，结果: ${reward}`);
 
             GlobalState.updateWorker(roomId, 'WAITING', `领取到: ${reward}`, { countdown: null });
+            
+            // 6. 关闭弹窗
             const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
-            await DOM.safeClick(closeBtn, '领取结果弹窗的关闭按钮');
+            await DOM.safeClick(closeBtn, '关闭按钮');
         } else {
-            Utils.log('点击打开按钮失败。');
+            Utils.log('[领取] 点击打开操作失败。');
         }
 
         STATE.lastActionTime = Date.now();
-
-        // 核心：无论成功与否，等待后都回到起点，寻找下一个任务
         Utils.log('操作完成，2秒后在本房间内寻找下一个任务...');
         await Utils.sleep(2000);
         this.findAndExecuteNextTask(roomId);
@@ -389,14 +635,28 @@ export const WorkerPage = {
             return;
         }
 
-        // 使用 DOM.findElement 替换 querySelector，给它5秒的等待时间
-        Utils.log('正在寻找暂停按钮...');
-        const pauseBtn = await DOM.findElement(SETTINGS.SELECTORS.pauseButton, 5000);
+        // 1. 尝试寻找暂停按钮
+        let pauseBtn = document.querySelector(SETTINGS.SELECTORS.pauseButton);
+
+        // 2. 如果找不到，可能是控制栏隐藏了，尝试通过触发播放器 hover 来唤出控制栏
+        if (!pauseBtn) {
+            const player = document.querySelector('#js-player-video');
+            if (player) {
+                // 模拟鼠标进入播放器区域
+                player.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                await Utils.sleep(500); // 等待控制栏动画显示
+                pauseBtn = document.querySelector(SETTINGS.SELECTORS.pauseButton);
+            }
+        }
 
         if (pauseBtn) {
-            // Utils.log("检测到视频正在播放，尝试自动暂停...");
-            if (await DOM.safeClick(pauseBtn, '暂停按钮')) {
-                Utils.log('视频已通过脚本暂停。'); // 只有这里出现，才代表真的成功了
+            // 检查是否真的是暂停按钮（通过内部 SVG 的 path 特征判断，可选但更稳健）
+            const isPauseIcon = pauseBtn.innerHTML.includes('M9.5 7'); 
+            
+            if (isPauseIcon) {
+                if (await DOM.safeClick(pauseBtn, '暂停按钮')) {
+                    Utils.log('视频已通过脚本暂停。');
+                }
             }
         } else {
             // Utils.log("在5秒内未找到暂停按钮，可能视频未播放或已暂停。");
@@ -582,5 +842,34 @@ export const WorkerPage = {
                 this.commandChannel.close();
             }
         });
+    },
+
+    /**
+     * 等待红包容器出现（确保找到的是真正的红包容器）
+     * @param {number} timeout - 超时时间（毫秒）
+     * @returns {Promise<HTMLElement|null>} - 找到的红包容器或 null
+     */
+    async waitForRedEnvelopeContainer(timeout) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < timeout) {
+            // 查找所有可能的容器
+            const containers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
+            
+            // 遍历找到包含红包图标的容器
+            for (const container of containers) {
+                const hasBoxIcon = container.querySelector(SETTINGS.SELECTORS.boxIcon);
+                if (hasBoxIcon) {
+                    Utils.log(`[等待] 找到红包容器，耗时 ${Date.now() - startTime}ms`);
+                    return container;
+                }
+            }
+            
+            // 没找到，等待一小段时间后重试
+            await Utils.sleep(300);
+        }
+        
+        Utils.log(`[等待] 等待红包容器超时（${timeout}ms）`);
+        return null;
     },
 };
