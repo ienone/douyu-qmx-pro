@@ -14,15 +14,29 @@ export const DOM = {
      * @param {string} selector - CSS选择器。
      * @param {number} [timeout=SETTINGS.PANEL_WAIT_TIMEOUT] - 超时时间。
      * @param {Document|HTMLElement} [parent=document] - 父元素。
+     * @param {Function} [validator=null] - 验证函数，返回 true 表示元素有效
      * @returns {Promise<HTMLElement|null>} - 找到的元素或 null。
      */
-    async findElement(selector, timeout = SETTINGS.PANEL_WAIT_TIMEOUT, parent = document) {
+    async findElement(selector, timeout = SETTINGS.PANEL_WAIT_TIMEOUT, parent = document, validator = null) {
         const startTime = Date.now();
         while (Date.now() - startTime < timeout) {
-            const element = parent.querySelector(selector);
-            if (element && window.getComputedStyle(element).display !== 'none') {
+            const elements = parent.querySelectorAll(selector);
+            
+            for (const element of elements) {
+                // 检查元素是否可见
+                if (window.getComputedStyle(element).display === 'none') {
+                    continue;
+                }
+                
+                // 如果提供了验证函数，使用它进一步验证
+                if (validator && !validator(element)) {
+                    continue;
+                }
+                
+                // 找到有效元素
                 return element;
             }
+            
             await Utils.sleep(300);
         }
         Utils.log(`查找元素超时: ${selector}`);

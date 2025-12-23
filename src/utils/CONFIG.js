@@ -67,20 +67,51 @@ export const CONFIG = {
     CONVERT_LEGACY_POSITION: true, // 是否自动将旧的像素位置转换为新的比例位置，仅执行一次。
 
     // --- 选择器 ---
-    // 存储所有脚本需要操作的页面元素的CSS选择器，便于统一管理和修改。
     SELECTORS: {
-        redEnvelopeContainer: '#layout-Player-aside div.LiveNewAnchorSupportT-enter', // 右下角红包活动的总容器。
-        countdownTimer: 'span.LiveNewAnchorSupportT-enter--bottom', // 红包容器内显示倒计时的元素。
-        popupModal: 'body > div.LiveNewAnchorSupportT-pop', // 点击红包后弹出的主模态框（弹窗）。
-        openButton: 'div.LiveNewAnchorSupportT-singleBag--btnOpen', // 弹窗内的“开”或“抢”按钮。
-        closeButton: 'div.LiveNewAnchorSupportT-pop--close', // 领取奖励后，弹窗上的关闭按钮。
-        criticalElement: '#js-player-video', // 用于判断页面是否加载成功的关键元素（如此处的视频播放器）。
-        pauseButton: 'div.pause-c594e8:not(.removed-9d4c42)', // 播放器上的暂停按钮。
-        playButton: 'div.play-8dbf03:not(.removed-9d4c42)', // 播放器上的播放按钮。
-        rewardSuccessIndicator: '.LiveNewAnchorSupportT-singleBagOpened', // 成功状态的弹窗
-        limitReachedPopup: 'div.dy-Message-custom-content.dy-Message-info', // 斗鱼官方弹出的“今日已达上限”的提示信息元素。
-        rankListContainer: '#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank', // 注入模式下，脚本面板要替换的目标容器。
-        anchorName: 'div.Title-anchorName > h2.Title-anchorNameH2', // 直播间页面中显示主播昵称的元素。
+        // 1. 外层容器：用于查找红包区域
+        redEnvelopeContainer: 'div.activeItem__d6uUm, div[class*="activeItem"]',
+        
+        // 2. 可点击的内层容器
+        clickableContainer: 'div.container__0Xsh2, div[class*="container__"]',
+        
+        // 3. 倒计时文本容器
+        countdownTimer: 'div.boxContent__N0d-3, div[class*="boxContent"]',
+        
+        // 4. 状态文本容器（包含"倒计时"/"可领取"等）
+        statusHeadline: 'div.boxHeadline__GP-am, div[class*="boxHeadline"]',
+        
+        // 5. 红包图标容器（用于确认是红包而非其他活动）
+        boxIcon: 'div.boxIcon__H-44m, div[class*="boxIcon"]',
+        
+        // 6. 弹窗主模态框
+        popupModal: 'div.LiveNewAnchorSupportT-pop--inner, div[class*="pop--inner"]',
+        
+        // 7. 弹窗中的红包主体
+        singleBag: 'div.LiveNewAnchorSupportT-singleBag, div[class*="singleBag"]',
+        
+        // 8. 打开/领取按钮（文本可能是"立即抢"或"122秒后可抢"）
+        openButton: 'div.LiveNewAnchorSupportT-singleBag--btn, div[class*="singleBag--btn"]',
+        
+        // 9. 关闭按钮
+        closeButton: 'div.LiveNewAnchorSupportT-pop--close, div[class*="pop--close"]',
+        
+        // 10. 播放器控制
+        criticalElement: '#js-player-video',
+        pauseButton: '#js-player-controlbar [class*="left-"] i:nth-child(1), [class*="icon-pause"], .icon-c8be96',
+        
+        // 11. 成功状态指示器
+        rewardSuccessIndicator: '[class*="singleBagOpened"]',
+        
+        // 12. 其他
+        limitReachedPopup: 'div.dy-Message-custom-content.dy-Message-info',
+        rankListContainer: '#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank',
+        anchorName: 'h3.anchorName__6NXv9, h3[class*="anchorName"], div.Title-anchorName > h2.Title-anchorNameH2',
+        
+        // 13. 奖励提取 - 优化后的选择器
+        prizeContainer: 'div.LiveNewAnchorSupportT-singleBag--awards, div[class*="singleBag--awards"]',
+        prizeItem: 'div.LiveNewAnchorSupportT-singleBag--prize, div[class*="singleBag--prize"]',
+        prizeImage: 'img',
+        prizeCount: 'span',
     },
     
     // =======================================================
