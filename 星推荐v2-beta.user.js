@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name             斗鱼全民星推荐自动领取pro
+// @name             斗鱼全民星推荐pro-beta
 // @namespace        http://tampermonkey.net/
-// @version          2.0.8
+// @version          beta-5-beta
 // @author           ienone&Truthss
-// @description      原版《斗鱼全民星推荐自动领取》的增强版(应该增强了……)在保留核心功能的基础上，引入了可视化管理面板。
+// @description      星推荐自动领取脚本
 // @license          MIT
 // @match            *://www.douyu.com/*
 // @connect          list-www.douyu.com
@@ -540,7 +540,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
                 <button class="tab-link active" data-tab="basic">基本设置</button>
                 <button class="tab-link" data-tab="perf">性能与延迟</button>
                 <button class="tab-link" data-tab="advanced">高级设置</button>
-                <button class="tab-link" data-tab="danmupro">弹幕助手</button>
+                ${'<button class="tab-link" data-tab="danmupro">弹幕助手</button>'}
                 <button class="tab-link" data-tab="about">关于</button>
                 <!-- 主题模式切换开关 -->
                 <div class="qmx-settings-item">
@@ -609,13 +609,14 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
                             <span class="slider"></span>
                         </label>
                     </div>
+                    ${`
                     <div class="qmx-settings-item">
                         <label>启用弹幕助手😋<span class="qmx-tooltip-icon" data-tooltip-key="danmupro-mode">?</span></label>
                         <label class="qmx-toggle">
                             <input type="checkbox" id="setting-danmupro-mode" ${SETTINGS2.ENABLE_DANMU_PRO ? "checked" : ""}>
                             <span class="slider"></span>
                         </label>
-                    </div>
+                    </div>`}
                     <div class="qmx-settings-item">
                         <label>达到上限后的行为</label>
                         <div class="qmx-select" data-target-id="setting-daily-limit-action">
@@ -697,6 +698,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
             </div>
 
             <!-- ==================== Tab 4: 弹幕助手 ==================== -->
+            ${`
             <div id="tab-danmupro" class="tab-content">
                 <h4>关于斗鱼弹幕助手功能</h4>
                 <ul class="qmx-styled-list">
@@ -715,7 +717,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
                     </li>
                     <li>长文本预览：当鼠标悬停或键盘选择到内容过长的候选项时，会显示一个悬浮框来展示完整内容。</li>
                 </ul>
-            </div>      
+            </div>`}
             <!-- ==================== Tab 5: 关于 ==================== -->
             <div id="tab-about" class="tab-content">
                 <!-- 调试工具 - 仅在开发时启用
@@ -6495,14 +6497,14 @@ checkInjectionState() {
         }
       }
     },
-handleSettingsUpdate(newSettings) {
+async handleSettingsUpdate(newSettings) {
       Utils.log("[ControlPage] 检测到设置更新，正在应用...");
       if (newSettings.MODAL_DISPLAY_MODE) {
         this.applyModalMode();
         this.correctModalPosition();
       }
       if (typeof newSettings.ENABLE_DANMU_PRO !== "undefined") {
-        if (newSettings.ENABLE_DANMU_PRO) {
+        if (newSettings.ENABLE_DANMU_PRO && true) {
           DanmuPro.init();
         } else {
           DanmuPro.destroy();
@@ -7484,7 +7486,6 @@ startCommandListener(roomId) {
       const currentUrl = window.location.href;
       const controlIds = [SETTINGS.CONTROL_ROOM_ID, SETTINGS.TEMP_CONTROL_ROOM_RID].filter(Boolean);
       Utils.log(`控制页识别ID列表: ${controlIds.join(", ")}`);
-      Utils.log(`当前页面URL: ${currentUrl}`);
       const isControlRoom = controlIds.some(
         (id) => currentUrl.includes(`/${id}`) || currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${id}`)
       );
@@ -7505,7 +7506,6 @@ startCommandListener(roomId) {
           if (Object.hasOwn(globalTabs, roomId) && pendingIndex > -1) {
             pendingWorkers.splice(pendingIndex, 1);
             GM_setValue("qmx_pending_workers", pendingWorkers);
-            Utils.log(`[身份清理] 房间 ${roomId} 已是激活状态，清理残留的待处理标记。`);
           }
           WorkerPage.init();
         } else {
