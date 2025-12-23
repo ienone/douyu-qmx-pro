@@ -421,6 +421,8 @@
     color: var(--md-sys-color-on-surface-variant);
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     justify-content: center;
+    /* 允许内容换行，防止窄屏下溢出 */
+    flex-wrap: wrap; 
 }
 
 .qmx-stat-details.transitioning {
@@ -442,17 +444,19 @@
 /* 任务列表项 */
 .qmx-tab-list-item {
     background-color: var(--md-sys-color-surface-bright);
-    border-radius: 12px;
-    padding: 12px 16px;
+    border-radius: 16px; /* Material 3 风格圆角 */
+    padding: 8px 16px;
     margin-bottom: 8px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     transition: background-color 0.2s, transform 0.3s ease, opacity 0.3s ease;
+    position: relative;
+    overflow: hidden; /* 防止内容溢出圆角 */
 }
 
 .qmx-tab-list-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.08));
 }
 
 .qmx-item-enter {
@@ -475,8 +479,8 @@
 }
 
 .qmx-tab-status-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -485,15 +489,16 @@
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    gap: 4px;
+    gap: 2px;
     font-size: 14px;
     overflow: hidden;
+    min-width: 0; /* 允许flex子项收缩 */
 }
 
 .qmx-tab-header {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
 }
 
 .qmx-tab-nickname {
@@ -502,43 +507,71 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 14px;
 }
 
 .qmx-tab-room-id {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--md-sys-color-on-surface-variant);
-    opacity: 0.7;
+    background-color: var(--md-sys-color-surface-variant, rgba(231, 224, 236, 0.4)); /* 淡底色 */
+    padding: 1px 6px;
+    border-radius: 6px;
+    font-family: 'Roboto Mono', monospace; /* 可选：等宽字体 */
+    line-height: 1.4;
+    flex-shrink: 0;
 }
 
 .qmx-tab-details {
     display: flex;
     align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--md-sys-color-on-surface-variant);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.qmx-tab-prizes {
+    display: flex;
+    align-items: center;
     gap: 8px;
-    font-size: 13px;
-    color: var(--md-sys-color-on-surface-variant);
-}
-
-.qmx-tab-status-name {
-    font-weight: 500;
-}
-
-.qmx-tab-close-btn {
+    margin-left: auto; /* 推到最右侧 */
+    padding: 4px 10px;
+    background-color: var(--md-sys-color-surface-container, rgba(0, 0, 0, 0.05));
+    border-radius: 100px; /* 胶囊形状 */
     flex-shrink: 0;
-    background: none;
-    border: none;
-    color: var(--md-sys-color-on-surface-variant);
-    font-size: 20px;
-    cursor: pointer;
-    padding: 0 4px;
-    line-height: 1;
-    opacity: 0.6;
-    transition: opacity 0.2s, color 0.2s, transform 0.2s;
 }
 
-.qmx-tab-close-btn:hover {
-    opacity: 1;
-    color: #f44336;
-    transform: scale(1.1);
+.qmx-tab-prize-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    padding: 0;
+    border: none;
+    line-height: 1;
+    color: var(--md-sys-color-on-surface);
+    font-weight: 500;
+    font-size: 12px;
+}
+
+.qmx-tab-prize-item:hover {
+    transform: translateY(-1px);
+    opacity: 0.8;
+}
+
+.qmx-tab-prize-item svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+}
+
+.qmx-tab-prize-text {
+    font-weight: 600;
+    white-space: nowrap;
+    color: inherit; 
+    font-size: 12px;
 }
 
 /* 控制面板底部 */

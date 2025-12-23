@@ -15,6 +15,13 @@ import { FirstTimeNotice } from './FirstTimeNotice.js';
 import { StatsInfo } from './StatsInfo';
 import { DanmuPro } from './danmu/DanmuPro'; // 1. 添加静态导入
 
+// --- 图标常量 ---
+const ICONS = {
+    GOLD: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#FFD700" stroke="#FFA000" stroke-width="2"/><text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="14" fill="#B8860B" font-weight="bold" font-family="Arial">¥</text></svg>`,
+    STARLIGHT: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FF69B4" stroke="#FF1493" stroke-width="2"/></svg>`,
+    GIFT: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="8" width="18" height="12" rx="2" fill="#FF7043"/><rect x="10" y="8" width="4" height="12" fill="#FFCCBC"/><path d="M12 8V4M12 4L8 8M12 4L16 8" stroke="#FF7043" stroke-width="2" stroke-linecap="round"/></svg>`
+};
+
 /**
  * =================================================================================
  * 模块：控制页面 (ControlPage)
@@ -442,6 +449,31 @@ export const ControlPage = {
                 if (statusTextEl.textContent !== currentStatusText) {
                     statusTextEl.textContent = currentStatusText;
                 }
+
+                // 更新奖品信息 (适配新布局：奖品独立在右侧)
+                let prizesContainer = existingItem.querySelector('.qmx-tab-prizes');
+                const newPrizesHtml = this.generatePrizesHTML(tabData.prizes);
+                
+                if (newPrizesHtml) {
+                    // 如果有新的奖励信息
+                    if (!prizesContainer) {
+                        // 不存在容器，插入到关闭按钮之前
+                        const closeBtn = existingItem.querySelector('.qmx-tab-close-btn');
+                        if (closeBtn) {
+                            closeBtn.insertAdjacentHTML('beforebegin', newPrizesHtml);
+                        } else {
+                            existingItem.insertAdjacentHTML('beforeend', newPrizesHtml);
+                        }
+                    } else {
+                        // 容器存在，检查内容是否变化
+                        if (prizesContainer.outerHTML !== newPrizesHtml) {
+                            prizesContainer.outerHTML = newPrizesHtml;
+                        }
+                    }
+                } else if (prizesContainer) {
+                    // 没有奖励信息且容器存在，移除容器
+                    prizesContainer.remove();
+                }
             } else {
                 // --- B. 如果条目不存在，则创建并添加 (CREATE path) ---
                 //Utils.log(`[Render] 房间 ${roomId}: UI条目不存在，执行创建！状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
@@ -765,7 +797,9 @@ export const ControlPage = {
         const statusColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
         const nickname = tabData.nickname || '加载中...';
         const statusName = statusMap[tabData.status] || tabData.status;
+        const prizesHtml = this.generatePrizesHTML(tabData.prizes);
 
+        // 优化布局：将 prizesHtml 移出 qmx-tab-details，放在右侧
         newItem.innerHTML = `
                 <div class="qmx-tab-status-dot" style="background-color: ${statusColor};"></div>
                 <div class="qmx-tab-info">
@@ -778,9 +812,35 @@ export const ControlPage = {
                         <span class="qmx-tab-status-text">${statusText}</span>
                     </div>
                 </div>
+                ${prizesHtml}
                 <button class="qmx-tab-close-btn" title="关闭该标签页">×</button>
             `;
         return newItem;
+    },
+
+    /**
+     * 生成奖品信息的HTML (使用SVG图标)
+     */
+    generatePrizesHTML(prizes) {
+        if (!prizes || !Array.isArray(prizes) || prizes.length === 0) return '';
+        
+        return `<div class="qmx-tab-prizes">` +
+            prizes.map((p, index) => {
+                // 简化的图标匹配逻辑
+                let icon = ICONS.GOLD; // 默认为金币
+                
+                // 如果有两个奖励:第一个是金币,第二个是星光棒
+                // 如果只有一个奖励:就是金币
+                if (prizes.length === 2 && index === 1) {
+                    icon = ICONS.STARLIGHT;
+                }
+
+                return `<div class="qmx-tab-prize-item" title="${p.name || p.text}">
+                    ${icon}
+                    <span class="qmx-tab-prize-text">${p.text}</span>
+                </div>`;
+            }).join('') +
+            `</div>`;
     },
 
     /**
