@@ -21,6 +21,11 @@ export default defineConfig([
                 ...globals.node,
                 ...globals.es2022,
                 ...globals.greasemonkey,
+                __BUILD_FLAVOR__: 'readonly',
+                __BUILD_CHANNEL__: 'readonly',
+                __ENABLE_DANMU_PRO__: 'readonly',
+                __ENABLE_STAR_CORE__: 'readonly',
+
             },
         },
     },

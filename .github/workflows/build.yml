@@ -25,7 +25,11 @@ jobs:
         run: npm install
         
       - name: Build
-        run: npm run build
+        run: |
+          BUILD_FLAVOR=full \
+          BUILD_CHANNEL=beta \
+          VERSION_SUFFIX=beta-${{ github.run_number }} \
+          npm run build
         
       # 核心步骤：将 dist 文件夹推送到 build 分支
       - name: Deploy to Build Branch

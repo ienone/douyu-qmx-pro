@@ -1,0 +1,56 @@
+name: Release Builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: 'Release version tag (e.g. 2.0.9)'
+        required: true
+        default: '2.0.8'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Clean dist
+        run: rm -rf dist && mkdir -p dist
+
+      - name: Build full (星推荐+弹幕)
+        run: |
+          BUILD_FLAVOR=full \
+          BUILD_CHANNEL=release \
+          VERSION_SUFFIX=${{ github.event.inputs.release_version }} \
+          npm run build
+
+      - name: Build star-only (仅星推荐)
+        run: |
+          BUILD_FLAVOR=star-only \
+          BUILD_CHANNEL=release \
+          VERSION_SUFFIX=${{ github.event.inputs.release_version }} \
+          npm run build
+
+      - name: Build danmu-only (仅弹幕助手)
+        run: |
+          BUILD_FLAVOR=danmu-only \
+          BUILD_CHANNEL=release \
+          VERSION_SUFFIX=${{ github.event.inputs.release_version }} \
+          npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: userscripts-${{ github.event.inputs.release_version }}
+          path: dist/*.user.js

@@ -13,7 +13,7 @@ import { DouyuAPI } from '../utils/DouyuAPI';
 import { SettingsPanel } from './SettingsPanel.js';
 import { FirstTimeNotice } from './FirstTimeNotice.js';
 import { StatsInfo } from './StatsInfo';
-import { DanmuPro } from './danmu/DanmuPro';
+import { DanmuPro } from './danmu/DanmuPro'; // 1. 添加静态导入
 
 /**
  * =================================================================================
@@ -106,7 +106,7 @@ export const ControlPage = {
     /**
      * 处理设置更新
      */
-    handleSettingsUpdate(newSettings) {
+    async handleSettingsUpdate(newSettings) {
         Utils.log('[ControlPage] 检测到设置更新，正在应用...');
 
         // 1. 处理显示模式变更
@@ -117,9 +117,10 @@ export const ControlPage = {
 
         // 2. 处理弹幕助手开关
         if (typeof newSettings.ENABLE_DANMU_PRO !== 'undefined') {
-            if (newSettings.ENABLE_DANMU_PRO) {
+            if (newSettings.ENABLE_DANMU_PRO && __ENABLE_DANMU_PRO__) {
+                // 2. 直接使用静态导入的对象，不再使用 await import
                 DanmuPro.init();
-            } else {
+            } else if (__ENABLE_DANMU_PRO__) {
                 DanmuPro.destroy();
             }
         }

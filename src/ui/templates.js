@@ -93,7 +93,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 <button class="tab-link active" data-tab="basic">基本设置</button>
                 <button class="tab-link" data-tab="perf">性能与延迟</button>
                 <button class="tab-link" data-tab="advanced">高级设置</button>
-                <button class="tab-link" data-tab="danmupro">弹幕助手</button>
+                ${__ENABLE_DANMU_PRO__ ? '<button class="tab-link" data-tab="danmupro">弹幕助手</button>' : ''}
                 <button class="tab-link" data-tab="about">关于</button>
                 <!-- 主题模式切换开关 -->
                 <div class="qmx-settings-item">
@@ -162,13 +162,14 @@ export const settingsPanelTemplate = (SETTINGS) => {
                             <span class="slider"></span>
                         </label>
                     </div>
+                    ${__ENABLE_DANMU_PRO__ ? `
                     <div class="qmx-settings-item">
                         <label>启用弹幕助手😋<span class="qmx-tooltip-icon" data-tooltip-key="danmupro-mode">?</span></label>
                         <label class="qmx-toggle">
                             <input type="checkbox" id="setting-danmupro-mode" ${SETTINGS.ENABLE_DANMU_PRO ? 'checked' : ''}>
                             <span class="slider"></span>
                         </label>
-                    </div>
+                    </div>` : ''}
                     <div class="qmx-settings-item">
                         <label>达到上限后的行为</label>
                         <div class="qmx-select" data-target-id="setting-daily-limit-action">
@@ -266,6 +267,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
             </div>
 
             <!-- ==================== Tab 4: 弹幕助手 ==================== -->
+            ${__ENABLE_DANMU_PRO__ ? `
             <div id="tab-danmupro" class="tab-content">
                 <h4>关于斗鱼弹幕助手功能</h4>
                 <ul class="qmx-styled-list">
@@ -284,7 +286,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     </li>
                     <li>长文本预览：当鼠标悬停或键盘选择到内容过长的候选项时，会显示一个悬浮框来展示完整内容。</li>
                 </ul>
-            </div>      
+            </div>` : ''}
             <!-- ==================== Tab 5: 关于 ==================== -->
             <div id="tab-about" class="tab-content">
                 <!-- 调试工具 - 仅在开发时启用
