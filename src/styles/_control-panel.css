@@ -516,7 +516,7 @@
     background-color: var(--md-sys-color-surface-variant, rgba(231, 224, 236, 0.4)); /* 淡底色 */
     padding: 1px 6px;
     border-radius: 6px;
-    font-family: 'Roboto Mono', monospace; /* 可选：等宽字体 */
+    /* font-family: 'Roboto Mono', monospace; 可选：等宽字体 */
     line-height: 1.4;
     flex-shrink: 0;
 }
@@ -535,12 +535,13 @@
 .qmx-tab-prizes {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px; /* 减小间距 */
     margin-left: auto; /* 推到最右侧 */
-    padding: 4px 10px;
+    padding: 4px 8px; /* 减小内边距 */
     background-color: var(--md-sys-color-surface-container, rgba(0, 0, 0, 0.05));
     border-radius: 100px; /* 胶囊形状 */
     flex-shrink: 0;
+    flex-direction: column; /* 改为垂直布局 */
 }
 
 .qmx-tab-prize-item {
@@ -553,7 +554,7 @@
     line-height: 1;
     color: var(--md-sys-color-on-surface);
     font-weight: 500;
-    font-size: 12px;
+    font-size: 11px; /* 稍微减小字体 */
 }
 
 .qmx-tab-prize-item:hover {
@@ -563,15 +564,15 @@
 
 .qmx-tab-prize-item svg {
     display: block;
-    width: 14px;
-    height: 14px;
+    width: 12px; /* 稍微减小图标尺寸 */
+    height: 12px;
 }
 
 .qmx-tab-prize-text {
     font-weight: 600;
     white-space: nowrap;
     color: inherit; 
-    font-size: 12px;
+    font-size: 11px; /* 稍微减小字体 */
 }
 
 /* 控制面板底部 */
