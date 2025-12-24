@@ -46,6 +46,9 @@ body[data-theme="light"] {
     --surface-container-highest: #E6E0E9;
     --primary-container: #EADDFF;
     --on-primary-container: #21005D;
+    /* 新增：日间模式专用的胶囊边框颜色 */
+    --capsule-border-color: rgba(103, 80, 164, 0.3);
+    --capsule-border-hover: rgba(103, 80, 164, 0.6);
 }
 
 /* --- 核心布局与基础组件 --- */
@@ -541,6 +544,7 @@ input[type=number]::-webkit-outer-spin-button {
 /* Firefox 浏览器 */
 input[type=number] {
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 /* 滑动开关 (Toggle Switch) */

@@ -46,7 +46,8 @@
     flex-shrink: 0;
     padding: var(--ddp-capsule-item-padding, 3px) 8px;
     background: var(--md-sys-color-surface-container);
-    border: 1px solid var(--md-sys-color-outline);
+    /* 核心修复：使用主题感知的边框颜色，确保日间模式下可见 */
+    border: 1.5px solid var(--capsule-border-color, rgba(103, 80, 164, 0.3));
     border-radius: 12px;
     color: var(--md-sys-color-on-surface);
     font-size: 12px;
@@ -79,10 +80,11 @@
 
 /* 悬停效果 */
 .ddp-candidate-capsule:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.4);
+    /* 增强悬停时的边框颜色和背景色对比 */
+    background: var(--md-sys-color-surface-bright);
+    border-color: var(--capsule-border-hover, rgba(103, 80, 164, 0.6));
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 /* 激活状态 */
@@ -91,7 +93,7 @@
     border-color: #ff8833;
     color: #fff;
     font-weight: 500;
-    box-shadow: 0 2px 6px rgba(255, 102, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(255, 102, 0, 0.4);
 }
 
 /* 选择模式指示器 */

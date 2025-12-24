@@ -11,7 +11,8 @@
     position: fixed;
     z-index: 9999;
     background: var(--md-sys-color-surface-container);
-    border: 1px solid var(--md-sys-color-outline);
+    /* 优化：使用主题感知的边框颜色 */
+    border: 1.5px solid var(--capsule-border-color, rgba(103, 80, 164, 0.3));
     transition: all .3s var(--motion-easing), box-shadow .3s var(--motion-easing); 
     border-radius: 12px;
     box-shadow: 0 4px 8px 3px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.3);
@@ -45,7 +46,8 @@
 .dda-popup-item {
   padding: 8px 16px;
   cursor: pointer;
-  border-bottom: 1px solid var(--md-sys-color-outline);
+  /* 优化：使用主题感知的边框颜色 */
+  border-bottom: 1px solid var(--capsule-border-color, rgba(103, 80, 164, 0.2));
   transition: all .25s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 40px;
   display: flex;

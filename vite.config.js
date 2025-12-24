@@ -12,7 +12,27 @@ export default defineConfig(() => {
     const channelSuffix = buildChannel === 'beta' ? `-beta` : '';
     const flavorSuffix = buildFlavor === 'full' ? '' : `-${buildFlavor}`;
     const fileName = `星推荐v2${flavorSuffix}${channelSuffix}.user.js`;
-    const scriptName = `斗鱼全民星推荐${buildFlavor === 'danmu-only' ? '弹幕助手' : 'pro'}${channelSuffix}`;
+    
+    // 更清晰的脚本名称
+    let scriptName;
+    if (buildFlavor === 'danmu-only') {
+        scriptName = `斗鱼弹幕助手${channelSuffix}`;
+    } else if (buildFlavor === 'star-only') {
+        scriptName = `斗鱼全民星推荐助手${channelSuffix}`;
+    } else {
+        scriptName = `斗鱼全民星推荐助手+弹幕助手${channelSuffix}`;
+    }
+    
+    // 更详细的描述
+    let description;
+    if (buildFlavor === 'danmu-only') {
+        description = '斗鱼弹幕智能补全助手 - 提供弹幕模板自动补全、全键盘操作等功能';
+    } else if (buildFlavor === 'star-only') {
+        description = '斗鱼全民星推荐自动领取脚本 - 自动领取红包奖励，支持多标签页管理与可视化面板';
+    } else {
+        description = '斗鱼全民星推荐自动领取 + 弹幕智能助手 - 集成红包自动领取与弹幕补全功能的完整版';
+    }
+    
     const enableDanmu = buildFlavor !== 'star-only';
     const enableStar = buildFlavor !== 'danmu-only';
 
@@ -23,6 +43,7 @@ export default defineConfig(() => {
                 // 根据构建版本，将不需要的模块替换为空文件
                 ...(buildFlavor === 'star-only' ? {
                     './modules/danmu/DanmuPro': path.resolve(__dirname, 'src/utils/empty.js'),
+                    './danmu/DanmuPro': path.resolve(__dirname, 'src/utils/empty.js'),
                 } : {}),
                 ...(buildFlavor === 'danmu-only' ? {
                     './modules/ControlPage': path.resolve(__dirname, 'src/utils/empty.js'),
@@ -41,9 +62,7 @@ export default defineConfig(() => {
                 userscript: {
                     name: scriptName,
                     namespace: 'http://tampermonkey.net/',
-                    description: enableStar
-                        ? '星推荐自动领取脚本'
-                        : '斗鱼弹幕助手独立版',
+                    description: description,
                     version: versionBase + channelSuffix,
                     author: 'ienone&Truthss',
                     match: [

@@ -90,8 +90,8 @@
 /* 控制面板头部 */
 .qmx-modal-header {
     position: relative;
-    padding: 12px 20px 0px 20px;
-    font-size: 22px;
+    padding: 10px 20px 4px 20px;
+    font-size: 20px;
     font-weight: 400;
     color: var(--md-sys-color-on-surface);
     user-select: none;
@@ -145,9 +145,7 @@
 /* 控制面板内容区 */
 .qmx-modal-content {
     padding: 0 24px;
-    /* 核心改动：让内容区占据所有剩余空间 */
     flex: 1;
-    /* 核心改动：确保内容区可以收缩，并允许内部滚动 */
     min-height: 0;
     display: flex;
     flex-direction: column;
@@ -161,8 +159,7 @@
     margin: 0 0 8px 0;
 }
 
-
-
+/* 统计面板容器 */
 .qmx-stats-header {
     display: flex;
     align-items: center;
@@ -200,6 +197,7 @@
     overflow: hidden;
     padding: 0;
 }
+
 /* 统计面板切换器 */
 .qmx-stats-toggle {
     position: relative;
@@ -241,6 +239,25 @@
     font-size: 15px;
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     position: relative;
+    background: transparent;
+    border: none;
+    color: var(--md-sys-color-on-surface-variant);
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.qmx-stats-refresh:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--md-sys-color-primary);
+}
+
+.qmx-stats-refresh svg {
+    width: 20px;
+    height: 20px;
 }
 
 .qmx-stats-refresh.rotating {
@@ -323,8 +340,7 @@
     transform: translateX(100%);
 }
 
-
-/* 左右切换按钮 */
+/* 左右切换按钮展开状态 */
 .qmx-stats-toggle.expanded .qmx-stats-switcher {
     cursor: pointer;
     opacity: 1;
@@ -333,23 +349,17 @@
 
 .qmx-stats-toggle.expanded #qmx-stats-left {
     left: 60px;
-}
-
-.qmx-stats-toggle.expanded #qmx-stats-right {
-    right: 60px;
-}
-
-.qmx-stats-toggle.expanded .qmx-stats-switcher.disabled{
-    cursor: not-allowed;
-    color: #666;
-}
-
-.qmx-stats-toggle.expanded #qmx-stats-left {
     transform: translateX(-55px);
 }
 
 .qmx-stats-toggle.expanded #qmx-stats-right {
+    right: 60px;
     transform: translateX(55px);
+}
+
+.qmx-stats-toggle.expanded .qmx-stats-switcher.disabled {
+    cursor: not-allowed;
+    color: #666;
 }
 
 /* 统计面板内容区 */
@@ -411,6 +421,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    pointer-events: auto !important;
 }
 
 .qmx-stat-details {
@@ -421,8 +432,7 @@
     color: var(--md-sys-color-on-surface-variant);
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     justify-content: center;
-    /* 允许内容换行，防止窄屏下溢出 */
-    flex-wrap: wrap; 
+    flex-wrap: wrap;
 }
 
 .qmx-stat-details.transitioning {
@@ -433,30 +443,30 @@
     font-weight: 500;
 }
 
+/* 任务列表 */
 #qmx-tab-list {
-    /* 核心改动：允许任务列表本身滚动 */
     overflow-y: auto;
-    flex-grow: 1; /* 确保它填满 .qmx-modal-content 的剩余空间 */
-    padding-right: 4px; /* 为滚动条留出一点空间，防止内容紧贴边缘 */
-    margin-right: -4px; /* 抵消padding，保持整体布局不变 */
+    flex-grow: 1;
+    padding-right: 4px;
+    margin-right: -4px;
 }
 
 /* 任务列表项 */
 .qmx-tab-list-item {
     background-color: var(--md-sys-color-surface-bright);
-    border-radius: 16px; /* Material 3 风格圆角 */
-    padding: 8px 16px;
+    border-radius: 16px;
+    padding: 8px 16px 8px 18px;
     margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 12px;
     transition: background-color 0.2s, transform 0.3s ease, opacity 0.3s ease;
     position: relative;
-    overflow: hidden; /* 防止内容溢出圆角 */
+    overflow: hidden;
 }
 
 .qmx-tab-list-item:hover {
-    background-color: var(--md-sys-color-surface-container-high, rgba(255, 255, 255, 0.08));
+    background-color: var(--surface-container-highest);
 }
 
 .qmx-item-enter {
@@ -479,10 +489,20 @@
 }
 
 .qmx-tab-status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2px;
+    height: 28px;
+    border-radius: 0 4px 4px 0;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     flex-shrink: 0;
+}
+
+.qmx-tab-list-item:hover .qmx-tab-status-dot {
+    height: 32px;
+    width: 3px;
 }
 
 .qmx-tab-info {
@@ -492,33 +512,97 @@
     gap: 2px;
     font-size: 14px;
     overflow: hidden;
-    min-width: 0; /* 允许flex子项收缩 */
+    min-width: 0;
 }
 
 .qmx-tab-header {
     display: flex;
     align-items: center;
-    gap: 6px;
+    justify-content: flex-start;
+    height: auto;
+    overflow: visible;
+    margin-bottom: 2px;
 }
 
-.qmx-tab-nickname {
-    font-weight: 500;
+/* 身份标识按钮（房间号/房间名切换） */
+.qmx-tab-identity {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    padding: 2px 4px 2px 4px;
+    border-radius: 999px;
+    border: 1px solid var(--md-sys-color-on-surface-variant);
+    background-color: var(--md-sys-color-surface-bright);
     color: var(--md-sys-color-on-surface);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, padding-left 0.2s ease;
+    overflow: visible;
 }
 
-.qmx-tab-room-id {
-    font-size: 11px;
-    color: var(--md-sys-color-on-surface-variant);
-    background-color: var(--md-sys-color-surface-variant, rgba(231, 224, 236, 0.4)); /* 淡底色 */
-    padding: 1px 6px;
-    border-radius: 6px;
-    /* font-family: 'Roboto Mono', monospace; 可选：等宽字体 */
-    line-height: 1.4;
-    flex-shrink: 0;
+.qmx-tab-identity:hover {
+    padding-left: 24px;
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.qmx-tab-identity.copied {
+    border-color: var(--status-color-waiting);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.qmx-tab-identity-icon {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%) translateX(-100%);
+    width: 14px;
+    height: 14px;
+    color: var(--md-sys-color-primary);
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.qmx-tab-identity:hover .qmx-tab-identity-icon {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.qmx-tab-identity-text {
+    display: inline-flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    pointer-events: none;
+    min-width: 0;
+}
+
+.qmx-tab-identity-text span {
+    transition: transform 0.25s ease, opacity 0.2s ease;
+    white-space: nowrap;
+    text-align: left;
+}
+
+.qmx-tab-identity[data-state='nickname'] .identity-roomid,
+.qmx-tab-identity[data-state='room'] .identity-nickname {
+    transform: translateY(-100%);
+    opacity: 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.qmx-tab-identity[data-state='nickname'] .identity-nickname,
+.qmx-tab-identity[data-state='room'] .identity-roomid {
+    position: relative;
+    transform: translateY(0);
+    opacity: 1;
 }
 
 .qmx-tab-details {
@@ -532,16 +616,29 @@
     text-overflow: ellipsis;
 }
 
+/* 奖励信息容器 */
 .qmx-tab-prizes {
     display: flex;
     align-items: center;
-    gap: 4px; /* 减小间距 */
-    margin-left: auto; /* 推到最右侧 */
-    padding: 4px 8px; /* 减小内边距 */
+    gap: 4px;
+    margin-left: auto;
+    padding: 4px 8px;
     background-color: var(--md-sys-color-surface-container, rgba(0, 0, 0, 0.05));
-    border-radius: 100px; /* 胶囊形状 */
     flex-shrink: 0;
-    flex-direction: column; /* 改为垂直布局 */
+}
+
+/* 单个奖励：水平布局，胶囊形状 */
+.qmx-tab-prizes.single-prize {
+    flex-direction: row;
+    border-radius: 100px;
+}
+
+/* 多个奖励：垂直布局，较小圆角，固定宽度 */
+.qmx-tab-prizes.multi-prizes {
+    flex-direction: column;
+    border-radius: 12px;
+    min-width: 70px;
+    padding: 6px 10px;
 }
 
 .qmx-tab-prize-item {
@@ -554,30 +651,123 @@
     line-height: 1;
     color: var(--md-sys-color-on-surface);
     font-weight: 500;
-    font-size: 11px; /* 稍微减小字体 */
+    font-size: 11px;
 }
 
 .qmx-tab-prize-item:hover {
-    transform: translateY(-1px);
     opacity: 0.8;
 }
 
 .qmx-tab-prize-item svg {
     display: block;
-    width: 12px; /* 稍微减小图标尺寸 */
+    width: 12px;
     height: 12px;
+    flex-shrink: 0;
 }
 
 .qmx-tab-prize-text {
     font-weight: 600;
     white-space: nowrap;
-    color: inherit; 
-    font-size: 11px; /* 稍微减小字体 */
+    color: inherit;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
 }
 
-/* 控制面板底部 */
-.qmx-modal-footer {
+/* 关闭按钮 */
+.qmx-tab-close-btn {
+    flex-shrink: 0;
+    background-color: rgba(208, 188, 255, 0.15);
+    border: none;
+    color: var(--md-sys-color-primary);
+    cursor: pointer;
+    padding: 0;
+    transition: background-color 0.2s, transform 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+
+.qmx-tab-close-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 3;
+}
+
+.qmx-tab-close-btn:hover {
+    color: var(--md-sys-color-on-primary);
+    background-color: var(--md-sys-color-primary);
+    transform: scale(1.1) rotate(90deg);
+}
+
+/* 控制面板底部 */   
+.qmx-modal-footer {   
     padding: 16px 24px;
     display: flex;
     gap: 8px;
+}
+
+.qmx-modal-btn {
+    flex-grow: 1;
+    padding: 10px 16px;
+    border: 1px solid var(--md-sys-color-outline);
+    background-color: transparent;
+    color: var(--md-sys-color-primary);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+}
+
+.qmx-modal-btn:hover {
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.qmx-modal-btn:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: none;
+}
+
+.qmx-modal-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.qmx-modal-btn.primary {
+    background-color: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+    border: none;
+}
+
+.qmx-modal-btn.primary:hover {
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qmx-modal-btn.danger {
+    border-color: var(--status-color-error);
+    color: var(--status-color-error);
+}
+
+.qmx-modal-btn.danger:hover {
+    background-color: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.qmx-tab-header.show-id .qmx-tab-nickname {
+    pointer-events: none !important; /* 隐藏时不响应点击 */
+}
+
+.qmx-tab-header.show-id .qmx-tab-room-id {
+    pointer-events: auto !important; /* 显示时可点击 */
 }

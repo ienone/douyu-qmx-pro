@@ -54,7 +54,7 @@ export const ControlPage = {
         if (SETTINGS.SHOW_STATS_IN_PANEL) {
             // 启用统计信息面板
             if (qmxModalHeader) {
-                qmxModalHeader.style.padding = '12px 20px 0px 20px;';
+                qmxModalHeader.style.padding = '10px 20px 0px 20px';
             }
             StatsInfo.init();
         } else {
@@ -62,7 +62,7 @@ export const ControlPage = {
             const statsContent = document.querySelector('.qmx-stats-container');
             if (statsContent && qmxModalHeader) {
                 statsContent.remove();
-                qmxModalHeader.style.padding = '16px 24px';
+                qmxModalHeader.style.padding = '10px 20px 4px 20px';
             }
         }
         // applyModalMode 必须在 bindEvents 之前调用，因为它会决定事件如何绑定
@@ -176,7 +176,7 @@ export const ControlPage = {
             }
             
             if (qmxModalHeader) {
-                qmxModalHeader.style.padding = '12px 20px 0px 20px;';
+                qmxModalHeader.style.padding = '10px 20px 0px 20px';
             }
             StatsInfo.init();
         } else {
@@ -184,7 +184,7 @@ export const ControlPage = {
                 statsContent.remove();
             }
             if (qmxModalHeader) {
-                qmxModalHeader.style.padding = '16px 24px';
+                qmxModalHeader.style.padding = '10px 20px 4px 20px';
             }
             StatsInfo.destroy();
         }
@@ -431,13 +431,14 @@ export const ControlPage = {
 
             if (existingItem) {
                 // --- A. 如果条目已存在，则只更新内容 (UPDATE path) ---
-                //Utils.log(`[Render] 房间 ${roomId}: UI条目已存在，准备更新。状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
-                const nicknameEl = existingItem.querySelector('.qmx-tab-nickname');
+                const nicknameEl =
+                    existingItem.querySelector('.identity-nickname') ||
+                    existingItem.querySelector('.qmx-tab-nickname');
                 const statusNameEl = existingItem.querySelector('.qmx-tab-status-name');
                 const statusTextEl = existingItem.querySelector('.qmx-tab-status-text');
                 const dotEl = existingItem.querySelector('.qmx-tab-status-dot');
 
-                if (tabData.nickname && nicknameEl.textContent !== tabData.nickname) {
+                if (tabData.nickname && nicknameEl && nicknameEl.textContent !== tabData.nickname) {
                     nicknameEl.textContent = tabData.nickname;
                 }
 
@@ -465,8 +466,18 @@ export const ControlPage = {
                             existingItem.insertAdjacentHTML('beforeend', newPrizesHtml);
                         }
                     } else {
-                        // 容器存在，检查内容是否变化
-                        if (prizesContainer.outerHTML !== newPrizesHtml) {
+                        // 核心修复：只在内容真正变化时才更新，避免每秒都触发 DOM 重绘
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = newPrizesHtml;
+                        const newContainer = tempDiv.firstElementChild;
+                        
+                        // 比较类名和内部文本内容，而不是整个 HTML
+                        const oldLayoutClass = prizesContainer.classList.contains('multi-prizes') ? 'multi-prizes' : 'single-prize';
+                        const newLayoutClass = newContainer.classList.contains('multi-prizes') ? 'multi-prizes' : 'single-prize';
+                        const oldText = prizesContainer.textContent.trim();
+                        const newText = newContainer.textContent.trim();
+                        
+                        if (oldLayoutClass !== newLayoutClass || oldText !== newText) {
                             prizesContainer.outerHTML = newPrizesHtml;
                         }
                     }
@@ -476,7 +487,6 @@ export const ControlPage = {
                 }
             } else {
                 // --- B. 如果条目不存在，则创建并添加 (CREATE path) ---
-                //Utils.log(`[Render] 房间 ${roomId}: UI条目不存在，执行创建！状态: ${tabData.status}, 文本: "${currentStatusText}"`); // 新增日志
                 const newItem = this.createTaskItem(roomId, tabData, statusDisplayMap, currentStatusText);
                 tabList.appendChild(newItem);
                 requestAnimationFrame(() => {
@@ -799,13 +809,21 @@ export const ControlPage = {
         const statusName = statusMap[tabData.status] || tabData.status;
         const prizesHtml = this.generatePrizesHTML(tabData.prizes);
 
-        // 优化布局：将 prizesHtml 移出 qmx-tab-details，放在右侧
         newItem.innerHTML = `
                 <div class="qmx-tab-status-dot" style="background-color: ${statusColor};"></div>
                 <div class="qmx-tab-info">
                     <div class="qmx-tab-header">
-                        <span class="qmx-tab-nickname">${nickname}</span>
-                        <span class="qmx-tab-room-id">${roomId}</span>
+                        <button class="qmx-tab-identity" type="button" data-state="nickname" title="点击切换或复制">
+                            <span class="qmx-tab-identity-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" role="img" focusable="false">
+                                    <path d="M8 7h3v2H8v9H6V9H3V7h3V4h2v3zm7 0h6v2h-6v9h-2V7h2z" fill="currentColor"></path>
+                                </svg>
+                            </span>
+                            <span class="qmx-tab-identity-text">
+                                <span class="identity-nickname">${nickname}</span>
+                                <span class="identity-roomid">${roomId}</span>
+                            </span>
+                        </button>
                     </div>
                     <div class="qmx-tab-details">
                         <span class="qmx-tab-status-name">[${statusName}]</span>
@@ -813,8 +831,64 @@ export const ControlPage = {
                     </div>
                 </div>
                 ${prizesHtml}
-                <button class="qmx-tab-close-btn" title="关闭该标签页">×</button>
+                <button class="qmx-tab-close-btn" title="关闭该标签页">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
             `;
+
+        const identityBtn = newItem.querySelector('.qmx-tab-identity');
+        const nicknameSpan = identityBtn.querySelector('.identity-nickname');
+        const roomIdSpan = identityBtn.querySelector('.identity-roomid');
+        const iconSpan = identityBtn.querySelector('.qmx-tab-identity-icon');
+
+        const setIdentityState = (state) => {
+            identityBtn.dataset.state = state;
+        };
+
+        const copyIdentityValue = async (state) => {
+            const value =
+                state === 'room'
+                    ? roomIdSpan.textContent.trim()
+                    : nicknameSpan.textContent.trim();
+            const label = state === 'room' ? '房间号' : '房间名';
+            try {
+                await navigator.clipboard.writeText(value);
+                identityBtn.classList.add('copied');
+                setTimeout(() => identityBtn.classList.remove('copied'), 300);
+                Utils.log(`[房间号切换] 已复制${label}: ${value}`);
+            } catch (err) {
+                Utils.log(`[房间号切换] 复制失败: ${err.message}`);
+            }
+        };
+
+        // 图标区域：点击复制当前显示的值
+        iconSpan.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const currentState = identityBtn.dataset.state === 'room' ? 'room' : 'nickname';
+            await copyIdentityValue(currentState);
+        });
+
+        // 按钮其他区域：点击切换显示
+        identityBtn.addEventListener('click', (e) => {
+            // 如果点击的是图标，不执行切换
+            if (e.target.closest('.qmx-tab-identity-icon')) {
+                return;
+            }
+            e.stopPropagation();
+            const currentState = identityBtn.dataset.state === 'room' ? 'room' : 'nickname';
+            const nextState = currentState === 'nickname' ? 'room' : 'nickname';
+            setIdentityState(nextState);
+        });
+
+        identityBtn.addEventListener(
+            'mouseenter',
+            () => Utils.log(`[房间号切换] 鼠标悬停在房间胶囊: ${roomId}`),
+            { once: true }
+        );
+
         return newItem;
     },
 
@@ -824,13 +898,12 @@ export const ControlPage = {
     generatePrizesHTML(prizes) {
         if (!prizes || !Array.isArray(prizes) || prizes.length === 0) return '';
         
-        return `<div class="qmx-tab-prizes">` +
+        // 根据奖励数量决定布局类
+        const layoutClass = prizes.length > 1 ? 'multi-prizes' : 'single-prize';
+        
+        return `<div class="qmx-tab-prizes ${layoutClass}">` +
             prizes.map((p, index) => {
-                // 简化的图标匹配逻辑
-                let icon = ICONS.GOLD; // 默认为金币
-                
-                // 如果有两个奖励:第一个是金币,第二个是星光棒
-                // 如果只有一个奖励:就是金币
+                let icon = ICONS.GOLD;
                 if (prizes.length === 2 && index === 1) {
                     icon = ICONS.STARLIGHT;
                 }
