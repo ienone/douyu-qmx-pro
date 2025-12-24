@@ -122,12 +122,11 @@ export const ControlPage = {
             this.correctModalPosition();
         }
 
-        // 2. 处理弹幕助手开关
-        if (typeof newSettings.ENABLE_DANMU_PRO !== 'undefined') {
-            if (newSettings.ENABLE_DANMU_PRO && __ENABLE_DANMU_PRO__) {
-                // 2. 直接使用静态导入的对象，不再使用 await import
+        // 2. 处理弹幕助手开关 - 添加编译时检查
+        if (__ENABLE_DANMU_PRO__ && typeof newSettings.ENABLE_DANMU_PRO !== 'undefined') {
+            if (newSettings.ENABLE_DANMU_PRO) {
                 DanmuPro.init();
-            } else if (__ENABLE_DANMU_PRO__) {
+            } else {
                 DanmuPro.destroy();
             }
         }

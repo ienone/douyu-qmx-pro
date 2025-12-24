@@ -99,7 +99,8 @@ export const SettingsPanel = {
             CONTROL_ROOM_ID: document.getElementById('setting-control-room-id').value,
             TEMP_CONTROL_ROOM_RID: document.getElementById('setting-temp-control-room-id').value,
             AUTO_PAUSE_ENABLED: document.getElementById('setting-auto-pause').checked,
-            ENABLE_DANMU_PRO: document.getElementById('setting-danmupro-mode').checked,
+            // 添加条件检查：只在弹幕助手功能启用时才读取该设置
+            ...(__ENABLE_DANMU_PRO__ ? { ENABLE_DANMU_PRO: document.getElementById('setting-danmupro-mode').checked } : {}),
             DAILY_LIMIT_ACTION: document.getElementById('setting-daily-limit-action').value,
             MODAL_DISPLAY_MODE: document.getElementById('setting-modal-mode').value,
             SHOW_STATS_IN_PANEL: document.getElementById('setting-stats-info').checked,

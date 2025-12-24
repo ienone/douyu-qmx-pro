@@ -20,14 +20,29 @@ export const FirstTimeNotice = {
         if (!hasShownNotice) {
             const noticeHTML = `
                 <div class="qmx-modal-header">
-                    <h3>星推荐助手提示</h3>
+                    <h3>⚠️ 重要更新提示</h3>
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <p>新增功能：控制面板现在会显示每个红包的具体奖励信息🎁</p>
-                    <p>弹幕助手功能持续优化中😋，使用方法详见设置->弹幕助手</p>
-                    <p>如需关闭弹幕助手，关闭'设置->基本设置->启用弹幕助手😋'即可</p>
-                    <h4>项目地址<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer">douyu-qmx-pro</a>，求个star🌟~~</h4>
+                    <h4 style="color: var(--accent-color, #ff6b6b); margin-top: 0;">斗鱼网页UI更新说明</h4>
+                    <p>斗鱼已更新直播间界面，脚本正在适配中。目前基本功能可用，但请注意：</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>控制面板"替换排行榜"模式暂不可用</strong>，请使用"浮动窗口"或"屏幕居中"模式</li>
+                        <li><strong>刚开始打开的几个工作标签页</strong>可能需要手动切换激活一下才能正常加载</li>
+                        <li><strong>弹幕助手功能</strong>正在适配中，暂时可能无法使用</li>
+                    </ul>
+                    
+                    <h4 style="color: var(--accent-color, #ff6b6b);">⚠️使用前必读</h4>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>斗鱼Ex插件冲突</strong>：如需使用本脚本抢红包，请暂时关闭斗鱼Ex插件，否则红包会消失。后续会尝试沟通解决此问题</li>
+                        <li><strong>浏览器DNS设置</strong>：请在浏览器设置中搜索"DNS"，将"使用安全的DNS"选项关闭，否则红包也会消失</li>
+                    </ul>
+                    
+                    <h4 style="color: var(--status-color-success, #4CAF50);">✨ 新增功能</h4>
+                    <p>控制面板现在会显示每个红包的具体奖励信息🎁</p>
+                    
+                    <h4 style="margin-bottom: 5px;">⭐️点点star吧~</h4>
+                    <p style="margin-top: 5px;">项目地址：<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color, #ff6b6b);">douyu-qmx-pro</a>，觉得好用请给个star🌟~~</p>
                 </div>
                 <div class="qmx-modal-footer">
                     <button id="qmx-notice-settings-btn" class="qmx-modal-btn">前往设置</button>
