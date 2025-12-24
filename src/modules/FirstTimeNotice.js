@@ -40,6 +40,7 @@ export const FirstTimeNotice = {
                     
                     <h4 style="color: var(--status-color-success, #4CAF50);">✨ 新增功能</h4>
                     <p>控制面板现在会显示每个红包的具体奖励信息🎁</p>
+                    <p>启用统计功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！</p>
                     
                     <h4 style="margin-bottom: 5px;">⭐️点点star吧~</h4>
                     <p style="margin-top: 5px;">项目地址：<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color, #ff6b6b);">douyu-qmx-pro</a>，觉得好用请给个star🌟~~</p>

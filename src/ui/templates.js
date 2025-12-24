@@ -318,27 +318,29 @@ export const settingsPanelTemplate = (SETTINGS) => {
                 </div>
                 -->
                 
-                <h4>关于脚本 <span class="version-tag">v2.0.8</span></h4>
+                <h4>关于脚本 <span class="version-tag">v2.0.9</span></h4>
                 <h4>致谢</h4>
                 <ul class="qmx-styled-list">
                     <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
                         进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享</li>
                     <li>兼容斗鱼新版UI的相关功能与项目重构主要由<a href="https://github.com/Truthss" target="_blank" rel="noopener noreferrer">@Truthss</a> 贡献，非常感谢！</li>
                 </ul>
-                <h4>一些tips</h4>
+                <h4>⚠️ 重要提示</h4>
                 <ul class="qmx-styled-list">
-                    <li>每天大概1000左右金币到上限</li>
-                    <li>注意这个活动到晚上的时候，100/50/20星光棒的选项可能空了(奖池对应项会变灰)这时候攒金币过了12点再抽，比较有性价比</li>
-                    <li>后台标签页有时会在还剩几秒时卡死在红包弹窗界面(标签页倒计时不动了)，然后就死循环了。目前已部分修复此问题</li>
-                    <li>脚本还是bug不少，随缘修了＞︿＜</li>
-                    <li>DouyuEx 的“阻止P2P上传”功能位置：点击精灵球->从左往右第四个🛠️样貌的选项->右侧菜单顶部 </li>
-                    <li>启用统计功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！',
+                    <li><strong>斗鱼Ex插件冲突</strong>：如需使用本脚本抢红包，请暂时关闭斗鱼Ex插件，否则红包会消失。</li>
+                    <li><strong>浏览器DNS设置</strong>：请在浏览器设置中搜索"DNS"，将"使用安全的DNS"选项关闭，否则红包也会消失。</li>
+                    <li><strong>新版UI适配</strong>：控制面板"替换排行榜"模式暂不可用，请使用"浮动窗口"或"屏幕居中"模式。</li>
+                    <li>启用统计功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！</li>
+                    <li>每天大概1000左右金币到上限。</li>
                 </ul>
-                <h4>脚本更新日志 (v2.0.8)</h4>
+                <h4>脚本更新日志 (v2.0.9)</h4>
                 <ul class="qmx-styled-list">
-                    <li>【修复】适配斗鱼星推荐API变动</li>
-                    <li>【新增】在控制面板中显示统计信息，记录每日领取的红包数量和金币总额。</li>
-                    <li>【新增】控制面板现在会显示每个红包的具体奖励信息。</li>
+                    <li>【新增】全新统计面板：支持查看今日及最近7天的红包数量与金币总数。</li>
+                    <li>【新增】奖励显示：控制面板现在可以直接显示每个红包的具体奖励信息（金币/荧光棒）。</li>
+                    <li>【优化】设置体验升级：修改设置选项后不再需要刷新页面即可生效。</li>
+                    <li>【优化】界面与布局：调整了控制面板样式，位置随窗口大小自动调整。</li>
+                    <li>【修复】适配斗鱼新版直播间界面（部分功能受限）。</li>
+                    <li>【修复】修复了重新打开控制页面时会残留已关闭的直播间信息的问题。</li>
                 </ul>
                 <h4>源码与社区</h4>
                 <ul class="qmx-styled-list">
