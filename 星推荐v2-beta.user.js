@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             斗鱼全民星推荐助手+弹幕助手-beta
 // @namespace        http://tampermonkey.net/
-// @version          beta-10-beta
+// @version          beta-11-beta
 // @author           ienone&Truthss
 // @description      斗鱼全民星推荐自动领取 + 弹幕智能助手 - 集成红包自动领取与弹幕补全功能的完整版
 // @license          MIT
