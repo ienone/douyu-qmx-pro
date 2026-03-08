@@ -147,8 +147,10 @@
     padding: 0 24px;
     flex: 1;
     min-height: 0;
+    max-height: 80vh;
     display: flex;
     flex-direction: column;
+    overflow-y: scroll;
 }
 
 .qmx-modal-content h3 {
