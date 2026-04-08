@@ -43,7 +43,7 @@ export const GlobalState = {
     /**
      * 更新单个工作标签页的状态，支持附加数据
      * @param {string} roomId - 房间ID。
-     * @param {string} status - 状态标识。
+     * @param {string} status - 状态标识。 
      * @param {string} statusText - 状态描述文本。
      * @param {object} [options={}] - 可选的附加数据，如 { nickname: '主播名' }。
      */

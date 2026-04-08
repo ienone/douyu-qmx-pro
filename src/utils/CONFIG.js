@@ -25,6 +25,7 @@ export const CONFIG = {
     MIN_DELAY: 1000, // 模拟人类操作的随机延迟时间范围的最小值，用于点击等操作，避免行为过于机械。
     MAX_DELAY: 2500, // 模拟人类操作的随机延迟时间范围的最大值。
     CLOSE_TAB_DELAY: 1500, // 旧标签页在打开新标签页后，等待多久再关闭自己，以确保新页面已成功接管任务。
+    OPEN_TAB_INTERVAL: 2000, // 控制中心从队列打开新标签页的最小间隔时间。
     INITIAL_SCRIPT_DELAY: 3000, // 页面加载完成后，脚本延迟多久再开始执行，以避开页面初始化时的高资源占用期。
     UNRESPONSIVE_TIMEOUT: 15 * 60 * 1000, // 工作标签页多久未向控制中心汇报心跳后，在面板上被标记为“无响应”状态。
     SWITCHING_CLEANUP_TIMEOUT: 30000, // 处于“切换中”状态的标签页，超过此时间后将被自动清理，防止卡死。
@@ -48,6 +49,7 @@ export const CONFIG = {
     DAILY_LIMIT_ACTION: 'CONTINUE_DORMANT', // 当达到每日领取上限时的处理策略。可选值: 'STOP_ALL'(停止所有任务), 'CONTINUE_DORMANT'(进入休眠等待第二天)。
     AUTO_PAUSE_ENABLED: true, // 是否启用在工作标签页中自动暂停视频播放的功能，以节省系统资源。
     AUTO_PAUSE_DELAY_AFTER_ACTION: 5000, // 在执行领取等操作后，需要等待多久才能再次尝试自动暂停视频。
+    PRELOAD_MODE_ENABLED: true, // 是否启用预载模式。开启时新标签页前台打开，关闭时新标签页后台打开。
     CALIBRATION_MODE_ENABLED: false, // 是否启用校准模式，提高倒计时精准度，尤其适用于禁用P2P的环境。
     SHOW_STATS_IN_PANEL: false, // 是否在控制面板中显示统计信息标签页。
     // 根据构建版本设置默认值，避免未定义

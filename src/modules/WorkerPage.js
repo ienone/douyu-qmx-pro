@@ -7,6 +7,7 @@ import { GlobalState } from './GlobalState';
 import { DOM } from '../utils/DOM';
 import { SETTINGS, STATE } from './SettingsManager';
 import { DouyuAPI } from '../utils/DouyuAPI';
+import { PageLoader } from './PageLoader';
 
 /**
  * =================================================================================
@@ -708,7 +709,12 @@ export const WorkerPage = {
                     // --- 找到了“/beta”，说明是新版UI ---
                     localStorage.setItem('newWebLive', 'A');
                 }
-                GM_openInTab(nextUrl, { active: false, setParent: true });
+                const queued = PageLoader.enqueue(nextUrl);
+                if (queued) {
+                    Utils.log(`切房打开请求已入队: ${nextUrl}`);
+                } else {
+                    Utils.log(`切房打开请求已存在于队列中，跳过重复入队: ${nextUrl}`);
+                }
                 await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
                 await this.selfClose(currentRoomId); // 使用统一的"自毁程序"
             } else {
