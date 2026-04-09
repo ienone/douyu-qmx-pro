@@ -682,16 +682,8 @@ export const WorkerPage = {
         GlobalState.updateWorker(currentRoomId, 'SWITCHING', '查找新房间...');
 
         try {
-            // 2. 获取 API 房间列表和当前已打开的房间列表
-            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
-            const currentState = GlobalState.get();
-            const openedRoomIds = new Set(Object.keys(currentState.tabs));
-
-            // 3. 筛选出未被打开的新房间
-            const nextUrl = apiRoomUrls.find((url) => {
-                const rid = url.match(/\/(\d+)/)?.[1];
-                return rid && !openedRoomIds.has(rid);
-            });
+            // 2. 获取已占用房间并从共享池消费一个新URL
+            const nextUrl = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
 
             if (nextUrl) {
                 Utils.log(`确定下一个房间链接: ${nextUrl}`);
