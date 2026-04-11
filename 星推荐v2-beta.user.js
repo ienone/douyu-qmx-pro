@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             斗鱼全民星推荐助手+弹幕助手-beta
 // @namespace        http://tampermonkey.net/
-// @version          beta-13-beta
+// @version          beta-14-beta
 // @author           ienone&Truthss
 // @description      斗鱼全民星推荐自动领取 + 弹幕智能助手 - 集成红包自动领取与弹幕补全功能的完整版
 // @license          MIT
@@ -45,6 +45,7 @@ RED_ENVELOPE_LOAD_TIMEOUT: 15e3,
 MIN_DELAY: 1e3,
 MAX_DELAY: 2500,
 CLOSE_TAB_DELAY: 1500,
+OPEN_TAB_INTERVAL: 2e3,
 INITIAL_SCRIPT_DELAY: 3e3,
 UNRESPONSIVE_TIMEOUT: 15 * 60 * 1e3,
 SWITCHING_CLEANUP_TIMEOUT: 3e4,
@@ -65,6 +66,7 @@ MAX_WORKER_TABS: 24,
 DAILY_LIMIT_ACTION: "CONTINUE_DORMANT",
 AUTO_PAUSE_ENABLED: true,
 AUTO_PAUSE_DELAY_AFTER_ACTION: 5e3,
+PRELOAD_MODE_ENABLED: true,
 CALIBRATION_MODE_ENABLED: false,
 SHOW_STATS_IN_PANEL: false,
 
@@ -539,6 +541,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
       "setting-popup-wait-timeout": { value: SETTINGS2.POPUP_WAIT_TIMEOUT / 1e3, unit: "秒" },
       "setting-worker-loading-timeout": { value: SETTINGS2.ELEMENT_WAIT_TIMEOUT / 1e3, unit: "秒" },
       "setting-close-tab-delay": { value: SETTINGS2.CLOSE_TAB_DELAY / 1e3, unit: "秒" },
+      "setting-open-tab-interval": { value: SETTINGS2.OPEN_TAB_INTERVAL / 1e3, unit: "秒" },
       "setting-api-retry-delay": { value: SETTINGS2.API_RETRY_DELAY / 1e3, unit: "秒" },
       "setting-switching-cleanup-timeout": { value: SETTINGS2.SWITCHING_CLEANUP_TIMEOUT / 1e3, unit: "秒" },
       "setting-healthcheck-interval": { value: SETTINGS2.HEALTHCHECK_INTERVAL / 1e3, unit: "秒" },
@@ -607,6 +610,13 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
                         </label>
                     </div>
                     <div class="qmx-settings-item">
+                        <label>预载模式 <span class="qmx-tooltip-icon" data-tooltip-key="preload-mode">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-preload-mode" ${SETTINGS2.PRELOAD_MODE_ENABLED ? "checked" : ""}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item">
                         <label>展示数据统计 <span class="qmx-tooltip-icon" data-tooltip-key="stats-info">?</span></label>
                         <label class="qmx-toggle">
                             <input type="checkbox" id="setting-stats-info" ${SETTINGS2.SHOW_STATS_IN_PANEL ? "checked" : ""}>
@@ -664,6 +674,7 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
                     ${createUnitInput("setting-popup-wait-timeout", "红包弹窗等待超时", settingsMeta)}
                     ${createUnitInput("setting-worker-loading-timeout", "播放器加载超时", settingsMeta)}
                     ${createUnitInput("setting-close-tab-delay", "关闭标签页延迟", settingsMeta)}
+                    ${createUnitInput("setting-open-tab-interval", "新标签页打开间隔", settingsMeta)}
                     ${createUnitInput("setting-switching-cleanup-timeout", "切换中状态兜底超时", settingsMeta)}
                     ${createUnitInput("setting-healthcheck-interval", "哨兵健康检查间隔", settingsMeta)}
                     ${createUnitInput("setting-disconnected-grace-period", "断开连接清理延迟", settingsMeta)}
@@ -1163,6 +1174,7 @@ show() {
         "control-room": "只有在此房间号的直播间中才能看到插件面板，看准了再改！(修改后不会立即刷新，下次进入该房间生效)",
         "temp-control-room": "备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。",
         "auto-pause": "自动暂停非控制直播间的视频播放，大幅降低资源占用。",
+        "preload-mode": "开启后新标签页会直接切到前台；关闭后新标签页会在后台打开。",
         "initial-script-delay": "页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。",
         "auto-pause-delay": "领取红包后等待多久再次尝试暂停视频。",
         "unresponsive-timeout": '工作页多久未汇报任何状态后，在面板上标记为"无响应"。',
@@ -1171,6 +1183,7 @@ show() {
         "worker-loading-timeout": "新开的直播间卡在加载状态多久还没显示播放组件，被判定为加载失败或缓慢。",
         "range-delay": "脚本在每次点击等操作前后随机等待的时间范围，模拟真人行为。",
         "close-tab-delay": "旧页面在打开新页面后，等待多久再关闭自己，确保新页面已接管。",
+        "open-tab-interval": "控制中心从开页队列中取出并打开新标签页的时间间隔。",
         "switching-cleanup-timeout": "处于“切换中”状态的标签页，超过此时间后将被强行清理，避免残留。",
         "max-worker-tabs": "同时运行的直播间数量上限。",
         "api-room-fetch-count": "每次从API获取的房间数。增加可提高找到新房间的几率。",
@@ -1206,6 +1219,7 @@ getSettingsFromUI() {
 CONTROL_ROOM_ID: document.getElementById("setting-control-room-id").value,
         TEMP_CONTROL_ROOM_RID: document.getElementById("setting-temp-control-room-id").value,
         AUTO_PAUSE_ENABLED: document.getElementById("setting-auto-pause").checked,
+        PRELOAD_MODE_ENABLED: document.getElementById("setting-preload-mode").checked,
 ...{ ENABLE_DANMU_PRO: document.getElementById("setting-danmupro-mode").checked },
         DAILY_LIMIT_ACTION: document.getElementById("setting-daily-limit-action").value,
         MODAL_DISPLAY_MODE: document.getElementById("setting-modal-mode").value,
@@ -1223,6 +1237,7 @@ INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script
         MIN_DELAY: parseFloat(document.getElementById("setting-min-delay").value) * 1e3,
         MAX_DELAY: parseFloat(document.getElementById("setting-max-delay").value) * 1e3,
         CLOSE_TAB_DELAY: parseFloat(document.getElementById("setting-close-tab-delay").value) * 1e3,
+        OPEN_TAB_INTERVAL: parseFloat(document.getElementById("setting-open-tab-interval").value) * 1e3,
         HEALTHCHECK_INTERVAL: parseFloat(document.getElementById("setting-healthcheck-interval").value) * 1e3,
         DISCONNECTED_GRACE_PERIOD: parseFloat(document.getElementById("setting-disconnected-grace-period").value) * 1e3,
         STATS_UPDATE_INTERVAL: parseFloat(document.getElementById("setting-stats-update-interval").value) * 1e3,
@@ -6534,6 +6549,47 @@ async firstTimeImport() {
       }
     }
   };
+  const QUEUE_KEY = "douyu_qmx_page_open_queue";
+  const PageLoader = {
+getQueue() {
+      const queue = GM_getValue(QUEUE_KEY, []);
+      return Array.isArray(queue) ? queue : [];
+    },
+setQueue(queue) {
+      GM_setValue(QUEUE_KEY, Array.isArray(queue) ? queue : []);
+    },
+enqueue(url, options = {}) {
+      if (!url || typeof url !== "string") return false;
+      const normalizedUrl = url.trim();
+      if (!normalizedUrl) return false;
+      const { dedupe = true } = options;
+      const queue = this.getQueue();
+      if (dedupe && queue.includes(normalizedUrl)) {
+        return false;
+      }
+      queue.push(normalizedUrl);
+      this.setQueue(queue);
+      return true;
+    },
+dequeue() {
+      const queue = this.getQueue();
+      if (queue.length === 0) return null;
+      const nextUrl = queue.shift() || null;
+      this.setQueue(queue);
+      return nextUrl;
+    },
+openNextTab() {
+      const nextUrl = this.dequeue();
+      if (!nextUrl) return null;
+      const shouldForegroundOpen = SETTINGS.PRELOAD_MODE_ENABLED !== false;
+      const active = shouldForegroundOpen;
+      GM_openInTab(nextUrl, { active, setParent: true });
+      Utils.log(
+        `[PageLoader] 已从队列打开新标签页(${shouldForegroundOpen ? "前台直切" : "后台打开"}): ${nextUrl}`
+      );
+      return nextUrl;
+    }
+  };
   const ICONS = {
     GOLD: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" fill="#FFD700" stroke="#FFA000" stroke-width="2"/><text x="50%" y="50%" text-anchor="middle" dy=".35em" font-size="14" fill="#B8860B" font-weight="bold" font-family="Arial">¥</text></svg>`,
     STARLIGHT: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FF69B4" stroke="#FF1493" stroke-width="2"/></svg>`
@@ -6543,7 +6599,7 @@ injectionTarget: null,
 isPanelInjected: false,
 commandChannel: null,
     modalContainer: null,
-
+openTabTimerId: null,
 init() {
       Utils.log("当前是控制页面，开始设置UI...");
       this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
@@ -6573,6 +6629,7 @@ init() {
         this.cleanupAndMonitorWorkers();
         this.checkInjectionState();
       }, 1e3);
+      this.startOpenTabScheduler();
       FirstTimeNotice.showCalibrationNotice();
       window.addEventListener("beforeunload", () => {
         if (this.commandChannel) {
@@ -6612,6 +6669,19 @@ async handleSettingsUpdate(newSettings) {
       if (newSettings.STATS_UPDATE_INTERVAL && SETTINGS.SHOW_STATS_IN_PANEL) {
         StatsInfo.updateInterval();
       }
+      if (typeof newSettings.OPEN_TAB_INTERVAL !== "undefined") {
+        this.startOpenTabScheduler();
+      }
+    },
+startOpenTabScheduler() {
+      if (this.openTabTimerId) {
+        clearInterval(this.openTabTimerId);
+        this.openTabTimerId = null;
+      }
+      const interval = Math.max(200, Number(SETTINGS.OPEN_TAB_INTERVAL) || 2e3);
+      this.openTabTimerId = setInterval(() => {
+        PageLoader.openNextTab();
+      }, interval);
     },
 toggleStatsPanel(show) {
       const qmxModalHeader = document.querySelector(".qmx-modal-header");
@@ -6937,8 +7007,12 @@ async openOneNewTab() {
           if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
             localStorage.setItem("newWebLive", "A");
           }
-          GM_openInTab(newUrl, { active: false, setParent: true });
-          Utils.log(`打开指令已发送: ${newUrl}`);
+          const queued = PageLoader.enqueue(newUrl);
+          if (queued) {
+            Utils.log(`打开请求已入队: ${newUrl}`);
+          } else {
+            Utils.log(`打开请求已存在于队列中，跳过重复入队: ${newUrl}`);
+          }
         } else {
           Utils.log("未能找到新的、未打开的房间。");
           openBtn.textContent = "无新房间";
@@ -7772,7 +7846,12 @@ async switchRoom() {
           if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
             localStorage.setItem("newWebLive", "A");
           }
-          GM_openInTab(nextUrl, { active: false, setParent: true });
+          const queued = PageLoader.enqueue(nextUrl);
+          if (queued) {
+            Utils.log(`切房打开请求已入队: ${nextUrl}`);
+          } else {
+            Utils.log(`切房打开请求已存在于队列中，跳过重复入队: ${nextUrl}`);
+          }
           await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
           await this.selfClose(currentRoomId);
         } else {
