@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             斗鱼全民星推荐助手+弹幕助手-beta
 // @namespace        http://tampermonkey.net/
-// @version          beta-12-beta
+// @version          beta-13-beta
 // @author           ienone&Truthss
 // @description      斗鱼全民星推荐自动领取 + 弹幕智能助手 - 集成红包自动领取与弹幕补全功能的完整版
 // @license          MIT
@@ -859,7 +859,68 @@ getDailyLimit() {
   };
   var _GM_cookie = (() => typeof GM_cookie != "undefined" ? GM_cookie : void 0)();
   var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
+  const ROOM_POOL_KEY = "douyu_qmx_room_pool";
+  const ROOM_POOL_LOCK_KEY = "douyu_qmx_room_pool_lock";
   const DouyuAPI = {
+getRoomPool() {
+      const pool = GM_getValue(ROOM_POOL_KEY, []);
+      return Array.isArray(pool) ? pool : [];
+    },
+setRoomPool(pool) {
+      GM_setValue(ROOM_POOL_KEY, Array.isArray(pool) ? pool : []);
+    },
+getRoomIdFromUrl(url) {
+      if (!url || typeof url !== "string") return null;
+      return url.match(/\/(\d+)/)?.[1] || null;
+    },
+async acquireRoomPoolLock() {
+      while (GM_getValue(ROOM_POOL_LOCK_KEY, false)) {
+        await Utils.sleep(20);
+      }
+      GM_setValue(ROOM_POOL_LOCK_KEY, true);
+    },
+releaseRoomPoolLock() {
+      GM_setValue(ROOM_POOL_LOCK_KEY, false);
+    },
+async getRoom(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
+      const consumeFromPool = () => {
+        const uniquePool = Array.from(new Set(this.getRoomPool()));
+        if (uniquePool.length === 0) {
+          this.setRoomPool(uniquePool);
+          return null;
+        }
+        const [url] = uniquePool.splice(0, 1);
+        this.setRoomPool(uniquePool);
+        return url || null;
+      };
+      await this.acquireRoomPoolLock();
+      try {
+        const cachedUrl = consumeFromPool();
+        if (cachedUrl) {
+          Utils.log(`[房间池] 命中缓存URL: ${cachedUrl}`);
+          return cachedUrl;
+        }
+      } finally {
+        this.releaseRoomPoolLock();
+      }
+      const fetchedRooms = await this.getRooms(count, rid, retries);
+      await this.acquireRoomPoolLock();
+      try {
+        const mergedPool = Array.from(
+new Set([...this.getRoomPool(), ...fetchedRooms])
+        );
+        this.setRoomPool(mergedPool);
+        const nextUrl = consumeFromPool();
+        if (nextUrl) {
+          Utils.log(`[房间池] 拉取后消费URL: ${nextUrl}`);
+          return nextUrl;
+        }
+        Utils.log("[房间池] 拉取后仍无可用URL。");
+        return null;
+      } finally {
+        this.releaseRoomPoolLock();
+      }
+    },
 getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
       return new Promise((resolve, reject) => {
         const attempt = (remainingTries) => {
@@ -6865,12 +6926,7 @@ async openOneNewTab() {
       openBtn.disabled = true;
       openBtn.textContent = "正在查找...";
       try {
-        const openedRoomIds = new Set(Object.keys(state.tabs));
-        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
-        const newUrl = apiRoomUrls.find((url) => {
-          const rid = url.match(/\/(\d+)/)?.[1];
-          return rid && !openedRoomIds.has(rid);
-        });
+        const newUrl = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
         if (newUrl) {
           const newRoomId = newUrl.match(/\/(\d+)/)[1];
           const pendingWorkers = GM_getValue("qmx_pending_workers", []);
@@ -7705,13 +7761,7 @@ async switchRoom() {
       const currentRoomId = Utils.getCurrentRoomId();
       GlobalState.updateWorker(currentRoomId, "SWITCHING", "查找新房间...");
       try {
-        const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
-        const currentState = GlobalState.get();
-        const openedRoomIds = new Set(Object.keys(currentState.tabs));
-        const nextUrl = apiRoomUrls.find((url) => {
-          const rid = url.match(/\/(\d+)/)?.[1];
-          return rid && !openedRoomIds.has(rid);
-        });
+        const nextUrl = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
         if (nextUrl) {
           Utils.log(`确定下一个房间链接: ${nextUrl}`);
           const nextRoomId = nextUrl.match(/\/(\d+)/)[1];
