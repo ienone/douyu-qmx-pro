@@ -582,12 +582,7 @@ export const ControlPage = {
         openBtn.textContent = '正在查找...';
 
         try {
-            const openedRoomIds = new Set(Object.keys(state.tabs));
-            const apiRoomUrls = await DouyuAPI.getRooms(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
-            const newUrl = apiRoomUrls.find((url) => {
-                const rid = url.match(/\/(\d+)/)?.[1];
-                return rid && !openedRoomIds.has(rid);
-            });
+            const newUrl = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
 
             if (newUrl) {
                 const newRoomId = newUrl.match(/\/(\d+)/)[1];
