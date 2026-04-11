@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             斗鱼全民星推荐助手+弹幕助手-beta
 // @namespace        http://tampermonkey.net/
-// @version          beta-14-beta
+// @version          beta-15-beta
 // @author           ienone&Truthss
 // @description      斗鱼全民星推荐自动领取 + 弹幕智能助手 - 集成红包自动领取与弹幕补全功能的完整版
 // @license          MIT
@@ -7356,9 +7356,7 @@ async safeClick(element, description) {
         if (window.getComputedStyle(element).display === "none") {
           return false;
         }
-        await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY / 2, SETTINGS.MAX_DELAY / 2));
         element.click();
-        await Utils.sleep(Utils.getRandomDelay());
         return true;
       } catch (error) {
         Utils.log(`[点击异常] ${description} 时发生错误: ${error.message}`);
@@ -7392,7 +7390,6 @@ async init() {
         return;
       }
       GlobalState.updateWorker(roomId, "OPENING", "页面加载中...", { countdown: null, nickname: null });
-      await Utils.sleep(1e3);
       this.startCommandListener(roomId);
       window.addEventListener("beforeunload", () => {
         GlobalState.updateWorker(Utils.getCurrentRoomId(), "DISCONNECTED", "连接已断开...");
@@ -7457,57 +7454,18 @@ async init() {
         return;
       }
       if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
-      Utils.log(`[调试] 开始在房间 ${roomId} 寻找红包...`);
-      const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
-      let redEnvelopeDiv = null;
-      let statusText = "";
-      let countdownText = "";
-      let foundValidContainer = false;
-      for (let i = 0; i < outerContainers.length; i++) {
-        const outer = outerContainers[i];
-        const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
-        if (!hasBoxIcon) {
-          continue;
-        }
-        foundValidContainer = true;
-        const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
-        const headline = headlineElem ? headlineElem.textContent.trim() : "";
-        const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
-        const content = contentElem ? contentElem.textContent.trim() : "";
-        Utils.log(`[调试] 容器 #${i} 标题: "${headline}" | 内容: "${content}"`);
-        if (headline.includes("倒计时") && content.includes(":")) {
-          redEnvelopeDiv = outer;
-          statusText = headline;
-          countdownText = content;
-          break;
-        } else if (headline.includes("可领取") || headline.includes("立即")) {
-          redEnvelopeDiv = outer;
-          statusText = headline;
-          countdownText = "";
-          break;
-        }
-        if (!redEnvelopeDiv) {
-          redEnvelopeDiv = outer;
-          statusText = headline;
-          countdownText = content;
-        }
+      Utils.log(`[调试] 房间 ${roomId} 进入任务寻找阶段...`);
+      const redEnvelopeDiv = await this.waitForRedEnvelopeContainer(SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
+      if (!redEnvelopeDiv) {
+        Utils.log("[判断] 超时后仍未发现红包，执行切房流程。");
+        GlobalState.updateWorker(roomId, "SWITCHING", "未发现红包, 切换中", { countdown: null });
+        await this.switchRoom();
+        return;
       }
-      if (!foundValidContainer) {
-        Utils.log(`[调试] 初次查找未发现红包容器，等待 ${SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT / 1e3} 秒后重新检查...`);
-        const waitedDiv = await this.waitForRedEnvelopeContainer(SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
-        if (!waitedDiv) {
-          Utils.log("[判断] 超时未找到红包容器，判定活动已结束。");
-          GlobalState.updateWorker(roomId, "SWITCHING", "活动已结束, 切换中", { countdown: null });
-          await this.switchRoom();
-          return;
-        }
-        foundValidContainer = true;
-        const headlineElem = waitedDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
-        const contentElem = waitedDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-        statusText = headlineElem ? headlineElem.textContent.trim() : "";
-        countdownText = contentElem ? contentElem.textContent.trim() : "";
-        redEnvelopeDiv = waitedDiv;
-      }
+      const headlineElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
+      const contentElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
+      const statusText = headlineElem ? headlineElem.textContent.trim() : "";
+      const countdownText = contentElem ? contentElem.textContent.trim() : "";
       if (countdownText.includes(":")) {
         const timeMatch = countdownText.match(/(\d+):(\d+)/);
         if (timeMatch) {
@@ -7568,9 +7526,8 @@ async extractPrizeInfo(redEnvelopeDiv) {
           Utils.log("[奖励提取] 弹窗未出现");
           return null;
         }
-        await Utils.sleep(500);
         const prizes = [];
-        const prizeContainer = popup.querySelector(SETTINGS.SELECTORS.prizeContainer);
+        const prizeContainer = await DOM.findElement(SETTINGS.SELECTORS.prizeContainer, 2e3, popup);
         if (prizeContainer) {
           const prizeItems = prizeContainer.querySelectorAll(SETTINGS.SELECTORS.prizeItem);
           Utils.log(`[奖励提取] 找到 ${prizeItems.length} 个奖励项容器`);
@@ -7718,46 +7675,47 @@ async claimAndRecheck(roomId) {
       }
       Utils.log(`[领取] 房间 ${roomId} 准备触发红包弹窗...`);
       GlobalState.updateWorker(roomId, "CLAIMING", "尝试打开红包...", { countdown: null });
-      const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
-      let targetBtn = null;
-      for (const outer of outerContainers) {
-        const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
-        if (!hasBoxIcon) {
-          continue;
+      let popup = document.querySelector(SETTINGS.SELECTORS.popupModal);
+      const isPopupVisible = popup && window.getComputedStyle(popup).display !== "none";
+      if (isPopupVisible) {
+        Utils.log("[领取] 检测到弹窗已在页面显示，跳过容器点击步骤。");
+      } else {
+        const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
+        let targetBtn = null;
+        for (const outer of outerContainers) {
+          const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
+          if (!hasBoxIcon) continue;
+          const innerContainer = outer.querySelector(SETTINGS.SELECTORS.clickableContainer);
+          if (!innerContainer) continue;
+          const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
+          const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
+          const headline = headlineElem ? headlineElem.textContent.trim() : "";
+          const content = contentElem ? contentElem.textContent.trim() : "";
+          if (headline.includes("倒计时") && content.includes(":") || headline.includes("可领取") || headline.includes("立即")) {
+            targetBtn = innerContainer;
+            Utils.log(`[领取] 锁定点击目标 - 标题: "${headline}" | 内容: "${content}"`);
+            break;
+          }
         }
-        const innerContainer = outer.querySelector(SETTINGS.SELECTORS.clickableContainer);
-        if (!innerContainer) {
-          continue;
+        if (!targetBtn) {
+          const outerDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, 3e3);
+          if (outerDiv) {
+            targetBtn = outerDiv.querySelector(SETTINGS.SELECTORS.clickableContainer) || outerDiv;
+          }
         }
-        const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
-        const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
-        const headline = headlineElem ? headlineElem.textContent.trim() : "";
-        const content = contentElem ? contentElem.textContent.trim() : "";
-        if (headline.includes("倒计时") && content.includes(":") || headline.includes("可领取") || headline.includes("立即")) {
-          targetBtn = innerContainer;
-          Utils.log(`[领取] 锁定点击目标 - 标题: "${headline}" | 内容: "${content}"`);
-          break;
+        if (!await DOM.safeClick(targetBtn, "红包内层容器", { immediate: true })) {
+          Utils.log("[领取] 点击失败，重新寻找任务。");
+          await Utils.sleep(2e3);
+          this.findAndExecuteNextTask(roomId);
+          return;
         }
-      }
-      if (!targetBtn) {
-        Utils.log("[领取] 未能锁定有效的点击目标，尝试兜底查找...");
-        const outerDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, 3e3);
-        if (outerDiv) {
-          targetBtn = outerDiv.querySelector(SETTINGS.SELECTORS.clickableContainer) || outerDiv;
+        popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
+        if (!popup) {
+          Utils.log("等待红包弹窗超时，重新寻找任务。");
+          await Utils.sleep(2e3);
+          this.findAndExecuteNextTask(roomId);
+          return;
         }
-      }
-      if (!await DOM.safeClick(targetBtn, "红包内层容器")) {
-        Utils.log("[领取] 点击失败，重新寻找任务。");
-        await Utils.sleep(2e3);
-        this.findAndExecuteNextTask(roomId);
-        return;
-      }
-      const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
-      if (!popup) {
-        Utils.log("等待红包弹窗超时，重新寻找任务。");
-        await Utils.sleep(2e3);
-        this.findAndExecuteNextTask(roomId);
-        return;
       }
       const singleBag = popup.querySelector(SETTINGS.SELECTORS.singleBag);
       const openBtn = singleBag ? singleBag.querySelector(SETTINGS.SELECTORS.openButton) : null;
@@ -7768,15 +7726,16 @@ async claimAndRecheck(roomId) {
           const waitMatch = btnText.match(/(\d+)秒后/);
           if (waitMatch) {
             const waitSeconds = parseInt(waitMatch[1]);
-            Utils.log(`[领取] 按钮显示还需等待 ${waitSeconds} 秒，等待中...`);
+            Utils.log(`[领取] 按钮显示还需等待 ${waitSeconds} 秒...`);
             GlobalState.updateWorker(roomId, "CLAIMING", `等待 ${waitSeconds} 秒...`, { countdown: null });
-            await Utils.sleep((waitSeconds + 1) * 1e3);
+            await Utils.sleep(waitSeconds * 1e3);
           }
         }
       }
       const clickTarget = openBtn || singleBag || popup;
       const targetName = openBtn ? "红包打开按钮" : singleBag ? "红包主体" : "红包弹窗";
-      if (await DOM.safeClick(clickTarget, targetName)) {
+      await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY, SETTINGS.MAX_DELAY));
+      if (await DOM.safeClick(clickTarget, targetName, { immediate: true })) {
         if (await DOM.checkForLimitPopup()) {
           GlobalState.setDailyLimit(true);
           Utils.log("检测到每日上限！");
@@ -7787,7 +7746,6 @@ async claimAndRecheck(roomId) {
           }
           return;
         }
-        await Utils.sleep(1500);
         const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3e3, popup);
         const reward = successIndicator ? "领取成功 " : "空包或失败";
         Utils.log(`领取操作完成，结果: ${reward}`);
@@ -7924,18 +7882,24 @@ startCommandListener(roomId) {
     },
 async waitForRedEnvelopeContainer(timeout) {
       const startTime = Date.now();
+      Utils.log(`[等待] 开始串行计时：等待红包组件渲染 (超时: ${timeout / 1e3}s)...`);
       while (Date.now() - startTime < timeout) {
         const containers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
         for (const container of containers) {
           const hasBoxIcon = container.querySelector(SETTINGS.SELECTORS.boxIcon);
-          if (hasBoxIcon) {
-            Utils.log(`[等待] 找到红包容器，耗时 ${Date.now() - startTime}ms`);
+          if (!hasBoxIcon) continue;
+          const headlineElem = container.querySelector(SETTINGS.SELECTORS.statusHeadline);
+          const contentElem = container.querySelector(SETTINGS.SELECTORS.countdownTimer);
+          const headline = headlineElem ? headlineElem.textContent.trim() : "";
+          const content = contentElem ? contentElem.textContent.trim() : "";
+          if (headline || content) {
+            Utils.log(`[等待] 红包组件完全就绪，耗时 ${Date.now() - startTime}ms`);
             return container;
           }
         }
-        await Utils.sleep(300);
+        await Utils.sleep(500);
       }
-      Utils.log(`[等待] 等待红包容器超时（${timeout}ms）`);
+      Utils.log(`[等待] 阶段二超时：红包组件未能在 ${timeout / 1e3}s 内完成渲染。`);
       return null;
     }
   };
