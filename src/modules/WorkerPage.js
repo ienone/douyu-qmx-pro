@@ -45,8 +45,6 @@ export const WorkerPage = {
         }
         GlobalState.updateWorker(roomId, 'OPENING', '页面加载中...', { countdown: null, nickname: null });
 
-        await Utils.sleep(1000);
-
         // 保留命令轮询器，以便接收来自控制面板的“关闭”指令
         this.startCommandListener(roomId);
 
@@ -129,84 +127,25 @@ export const WorkerPage = {
 
         if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
 
-        Utils.log(`[调试] 开始在房间 ${roomId} 寻找红包...`);
+        Utils.log(`[调试] 房间 ${roomId} 进入任务寻找阶段...`);
 
-        // 1. 查找所有红包外层容器
-        const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
-        let redEnvelopeDiv = null;
-        let statusText = '';
-        let countdownText = '';
-        let foundValidContainer = false; // 新增：标记是否找到有效的红包容器
+        // --- 核心改进：统一使用串行等待逻辑 ---
+        const redEnvelopeDiv = await this.waitForRedEnvelopeContainer(SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
 
-        for (let i = 0; i < outerContainers.length; i++) {
-            const outer = outerContainers[i];
-            
-            // 确认是红包容器（包含红包图标）
-            const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
-            if (!hasBoxIcon) {
-                continue;
-            }
-            
-            // 找到了红包容器
-            foundValidContainer = true;
-            
-            // 获取状态标题（"倒计时" 或 "可领取"）
-            const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
-            const headline = headlineElem ? headlineElem.textContent.trim() : '';
-            
-            // 获取内容（时间或其他）
-            const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
-            const content = contentElem ? contentElem.textContent.trim() : '';
-            
-            Utils.log(`[调试] 容器 #${i} 标题: "${headline}" | 内容: "${content}"`);
-            
-            // 判断是否为有效的红包容器
-            if (headline.includes('倒计时') && content.includes(':')) {
-                // 倒计时状态
-                redEnvelopeDiv = outer;
-                statusText = headline;
-                countdownText = content;
-                break;
-            } else if (headline.includes('可领取') || headline.includes('立即')) {
-                // 可领取状态
-                redEnvelopeDiv = outer;
-                statusText = headline;
-                countdownText = '';
-                break;
-            }
-            // 如果找到了红包容器但状态不符合，继续保存信息用于后续判断
-            if (!redEnvelopeDiv) {
-                redEnvelopeDiv = outer;
-                statusText = headline;
-                countdownText = content;
-            }
+        if (!redEnvelopeDiv) {
+            Utils.log('[判断] 超时后仍未发现红包，执行切房流程。');
+            GlobalState.updateWorker(roomId, 'SWITCHING', '未发现红包, 切换中', { countdown: null });
+            await this.switchRoom();
+            return;
         }
 
-        // 2. 如果没有找到任何红包容器，等待一次后再判断
-        if (!foundValidContainer) {
-            Utils.log(`[调试] 初次查找未发现红包容器，等待 ${SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT / 1000} 秒后重新检查...`);
-            
-            // 核心修复：使用专门的等待逻辑，确保找到的是红包容器
-            const waitedDiv = await this.waitForRedEnvelopeContainer(SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
-            
-            if (!waitedDiv) {
-                // 超时后仍未找到红包容器
-                Utils.log('[判断] 超时未找到红包容器，判定活动已结束。');
-                GlobalState.updateWorker(roomId, 'SWITCHING', '活动已结束, 切换中', { countdown: null });
-                await this.switchRoom();
-                return;
-            }
-            
-            // 找到了红包容器，提取信息
-            foundValidContainer = true;
-            const headlineElem = waitedDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
-            const contentElem = waitedDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-            statusText = headlineElem ? headlineElem.textContent.trim() : '';
-            countdownText = contentElem ? contentElem.textContent.trim() : '';
-            redEnvelopeDiv = waitedDiv;
-        }
+        // 到这里说明容器已经就绪且有内容
+        const headlineElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
+        const contentElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
+        const statusText = headlineElem ? headlineElem.textContent.trim() : '';
+        const countdownText = contentElem ? contentElem.textContent.trim() : '';
 
-        // 3. 此时确认找到了红包容器，执行状态判断逻辑
+        // 3. 执行状态判断逻辑
         if (countdownText.includes(':')) {
             // 倒计时状态
             const timeMatch = countdownText.match(/(\d+):(\d+)/);
@@ -292,11 +231,9 @@ export const WorkerPage = {
                 return null;
             }
 
-            await Utils.sleep(500); // 等待弹窗内容加载
-
-            // 3. 提取奖励信息
+            // 3. 动态等待并提取奖励信息容器（避免盲等 500ms）
             const prizes = [];
-            const prizeContainer = popup.querySelector(SETTINGS.SELECTORS.prizeContainer);
+            const prizeContainer = await DOM.findElement(SETTINGS.SELECTORS.prizeContainer, 2000, popup);
             
             if (prizeContainer) {
                 const prizeItems = prizeContainer.querySelectorAll(SETTINGS.SELECTORS.prizeItem);
@@ -512,64 +449,63 @@ export const WorkerPage = {
         Utils.log(`[领取] 房间 ${roomId} 准备触发红包弹窗...`);
         GlobalState.updateWorker(roomId, 'CLAIMING', '尝试打开红包...', { countdown: null });
 
-        // 1. 查找正确的点击目标
-        const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
-        let targetBtn = null;
+        // --- 核心优化：检查弹窗是否已经打开 ---
+        let popup = document.querySelector(SETTINGS.SELECTORS.popupModal);
+        const isPopupVisible = popup && window.getComputedStyle(popup).display !== 'none';
 
-        for (const outer of outerContainers) {
-            // 确认是红包容器
-            const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
-            if (!hasBoxIcon) {
-                continue;
+        if (isPopupVisible) {
+            Utils.log('[领取] 检测到弹窗已在页面显示，跳过容器点击步骤。');
+        } else {
+            // 1. 查找并点击容器
+            const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
+            let targetBtn = null;
+
+            for (const outer of outerContainers) {
+                const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
+                if (!hasBoxIcon) continue;
+                
+                const innerContainer = outer.querySelector(SETTINGS.SELECTORS.clickableContainer);
+                if (!innerContainer) continue;
+                
+                const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
+                const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
+                const headline = headlineElem ? headlineElem.textContent.trim() : '';
+                const content = contentElem ? contentElem.textContent.trim() : '';
+                
+                if ((headline.includes('倒计时') && content.includes(':')) || 
+                    headline.includes('可领取') || 
+                    headline.includes('立即')) {
+                    targetBtn = innerContainer;
+                    Utils.log(`[领取] 锁定点击目标 - 标题: "${headline}" | 内容: "${content}"`);
+                    break;
+                }
             }
-            
-            // 获取内层可点击容器
-            const innerContainer = outer.querySelector(SETTINGS.SELECTORS.clickableContainer);
-            if (!innerContainer) {
-                continue;
+
+            if (!targetBtn) {
+                const outerDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, 3000);
+                if (outerDiv) {
+                    targetBtn = outerDiv.querySelector(SETTINGS.SELECTORS.clickableContainer) || outerDiv;
+                }
             }
-            
-            // 检查是否为有效状态
-            const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
-            const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
-            const headline = headlineElem ? headlineElem.textContent.trim() : '';
-            const content = contentElem ? contentElem.textContent.trim() : '';
-            
-            // 只点击倒计时或可领取状态的红包
-            if ((headline.includes('倒计时') && content.includes(':')) || 
-                headline.includes('可领取') || 
-                headline.includes('立即')) {
-                targetBtn = innerContainer; // 点击内层容器
-                Utils.log(`[领取] 锁定点击目标 - 标题: "${headline}" | 内容: "${content}"`);
-                break;
+
+            if (!(await DOM.safeClick(targetBtn, '红包内层容器', { immediate: true }))) {
+                Utils.log('[领取] 点击失败，重新寻找任务。');
+                await Utils.sleep(2000);
+                this.findAndExecuteNextTask(roomId);
+                return;
+            }
+
+            // 2. 等待弹窗出现
+            popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
+            if (!popup) {
+                Utils.log('等待红包弹窗超时，重新寻找任务。');
+                await Utils.sleep(2000);
+                this.findAndExecuteNextTask(roomId);
+                return;
             }
         }
 
-        if (!targetBtn) {
-            Utils.log('[领取] 未能锁定有效的点击目标，尝试兜底查找...');
-            const outerDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, 3000);
-            if (outerDiv) {
-                targetBtn = outerDiv.querySelector(SETTINGS.SELECTORS.clickableContainer) || outerDiv;
-            }
-        }
-
-        if (!(await DOM.safeClick(targetBtn, '红包内层容器'))) {
-            Utils.log('[领取] 点击失败，重新寻找任务。');
-            await Utils.sleep(2000);
-            this.findAndExecuteNextTask(roomId);
-            return;
-        }
-
-        // 2. 等待弹窗出现
-        const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
-        if (!popup) {
-            Utils.log('等待红包弹窗超时，重新寻找任务。');
-            await Utils.sleep(2000);
-            this.findAndExecuteNextTask(roomId);
-            return;
-        }
-
-        // 3. 查找打开按钮
+        // 3. 查找打开按钮并处理“X秒后”
         const singleBag = popup.querySelector(SETTINGS.SELECTORS.singleBag);
         const openBtn = singleBag ? singleBag.querySelector(SETTINGS.SELECTORS.openButton) : null;
         
@@ -577,23 +513,27 @@ export const WorkerPage = {
             const btnText = openBtn.textContent.trim();
             Utils.log(`[领取] 找到打开按钮，文本: "${btnText}"`);
             
-            // 检查是否还需要等待
             if (/(\d+)秒后/.test(btnText)) {
                 const waitMatch = btnText.match(/(\d+)秒后/);
                 if (waitMatch) {
                     const waitSeconds = parseInt(waitMatch[1]);
-                    Utils.log(`[领取] 按钮显示还需等待 ${waitSeconds} 秒，等待中...`);
+                    Utils.log(`[领取] 按钮显示还需等待 ${waitSeconds} 秒...`);
                     GlobalState.updateWorker(roomId, 'CLAIMING', `等待 ${waitSeconds} 秒...`, { countdown: null });
-                    await Utils.sleep((waitSeconds + 1) * 1000);
+                    
+                    // 核心优化：只等待整数秒，不加额外的 1s 边际
+                    await Utils.sleep(waitSeconds * 1000);
                 }
             }
         }
         
-        // 4. 执行点击（优先点击按钮，否则点击弹窗）
+        // 4. 执行最终点击
         const clickTarget = openBtn || singleBag || popup;
         const targetName = openBtn ? '红包打开按钮' : (singleBag ? '红包主体' : '红包弹窗');
 
-        if (await DOM.safeClick(clickTarget, targetName)) {
+        // 在最终点击前，应用一次由设置决定的真实随机延迟，执行“人工反应模拟”
+        await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY, SETTINGS.MAX_DELAY));
+
+        if (await DOM.safeClick(clickTarget, targetName, { immediate: true })) {
             // 检查上限
             if (await DOM.checkForLimitPopup()) {
                 GlobalState.setDailyLimit(true);
@@ -605,10 +545,8 @@ export const WorkerPage = {
                 }
                 return;
             }
-
-            await Utils.sleep(1500);
             
-            // 5. 识别结果
+            // 5. 识别结果（直接安全轮询 3000ms 等待结果产生，不再死等 1.5s）
             const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3000, popup);
             const reward = successIndicator ? '领取成功 ' : '空包或失败';
             Utils.log(`领取操作完成，结果: ${reward}`);
@@ -843,31 +781,37 @@ export const WorkerPage = {
     },
 
     /**
-     * 等待红包容器出现（确保找到的是真正的红包容器）
+     * 等待红包容器出现并具备有效状态（确保内容已渲染）
      * @param {number} timeout - 超时时间（毫秒）
-     * @returns {Promise<HTMLElement|null>} - 找到的红包容器或 null
+     * @returns {Promise<HTMLElement|null>} - 找到的且具备有效内容的红包容器或 null
      */
     async waitForRedEnvelopeContainer(timeout) {
         const startTime = Date.now();
+        Utils.log(`[等待] 开始串行计时：等待红包组件渲染 (超时: ${timeout / 1000}s)...`);
         
         while (Date.now() - startTime < timeout) {
-            // 查找所有可能的容器
             const containers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
             
-            // 遍历找到包含红包图标的容器
             for (const container of containers) {
                 const hasBoxIcon = container.querySelector(SETTINGS.SELECTORS.boxIcon);
-                if (hasBoxIcon) {
-                    Utils.log(`[等待] 找到红包容器，耗时 ${Date.now() - startTime}ms`);
+                if (!hasBoxIcon) continue;
+
+                // 核心改进：不仅要有图标，还要有文字内容（说明红包业务逻辑已加载）
+                const headlineElem = container.querySelector(SETTINGS.SELECTORS.statusHeadline);
+                const contentElem = container.querySelector(SETTINGS.SELECTORS.countdownTimer);
+                const headline = headlineElem ? headlineElem.textContent.trim() : '';
+                const content = contentElem ? contentElem.textContent.trim() : '';
+
+                if (headline || content) {
+                    Utils.log(`[等待] 红包组件完全就绪，耗时 ${Date.now() - startTime}ms`);
                     return container;
                 }
             }
             
-            // 没找到，等待一小段时间后重试
-            await Utils.sleep(300);
+            await Utils.sleep(500); // 稍微加大幅度，降低 DOM 查询频率
         }
         
-        Utils.log(`[等待] 等待红包容器超时（${timeout}ms）`);
+        Utils.log(`[等待] 阶段二超时：红包组件未能在 ${timeout / 1000}s 内完成渲染。`);
         return null;
     },
 };

@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 *.local
 src/test/
+temp
+test
 
 # IDE
 .idea/

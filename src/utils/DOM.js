@@ -57,9 +57,8 @@ export const DOM = {
             if (window.getComputedStyle(element).display === 'none') {
                 return false;
             }
-            await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY / 2, SETTINGS.MAX_DELAY / 2));
+
             element.click();
-            await Utils.sleep(Utils.getRandomDelay());
             return true;
         } catch (error) {
             Utils.log(`[点击异常] ${description} 时发生错误: ${error.message}`);
