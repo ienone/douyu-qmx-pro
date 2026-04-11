@@ -85,6 +85,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
         'setting-popup-wait-timeout': { value: SETTINGS.POPUP_WAIT_TIMEOUT / 1000, unit: '秒' },
         'setting-worker-loading-timeout': { value: SETTINGS.ELEMENT_WAIT_TIMEOUT / 1000, unit: '秒' },
         'setting-close-tab-delay': { value: SETTINGS.CLOSE_TAB_DELAY / 1000, unit: '秒' },
+        'setting-open-tab-interval': { value: SETTINGS.OPEN_TAB_INTERVAL / 1000, unit: '秒' },
         'setting-api-retry-delay': { value: SETTINGS.API_RETRY_DELAY / 1000, unit: '秒' },
         'setting-switching-cleanup-timeout': { value: SETTINGS.SWITCHING_CLEANUP_TIMEOUT / 1000, unit: '秒' },
         'setting-healthcheck-interval': { value: SETTINGS.HEALTHCHECK_INTERVAL / 1000, unit: '秒' },
@@ -150,6 +151,13 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
                         <label class="qmx-toggle">
                             <input type="checkbox" id="setting-auto-pause" ${SETTINGS.AUTO_PAUSE_ENABLED ? 'checked' : ''}>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="qmx-settings-item">
+                        <label>预载模式 <span class="qmx-tooltip-icon" data-tooltip-key="preload-mode">?</span></label>
+                        <label class="qmx-toggle">
+                            <input type="checkbox" id="setting-preload-mode" ${SETTINGS.PRELOAD_MODE_ENABLED ? 'checked' : ''}>
                             <span class="slider"></span>
                         </label>
                     </div>
@@ -221,6 +229,7 @@ export const settingsPanelTemplate = (SETTINGS) => {
                     ${createUnitInput('setting-popup-wait-timeout', '红包弹窗等待超时', settingsMeta)}
                     ${createUnitInput('setting-worker-loading-timeout', '播放器加载超时', settingsMeta)}
                     ${createUnitInput('setting-close-tab-delay', '关闭标签页延迟', settingsMeta)}
+                    ${createUnitInput('setting-open-tab-interval', '新标签页打开间隔', settingsMeta)}
                     ${createUnitInput('setting-switching-cleanup-timeout', '切换中状态兜底超时', settingsMeta)}
                     ${createUnitInput('setting-healthcheck-interval', '哨兵健康检查间隔', settingsMeta)}
                     ${createUnitInput('setting-disconnected-grace-period', '断开连接清理延迟', settingsMeta)}

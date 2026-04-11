@@ -14,6 +14,7 @@ import { SettingsPanel } from './SettingsPanel.js';
 import { FirstTimeNotice } from './FirstTimeNotice.js';
 import { StatsInfo } from './StatsInfo';
 import { DanmuPro } from './danmu/DanmuPro'; // 1. 添加静态导入
+import { PageLoader } from './PageLoader';
 
 // --- 图标常量 ---
 const ICONS = {
@@ -35,6 +36,8 @@ export const ControlPage = {
     isPanelInjected: false, // 标记是否成功进入注入模式
     commandChannel: null,
     modalContainer: null, // 新增：持有面板引用，防止DOM丢失后无法找回
+    openTabTimerId: null,
+    
     /**
      * 控制页面的总入口和初始化函数。
      */
@@ -74,11 +77,12 @@ export const ControlPage = {
             this.handleSettingsUpdate(e.detail);
         });
 
-        setInterval(() => {
+       setInterval(() => {
             this.renderDashboard();
             this.cleanupAndMonitorWorkers(); // 标签页回收及监控僵尸标签页
             this.checkInjectionState(); // 新增：检查注入状态
         }, 1000);
+        this.startOpenTabScheduler();
 
         // 显示首次使用提示
         FirstTimeNotice.showCalibrationNotice();
@@ -140,6 +144,26 @@ export const ControlPage = {
         if (newSettings.STATS_UPDATE_INTERVAL && SETTINGS.SHOW_STATS_IN_PANEL) {
             StatsInfo.updateInterval();
         }
+
+        // 5. 开页调度间隔变更后，重建开页定时器
+        if (typeof newSettings.OPEN_TAB_INTERVAL !== 'undefined') {
+            this.startOpenTabScheduler();
+        }
+    },
+
+    /**
+     * 按设置的间隔调度队列开页。
+     */
+    startOpenTabScheduler() {
+        if (this.openTabTimerId) {
+            clearInterval(this.openTabTimerId);
+            this.openTabTimerId = null;
+        }
+
+        const interval = Math.max(200, Number(SETTINGS.OPEN_TAB_INTERVAL) || 2000);
+        this.openTabTimerId = setInterval(() => {
+            PageLoader.openNextTab();
+        }, interval);
     },
 
     /**
@@ -598,8 +622,12 @@ export const ControlPage = {
                     // --- 找到了“/beta”，说明是新版UI ---
                     localStorage.setItem('newWebLive', 'A');
                 }
-                GM_openInTab(newUrl, { active: false, setParent: true });
-                Utils.log(`打开指令已发送: ${newUrl}`);
+                const queued = PageLoader.enqueue(newUrl);
+                if (queued) {
+                    Utils.log(`打开请求已入队: ${newUrl}`);
+                } else {
+                    Utils.log(`打开请求已存在于队列中，跳过重复入队: ${newUrl}`);
+                }
             } else {
                 Utils.log('未能找到新的、未打开的房间。');
                 openBtn.textContent = '无新房间';
