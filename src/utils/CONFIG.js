@@ -43,6 +43,7 @@ export const CONFIG = {
     COIN_LIST_URL: 'https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/coin/record/list', // 获取金币历史的API地址
     API_RETRY_COUNT: 3, // API请求失败时的最大重试次数。
     API_RETRY_DELAY: 5000, // 每次API请求重试之间的等待时间。
+    API_GOLD_POOL_MIN: 5000, // 大红包过滤
 
     // --- 业务逻辑配置 ---
     MAX_WORKER_TABS: 24, // 允许同时运行的最大工作标签页（直播间）数量。

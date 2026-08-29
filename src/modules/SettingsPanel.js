@@ -45,6 +45,7 @@ export const SettingsPanel = {
             'switching-cleanup-timeout': '处于“切换中”状态的标签页，超过此时间后将被强行清理，避免残留。',
             'max-worker-tabs': '同时运行的直播间数量上限。',
             'api-room-fetch-count': '每次从API获取的房间数。增加可提高找到新房间的几率。',
+            'gold-pool-min': '只抢金币奖池不低于此值的房间。填 0 表示不过滤。',
             'api-retry-count': '获取房间列表失败时的重试次数。',
             'api-retry-delay': 'API请求失败后，等待多久再重试。',
             'healthcheck-interval': '哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。',
@@ -130,6 +131,7 @@ export const SettingsPanel = {
             MAX_WORKER_TABS: parseInt(document.getElementById('setting-max-tabs').value, 10),
             API_ROOM_FETCH_COUNT: parseInt(document.getElementById('setting-api-fetch-count').value, 10),
             API_RETRY_COUNT: parseInt(document.getElementById('setting-api-retry-count').value, 10),
+            API_GOLD_POOL_MIN: parseInt(document.getElementById('setting-gold-pool-min').value, 10),
             API_RETRY_DELAY: parseFloat(document.getElementById('setting-api-retry-delay').value) * 1000,
         };
     },

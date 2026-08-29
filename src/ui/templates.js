@@ -268,6 +268,12 @@ export const settingsPanelTemplate = (SETTINGS) => {
                         }">
                     </div>
                     <div class="qmx-settings-item">
+                        <label for="setting-gold-pool-min">大红包门槛（金币奖池≥） <span class="qmx-tooltip-icon" data-tooltip-key="gold-pool-min">?</span></label>
+                        <input type="number" class="qmx-input" id="setting-gold-pool-min" value="${
+                            SETTINGS.API_GOLD_POOL_MIN
+                        }">
+                    </div>
+                    <div class="qmx-settings-item">
                         <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
                         <input type="number" class="qmx-input" id="setting-api-retry-count" value="${SETTINGS.API_RETRY_COUNT}">
                     </div>
