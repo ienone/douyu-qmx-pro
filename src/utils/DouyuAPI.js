@@ -139,13 +139,22 @@ export const DouyuAPI = {
               response.response?.error === 0 &&
               Array.isArray(response.response.data?.redBagList)
             ) {
-              const rooms = response.response.data.redBagList
-                .map((item) => item.rid)
-                .filter(Boolean)
-                .slice(0, count * 2)
-                .map((rid) => `https://www.douyu.com/${rid}`);
-              Utils.log(`API 成功返回 ${rooms.length} 个房间URL。`);
-              resolve(rooms);
+              const type8Rooms = new Set();
+              response.response.data.redBagList.forEach((item) => {
+                if (item.rid && item.rbType === 8) type8Rooms.add(item.rid);
+              });
+              const rids = [...type8Rooms].slice(0, count * 2);
+              Promise.all(rids.map((candidateRid) => this.filterBigPacketRooms(candidateRid)))
+                .then((rooms) => {
+                  const bigRooms = rooms.filter(Boolean);
+                  if (bigRooms.length > 0) {
+                    resolve(bigRooms);
+                  } else {
+                    const emptyMsg = '广场房间均无达到门槛的大红包，本轮放弃。';
+                    Utils.log(emptyMsg);
+                    reject(new Error(emptyMsg));
+                  }
+                });
             } else {
               const errorMsg = `API 数据格式错误或失败: ${
                                 response.response?.msg || '未知错误'
@@ -176,6 +185,43 @@ export const DouyuAPI = {
       };
 
       attempt(retries);
+    });
+  },
+  filterBigPacketRooms(rid) {
+    return new Promise((resolve) => {
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url: `https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/room/list?rid=${rid}`,
+        headers: {
+          Referer: 'https://www.douyu.com/',
+          'User-Agent': navigator.userAgent,
+        },
+        responseType: 'json',
+        timeout: 10000,
+        onload: (response) => {
+          if (
+            response.status !== 200 ||
+            response.response?.error !== 0 ||
+            !Array.isArray(response.response?.data?.redBagList)
+          ) {
+            return resolve(null);
+          }
+          const hasBig = response.response.data.redBagList.some(
+            (rb) =>
+              rb.status === 0 &&
+              (rb.prizeList || []).some(
+                (prize) => prize.ptype === 9 && prize.num >= SETTINGS.API_GOLD_POOL_MIN,
+              ),
+          );
+          if (hasBig) {
+            resolve(`https://www.douyu.com/${rid}`);
+          } else {
+            resolve(null);
+          }
+        },
+        onerror: () => resolve(null),
+        ontimeout: () => resolve(null),
+      });
     });
   },
 
