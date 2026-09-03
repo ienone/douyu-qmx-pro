@@ -1,82 +1,48 @@
 /**
  * @file PageLoader.js
- * @description 统一管理待打开页面队列，并在控制页按节奏逐个打开。
+ * @description 管理领取任务所需的短时后台开页。
  */
 
 import { Utils } from '../utils/utils';
-import { SETTINGS } from './SettingsManager';
+import { GM_openInTab } from '$';
 
-const QUEUE_KEY = 'douyu_qmx_page_open_queue';
+const closeTabHandle = (tab) => {
+    try {
+        tab?.close?.();
+    } catch (error) {
+        Utils.log(`[PageLoader] 关闭短时工作页失败: ${String(error?.message || error)}`);
+    }
+};
 
 export const PageLoader = {
     /**
-     * 获取待打开页面队列。
-     * @returns {string[]}
-     */
-    getQueue() {
-        const queue = GM_getValue(QUEUE_KEY, []);
-        return Array.isArray(queue) ? queue : [];
-    },
-
-    /**
-     * 保存待打开页面队列。
-     * @param {string[]} queue
-     */
-    setQueue(queue) {
-        GM_setValue(QUEUE_KEY, Array.isArray(queue) ? queue : []);
-    },
-
-    /**
-     * 入队一个待打开URL（默认去重）。
+     * 后台打开一个短时工作页。调用方负责在初始化窗口结束后关闭。
      * @param {string} url
-     * @param {{dedupe?: boolean}} [options]
-     * @returns {boolean} 是否成功入队
+     * @returns {{url: string, roomId: string|null, openedAt: number, close: () => void}}
      */
-    enqueue(url, options = {}) {
-        if (!url || typeof url !== 'string') return false;
-
-        const normalizedUrl = url.trim();
-        if (!normalizedUrl) return false;
-
-        const { dedupe = true } = options;
-        const queue = this.getQueue();
-
-        if (dedupe && queue.includes(normalizedUrl)) {
-            return false;
+    openPrewarmTab(url) {
+        if (!url || typeof url !== 'string') {
+            throw new Error('短时工作页 URL 无效');
         }
 
-        queue.push(normalizedUrl);
-        this.setQueue(queue);
-        return true;
-    },
+        const targetUrl = new URL(url, 'https://www.douyu.com');
+        targetUrl.searchParams.set('qmxPrewarm', '1');
+        const tab = GM_openInTab(targetUrl.href, { active: false, setParent: true });
+        const openedAt = Date.now();
+        const roomId = url.match(/\/(\d+)/)?.[1] || null;
+        let closed = false;
 
-    /**
-     * 出队并返回一个URL。
-     * @returns {string|null}
-     */
-    dequeue() {
-        const queue = this.getQueue();
-        if (queue.length === 0) return null;
-
-        const nextUrl = queue.shift() || null;
-        this.setQueue(queue);
-        return nextUrl;
-    },
-
-    /**
-     * 从队列打开一个新标签页。
-     * @returns {string|null} 本次打开的URL
-     */
-    openNextTab() {
-        const nextUrl = this.dequeue();
-        if (!nextUrl) return null;
-
-        const shouldForegroundOpen = SETTINGS.PRELOAD_MODE_ENABLED !== false;
-        const active = shouldForegroundOpen;
-        GM_openInTab(nextUrl, { active, setParent: true });
-        Utils.log(
-            `[PageLoader] 已从队列打开新标签页(${shouldForegroundOpen ? '前台直切' : '后台打开'}): ${nextUrl}`
-        );
-        return nextUrl;
+        Utils.log(`[PageLoader] 已后台打开短时工作页: ${url}`);
+        return {
+            url: targetUrl.href,
+            roomId,
+            openedAt,
+            close() {
+                if (closed) return;
+                closed = true;
+                closeTabHandle(tab);
+                Utils.log(`[PageLoader] 已关闭短时工作页: ${url}`);
+            },
+        };
     },
 };

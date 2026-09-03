@@ -1,0 +1,175 @@
+#js-giftList-area.qmx-theater-host-active {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+#js-giftList-area.qmx-theater-host-active > :not(#qmx-theater-composer) {
+    display: none !important;
+}
+
+#qmx-theater-composer {
+    position: absolute;
+    inset: 0;
+    z-index: 12;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: 30px 42px;
+    gap: 4px;
+    padding: 0 6px;
+    color: #e8e3ec;
+    font: 12px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.qmx-theater-toolbar,
+.qmx-theater-editor-row {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    gap: 6px;
+}
+
+.qmx-theater-toolbar > button,
+.qmx-theater-chip,
+.qmx-theater-result {
+    border: 0;
+    color: inherit;
+    background: rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+}
+
+.qmx-theater-toolbar > button {
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 12px;
+}
+
+.qmx-theater-toolbar > button:hover,
+.qmx-theater-chip:hover,
+.qmx-theater-result:hover {
+    background: rgba(208, 188, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.qmx-theater-state {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #70d6a2;
+    transition: background-color 160ms ease, transform 160ms ease, border-radius 160ms ease;
+}
+
+.qmx-theater-state[data-state="loading"],
+.qmx-theater-state[data-state="sending"] {
+    background: #e5b95c;
+    border-radius: 2px;
+    transform: rotate(45deg) scale(0.86);
+}
+
+.qmx-theater-state[data-state="sent"] {
+    background: #65d79c;
+    transform: scale(1.35);
+}
+
+.qmx-theater-state[data-state="error"],
+.qmx-theater-state[data-state="empty"] {
+    background: #ef6b73;
+    border-radius: 2px;
+}
+
+.qmx-theater-candidates {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    gap: 5px;
+    overflow: hidden;
+}
+
+.qmx-theater-chip {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 130px;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.qmx-theater-editor-row {
+    height: 38px;
+    padding: 0 5px 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 18px;
+    background: rgba(20, 19, 23, 0.92);
+    transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.qmx-theater-editor-row:focus-within {
+    border-color: rgba(208, 188, 255, 0.75);
+    transform: translateY(-1px);
+}
+
+.qmx-theater-editor {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+}
+
+.qmx-theater-counter {
+    color: rgba(232, 227, 236, 0.55);
+    font-variant-numeric: tabular-nums;
+}
+
+.qmx-theater-send {
+    width: 31px;
+    height: 31px;
+    padding: 7px;
+    border: 0;
+    border-radius: 50%;
+    color: #211b2c;
+    background: #d0bcff;
+    cursor: pointer;
+    transition: background-color 150ms ease, transform 150ms ease;
+}
+
+.qmx-theater-send:hover {
+    transform: translateX(1px) scale(1.04);
+}
+
+.qmx-theater-send svg {
+    width: 100%;
+    height: 100%;
+}
+
+.qmx-theater-suggestions {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    bottom: calc(100% + 8px);
+    display: none;
+    max-height: 250px;
+    padding: 8px;
+    overflow: auto;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    background: rgba(28, 27, 31, 0.97);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+}
+
+.qmx-theater-suggestions.visible {
+    display: grid;
+    gap: 4px;
+}
+
+.qmx-theater-result {
+    padding: 8px 10px;
+    border-radius: 12px;
+    text-align: left;
+    transition: background-color 150ms ease, transform 150ms ease;
+}

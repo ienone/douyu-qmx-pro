@@ -9,10 +9,16 @@ import { Utils } from '../../utils/utils.js';
 import { DanmukuDB } from './DanmukuDB.js'; 
 import { InputManager } from './InputManager.js';
 import { KeyboardController } from './KeyboardController.js';
+import { DanmuDataSource } from '../../features/danmu/DanmuDataSource.js';
+import { TheaterComposer } from '../../features/theater-composer/TheaterComposer.js';
+import { Sb6657Provider } from '../../features/danmu/providers/Sb6657Provider.js';
+import { SETTINGS } from '../SettingsManager.js';
+import { DouyuLayoutAdapter } from '../../platform/douyu/DouyuLayoutAdapter.js';
 
 // 导入弹幕助手所需的样式
 import '../../styles/_danmuku-popup.css'; // 注意路径调整
 import '../../styles/_candidate-capsules.css';
+import '../../styles/_theater-composer.css';
 
 /**
  * 斗鱼弹幕助手主模块
@@ -39,7 +45,7 @@ export const DanmuPro = {
                 Utils.log('[弹幕助手] 数据库初始化失败，功能可能受限。', 'warn');
             }
 
-            // 检查并执行首次数据导入
+            // 检查在线数据源；不可用时才启用本地数据兜底
             await this.firstTimeImport();
 
             // 初始化键盘控制器
@@ -47,6 +53,9 @@ export const DanmuPro = {
 
             // 初始化输入管理器
             await InputManager.init();
+
+            // 剧场模式礼物栏弹幕工作台
+            TheaterComposer.init();
 
             this.initialized = true;
             Utils.log('[弹幕助手] 模块初始化完成！');
@@ -65,6 +74,7 @@ export const DanmuPro = {
         try {
             // 销毁输入管理器（它会负责销毁 UIManager 和 InputDetector）
             InputManager.destroy();
+            TheaterComposer.destroy();
             
             this.initialized = false;
             Utils.log('[弹幕助手] 模块已关闭');
@@ -73,14 +83,25 @@ export const DanmuPro = {
         }
     },
 
+    refresh() {
+        if (!this.initialized) return;
+        requestAnimationFrame(() => {
+            TheaterComposer.sync(DouyuLayoutAdapter.getSnapshot());
+        });
+    },
+
     /**
      * 检查并执行首次数据导入
      */
     async firstTimeImport() {
         try {
             const dataCount = await DanmukuDB.getDataCount();
-            if (dataCount === 0) {
-                Utils.log('[弹幕助手] 数据库为空，开始首次数据导入...');
+            Sb6657Provider.setBaseUrl(SETTINGS.DANMU_REMOTE_BASE_URL);
+            DanmuDataSource.remoteEnabled = SETTINGS.DANMU_REMOTE_ENABLED;
+            if (SETTINGS.DANMU_REMOTE_ENABLED) await DanmuDataSource.warmup();
+            else DanmuDataSource.remoteAvailable = false;
+            if (dataCount === 0 && !DanmuDataSource.remoteAvailable) {
+                Utils.log('[弹幕助手] 在线弹幕库不可用，开始导入本地兜底数据...');
                 const result = await DanmukuDB.autoImportData();
                 if (result && result.successCount > 0) {
                     Utils.log(`[弹幕助手] 首次数据导入成功 ${result.successCount} 条。`);

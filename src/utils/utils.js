@@ -1,4 +1,5 @@
 import { SETTINGS } from '../modules/SettingsManager';
+import { GM_log } from '$';
 
 /**
  * =================================================================================
@@ -23,6 +24,30 @@ export const Utils = {
     },
 
     /**
+     * 输出不包含 Cookie、CSRF 或红包 code 的领取链路日志。
+     * @param {'SNATCH'} source
+     * @param {string} message
+     * @param {object} [details]
+     */
+    claimLog(source, message, details = {}) {
+        const allowedKeys = new Set([
+            'roomId', 'bagId', 'result', 'error', 'msg', 'remainingSec',
+            'intervalMs', 'durationMs', 'reason', 'httpStatus', 'rewardText',
+        ]);
+        const safeDetails = Object.fromEntries(Object.entries(details)
+            .filter(([key]) => allowedKeys.has(key))
+            .map(([key, value]) => [key, typeof value === 'string' ? value.slice(0, 160) : value]));
+        const suffix = Object.keys(safeDetails).length ? ` ${JSON.stringify(safeDetails)}` : '';
+        const logMsg = `${SETTINGS.SCRIPT_PREFIX} [领取路径:${source}] ${message}${suffix}`;
+        console.info(logMsg);
+        try {
+            GM_log(logMsg);
+        } catch {
+            // DevTools 日志已经输出，GM_log 不可用时无需重复报错。
+        }
+    },
+
+    /**
      * 异步等待指定时间。
      * @param {number} ms - 等待的毫秒数。
      */
@@ -32,10 +57,10 @@ export const Utils = {
 
     /**
      * 获取指定范围内的随机延迟时间。
-     * @param {number} [min=SETTINGS.MIN_DELAY] - 最小延迟。
-     * @param {number} [max=SETTINGS.MAX_DELAY] - 最大延迟。
+     * @param {number} min - 最小延迟。
+     * @param {number} max - 最大延迟。
      */
-    getRandomDelay(min = SETTINGS.MIN_DELAY, max = SETTINGS.MAX_DELAY) {
+    getRandomDelay(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     },
 
@@ -96,43 +121,6 @@ export const Utils = {
         const month = String(beijingDate.getUTCMonth() + 1).padStart(2, '0');
         const day = String(beijingDate.getUTCDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
-    },
-
-    /**
-     * 防冲突锁机制
-     * @param {string} lockKey - 在油猴中本地保存的键 key
-     * @param {function} callback - 回调函数发现有锁时延迟回调
-     * @param args - 回调函数的参数
-     * @returns {boolean} - 返回值为true时继续执行
-     */
-    lockChecker: function (lockKey, callback, ...args) {
-        if (GM_getValue(lockKey, false)) {
-            // 如果发现有锁，则延迟50毫秒后重试
-            setTimeout(() => callback(...args), 50);
-            return false;
-        }
-        return true;
-    },
-
-    /**
-     * 安全地使用锁写入本地存储
-     * @param {string} lockKey - 锁定键
-     * @param {string} storageKey - 目标存储键
-     * @param {*} value - 要存储的值
-     * @param {string} nickname - 操作昵称，用于日志
-     */
-    setLocalValueWithLock: function (lockKey, storageKey, value, nickname) {
-        try {
-            // 上锁
-            GM_setValue(lockKey, true);
-            // 执行写入操作
-            GM_setValue(storageKey, value);
-        } catch (e) {
-            Utils.log(`[${nickname}-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
-        } finally {
-            // 无论成功与否，最后都要解锁
-            GM_setValue(lockKey, false);
-        }
     },
 
     /**

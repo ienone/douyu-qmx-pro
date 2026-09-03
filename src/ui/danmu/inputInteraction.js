@@ -149,7 +149,7 @@ export const InputInteraction = {
         // 触发输入变化事件
         this._emitInputEvent('inputChanged', { 
             inputEl, 
-            value: inputEl.value, 
+            value: NativeSetter.getValue(inputEl),
             event 
         });
     },
@@ -209,8 +209,15 @@ export const InputInteraction = {
      */
     _setCursorToEnd(inputEl) {
         if (inputEl.setSelectionRange) {
-            const len = inputEl.value.length;
+            const len = NativeSetter.getValue(inputEl).length;
             inputEl.setSelectionRange(len, len);
+        } else if (inputEl.isContentEditable) {
+            const range = document.createRange();
+            range.selectNodeContents(inputEl);
+            range.collapse(false);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
         }
     },
     

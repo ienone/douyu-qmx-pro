@@ -15,7 +15,7 @@
         "noEmit": true,
         "allowJs": true,
         "checkJs": false,
-        "types": ["tampermonkey"]
+        "types": ["vite-plugin-monkey/client"]
     },
     "include": ["src/**/*", "eslint.config.js", "vite.config.js"],
 }

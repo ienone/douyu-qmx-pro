@@ -4,14 +4,19 @@
  */
 
 export interface GlobalStateData {
-    tabs: { [roomID: string]: TabData };
+    tasks: { [roomID: string]: TaskData };
+    accountRisk?: {
+        suspected: boolean;
+        timestamp: number;
+        expiresAt: number;
+        count: number;
+    };
 }
 
-export interface TabData {
+export interface TaskData {
     status: string;
     statusText: string;
     lastUpdateTime: number;
     nickname?: string;
     [key: string]: unknown; // 允许其他动态属性，使用 unknown 而不是 any
 }
-

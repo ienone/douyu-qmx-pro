@@ -43,6 +43,12 @@ export const NativeSetter = {
         if (!element) return false;
         
         try {
+            if (element.isContentEditable || element.getAttribute?.('contenteditable') === 'true') {
+                element.textContent = value;
+                this.dispatchInputEvent(element, value);
+                return true;
+            }
+
             // 根据元素类型选择合适的descriptor
             let descriptor = null;
             
@@ -78,12 +84,14 @@ export const NativeSetter = {
      * 派发input事件
      * @param {HTMLElement} element - 目标元素
      */
-    dispatchInputEvent(element) {
+    dispatchInputEvent(element, value = null) {
         try {
             // 创建并派发input事件
-            const inputEvent = new Event('input', {
+            const inputEvent = new InputEvent('input', {
                 bubbles: true,
-                cancelable: true
+                cancelable: false,
+                data: value,
+                inputType: 'insertText',
             });
             
             element.dispatchEvent(inputEvent);
@@ -199,6 +207,10 @@ export const NativeSetter = {
         if (!element) return '';
         
         try {
+            if (element.isContentEditable || element.getAttribute?.('contenteditable') === 'true') {
+                return element.textContent || '';
+            }
+
             // 根据元素类型选择合适的descriptor
             let descriptor = null;
             

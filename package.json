@@ -6,14 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:star": "set BUILD_FLAVOR=star-only && vite build",
-    "build:danmu": "set BUILD_FLAVOR=danmu-only && vite build",
+    "test": "node --test src/modules/PageLoader.test.js src/modules/SettingsManager.test.js src/modules/GlobalState.test.js src/features/stats/ClaimEventStore.test.js src/features/redbag/RedBagState.test.js src/platform/douyu/CsrfConfig.test.js src/platform/douyu/DouyuLayoutAdapter.test.js src/utils/DouyuAPI.test.js",
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
     "preview": "vite preview"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@types/node": "^24.5.2",
-    "@types/tampermonkey": "^5.0.4",
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
     "eslint": "^9.35.0",

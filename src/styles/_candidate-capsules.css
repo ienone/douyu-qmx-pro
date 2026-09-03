@@ -237,3 +237,27 @@
 .ddp-candidate-capsule:nth-child(3) { animation-delay: 0.15s; }
 .ddp-candidate-capsule:nth-child(4) { animation-delay: 0.2s; }
 .ddp-candidate-capsule:nth-child(5) { animation-delay: 0.25s; }
+
+/* 新版斗鱼：候选项悬浮在输入区上方，不再挤压官方 Chat 布局。 */
+.layout-Player-chat.ddp-candidates-visible {
+    overflow: visible !important;
+}
+
+.layout-Player-chat > .ddp-candidate-capsules {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: calc(100% + 6px);
+    max-width: none;
+    margin: 0;
+    padding: 7px 9px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    z-index: 1200;
+}
+
+.layout-Player-chat > .ddp-candidate-capsules .ddp-candidate-capsule {
+    animation: none;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}

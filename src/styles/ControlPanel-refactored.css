@@ -6,8 +6,6 @@
 
 /* 组件层 */
 @import './_forms.css';
-@import './_tooltip.css';
-@import './_theme-switch.css';
 
 /* 功能模块层 */
 @import './_control-panel.css';
@@ -65,6 +63,7 @@
 
 /* 按钮样式应用 */
 .qmx-modal-btn {
+    position: relative;
     flex-grow: 1;
     padding: 10px 16px;
     border: 1px solid var(--md-sys-color-outline);
@@ -74,18 +73,18 @@
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    transition: background-color 180ms var(--motion-easing), color 180ms var(--motion-easing), border-color 180ms var(--motion-easing), box-shadow 180ms var(--motion-easing), transform 120ms var(--motion-easing);
     user-select: none;
 }
 
 .qmx-modal-btn:hover {
-    background-color: rgba(208, 188, 255, 0.1);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-color: color-mix(in srgb, var(--md-sys-color-primary) 72%, var(--md-sys-color-outline));
+    background-color: color-mix(in srgb, var(--md-sys-color-primary) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
 }
 
 .qmx-modal-btn:active {
-    transform: translateY(0) scale(0.98);
+    transform: scale(0.975);
     box-shadow: none;
 }
 
@@ -101,8 +100,70 @@
 }
 
 .qmx-modal-btn.primary:hover {
-    background-color: hsl(252, 100%, 85%);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    background-color: color-mix(in srgb, var(--md-sys-color-primary) 88%, var(--md-sys-color-on-primary));
+    color: var(--md-sys-color-on-primary);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-sys-color-on-primary) 20%, transparent);
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state] {
+    color: transparent;
+    border-radius: 13px;
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state]::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--md-sys-color-on-primary);
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state="saving"]::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    inset: 50% auto auto 50%;
+    border: 2px solid color-mix(in srgb, var(--md-sys-color-on-primary) 35%, transparent);
+    border-top-color: var(--md-sys-color-on-primary);
+    border-radius: 50%;
+    animation: qmx-save-spin 650ms linear infinite;
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state="saved"] {
+    background-color: #4f9f73;
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state="saved"]::after {
+    content: '✓';
+    font-size: 16px;
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state="error"] {
+    background-color: var(--status-color-error);
+    animation: qmx-save-error 260ms ease-out;
+}
+
+.qmx-settings-footer .qmx-modal-btn.primary[data-state="error"]::after {
+    content: '!';
+    font-weight: 700;
+}
+
+@keyframes qmx-save-spin {
+    from { transform: translate(-50%, -50%) rotate(0); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes qmx-save-error {
+    0%, 100% { transform: translateX(0); }
+    35% { transform: translateX(-3px); }
+    70% { transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qmx-settings-footer .qmx-modal-btn.primary[data-state]::after,
+    .qmx-settings-footer .qmx-modal-btn.primary[data-state="error"] {
+        animation-duration: 0.01ms !important;
+    }
 }
 
 .qmx-modal-btn.danger {
@@ -111,7 +172,8 @@
 }
 
 .qmx-modal-btn.danger:hover {
-    background-color: rgba(244, 67, 54, 0.1);
+    background-color: color-mix(in srgb, var(--status-color-error) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--status-color-error) 10%, transparent);
 }
 
 /* 滚动条样式应用 */

@@ -12,6 +12,7 @@ import { DanmukuDB } from './DanmukuDB.js';
 import { UIManager } from './UIManager.js';
 import { InputDetector, INPUT_TYPES } from './InputDetector.js';
 import { NativeSetter } from '../../utils/NativeSetter.js';
+import { DanmuDataSource } from '../../features/danmu/DanmuDataSource.js';
 
 /**
  * 应用状态枚举
@@ -53,6 +54,9 @@ export const InputManager = {
     
     // 值监听定时器
     valueWatcher: null,
+
+    // 中文输入法组合输入期间不接管按键和搜索
+    isComposing: false,
     
     /**
      * 初始化输入管理器
@@ -83,7 +87,12 @@ export const InputManager = {
             focusin: this.handleFocusIn.bind(this),
             focusout: this.handleFocusOut.bind(this),
             keydown: this.handleKeyDown.bind(this),
-            input: this.handleInput.bind(this)
+            input: this.handleInput.bind(this),
+            compositionstart: () => { this.isComposing = true; },
+            compositionend: (event) => {
+                this.isComposing = false;
+                if (event.target === this.currentInput) this.handleInput(event);
+            },
         };
 
         // 监听所有输入框的焦点事件
@@ -93,6 +102,8 @@ export const InputManager = {
         // 监听键盘事件（使用捕获阶段，以便更早拦截）
         document.addEventListener('keydown', this.boundHandlers.keydown, true);
         document.addEventListener('input', this.boundHandlers.input);
+        document.addEventListener('compositionstart', this.boundHandlers.compositionstart, true);
+        document.addEventListener('compositionend', this.boundHandlers.compositionend, true);
         
         // 监听输入框值的变化（包括程序化的清空）
         this.startInputValueWatcher();
@@ -106,7 +117,7 @@ export const InputManager = {
         
         this.valueWatcher = setInterval(() => {
             if (this.currentInput && this.currentSuggestions.length > 0) {
-                const currentValue = this.currentInput.value;
+                const currentValue = NativeSetter.getValue(this.currentInput);
                 if (currentValue.length === 0) {
                     // 输入框被清空了，立即隐藏候选项
                     this.hidePopup();
@@ -128,6 +139,8 @@ export const InputManager = {
             document.removeEventListener('focusout', this.boundHandlers.focusout);
             document.removeEventListener('keydown', this.boundHandlers.keydown, true);
             document.removeEventListener('input', this.boundHandlers.input);
+            document.removeEventListener('compositionstart', this.boundHandlers.compositionstart, true);
+            document.removeEventListener('compositionend', this.boundHandlers.compositionend, true);
             this.boundHandlers = {};
         }
 
@@ -275,9 +288,9 @@ export const InputManager = {
                 // 焦点转移到非插件UI，延迟检查输入框状态
                 setTimeout(() => {
                     // 检查输入框内容
-                    const hasContent = this.currentInput && 
-                        this.currentInput.value && 
-                        this.currentInput.value.trim().length > 0;
+                    const hasContent = Boolean(
+                        this.currentInput && NativeSetter.getValue(this.currentInput).trim().length > 0
+                    );
                     
                     console.log('焦点转移到非插件UI，输入框有内容:', hasContent);
                     
@@ -303,8 +316,9 @@ export const InputManager = {
      */
     handleInput(event) {
         if (event.target !== this.currentInput) return;
+        if (this.isComposing) return;
         
-        const inputValue = event.target.value;
+        const inputValue = NativeSetter.getValue(event.target);
 
         Utils.log('输入事件，当前值:', inputValue);
         
@@ -342,6 +356,7 @@ export const InputManager = {
      */
     handleKeyDown(event) {
         if (event.target !== this.currentInput) return;
+        if (this.isComposing || event.isComposing) return;
         
         const key = event.key;
         
@@ -518,7 +533,10 @@ export const InputManager = {
         }
         
         // 从数据库搜索匹配的弹幕模板
-        let suggestions = await DanmukuDB.search(inputValue, SETTINGS.maxSuggestions, SETTINGS.sortBy);
+        let suggestions = await DanmuDataSource.search(inputValue, {
+            limit: SETTINGS.maxSuggestions,
+            sortBy: SETTINGS.sortBy,
+        });
         
         this.currentSuggestions = suggestions;
         

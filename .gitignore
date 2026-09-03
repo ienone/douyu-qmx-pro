@@ -14,10 +14,10 @@ temp
 test
 
 # IDE
+.DS_Store
 .idea/
 .vscode/
 .vs/
 
 # Build output
 dist/
-

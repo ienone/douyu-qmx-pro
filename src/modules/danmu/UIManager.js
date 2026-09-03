@@ -142,17 +142,14 @@ export const UIManager = {
         Utils.log(`--ddp-capsule-item-padding: 3px (胶囊内padding)`);
         Utils.log(`预期测量高度: 24px + 3*2 + 8*2 + 8*2 = 62px (margin计入高度)`);
         
-        // 查找 Chat 容器（正确的父级容器）
-        const chat = document.querySelector('.layout-Player-chat .Chat');
-        if (!chat) {
-            Utils.log('未找到 Chat 容器，回退到普通弹窗模式');
+        // 候选项覆盖在官方输入区上方，不再修改斗鱼 Chat 的 padding 和高度。
+        const chatArea = document.querySelector('.layout-Player-chat');
+        if (!chatArea) {
+            Utils.log('未找到聊天区域，回退到普通弹窗模式');
             CandidatePanel.renderCandidatePanel(suggestions, this.activeIndex);
             CandidatePanel.showPanel(targetInput);
             return;
         }
-
-        // --- 新增：每次显示前重置 paddingBottom，防止累加 ---
-        chat.style.paddingBottom = '';
 
         // 立即应用CSS布局修复，确保输入框定位生效
         this.applyChatLayoutFix();
@@ -202,23 +199,12 @@ export const UIManager = {
             candidateList.appendChild(capsule);
         });
         
-        // 将候选列表插入到 ChatToolBar 之后、ChatSpeak 之前
-        // 这样 ChatToolBar 保持在顶部，ChatSpeak（输入框）保持在底部不动
-        const chatSpeak = chat.querySelector('.ChatSpeak');
-        if (chatSpeak) {
-            chatSpeak.parentNode.insertBefore(candidateList, chatSpeak);
-        } else {
-            chat.appendChild(candidateList);
-        }
-
-        // 更新布局以适应候选框高度
-        this.updateChatLayoutForCandidates(candidateList);
+        chatArea.appendChild(candidateList);
         
         // 存储当前模式状态
         this.currentCandidateMode = multiRow ? 'multi-row' : 'single-row';
         
-        Utils.log(`胶囊候选列表已显示 (${this.currentCandidateMode})，包含 ${displaySuggestions.length}/${suggestions.length} 个候选项，布局已调整`);
-        Utils.log(`DOM结构: Chat > [ChatToolBar, ddp-candidate-capsules, ChatSpeak]`);
+        Utils.log(`胶囊候选列表已显示 (${this.currentCandidateMode})，包含 ${displaySuggestions.length}/${suggestions.length} 个候选项`);
     },
     
     /**
@@ -226,12 +212,6 @@ export const UIManager = {
      */
     hidePopup() {
         if (!this.initialized) return;
-        
-        // 强制显示调用栈追踪
-        console.log('=== HIDEOPOPUP 被调用 ===');
-        console.log(`当前状态: ${this.currentState}`);
-        console.log('完整调用栈:');
-        console.trace('hidePopup调用追踪');
         
         Utils.log(`隐藏弹窗，当前状态: ${this.currentState}`);
         
@@ -290,67 +270,7 @@ export const UIManager = {
      * @param {HTMLElement} candidateList - 候选列表元素
      */
     updateChatLayoutForCandidates(candidateList) {
-        const chat = document.querySelector('.layout-Player-chat .Chat');
-        if (!chat || !candidateList) {
-            Utils.log('缺少必要元素，跳过padding更新');
-            return;
-        }
-
-        // --- 新增：每次更新前重置 paddingBottom，防止累加 ---
-        chat.style.paddingBottom = '';
-
-        // 记录调试信息
-        const beforeHeight = chat.getBoundingClientRect().height;
-        const currentPadding = getComputedStyle(chat).paddingBottom;
-        const initialPaddingValue = parseFloat(currentPadding) || 0;
-        
-        Utils.log(`=== 更新候选框布局开始 ===`);
-        Utils.log(`Chat当前高度: ${beforeHeight}px`);
-        Utils.log(`Chat初始paddingBottom: ${initialPaddingValue}px (必须保留)`);
-        
-        // 使用配置的精确高度值
-        const configuredHeight = SETTINGS.capsule.totalHeight;
-
-        // 获取 margin 值（上下合计）
-        const marginTop = parseFloat(getComputedStyle(candidateList).marginTop) || 0;
-        const marginBottom = parseFloat(getComputedStyle(candidateList).marginBottom) || 0;
-        const totalMargin = marginTop + marginBottom;
-
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                // 获取实际渲染高度进行验证
-                const actualHeight = Math.round(candidateList.getBoundingClientRect().height);
-
-                // 计算候选区总高度（内容高度 + margin）
-                const candidateHeightWithMargin = actualHeight + totalMargin;
-
-                // 决定候选项实际需要的高度
-                const heightDifference = Math.abs(candidateHeightWithMargin - configuredHeight);
-                const candidateHeight = heightDifference <= 2 ? configuredHeight : candidateHeightWithMargin;
-
-                // 核心修复：最终的padding = 初始padding + 候选项高度（含margin）
-                const finalPadding =  initialPaddingValue + candidateHeight;
-
-                // “拉”力：向上移动的距离应该精确等于为候选项腾出的空间
-                document.documentElement.style.setProperty('--ddp-candidate-height', `${candidateHeight}px`);
-                
-                // “推”力：设置能容纳“候选项+初始间距”的总padding
-                chat.style.paddingBottom = `${finalPadding}px`;
-                
-                // --- 日志验证 ---
-                const afterHeight = chat.getBoundingClientRect().height;
-                const actualPaddingBottom = getComputedStyle(chat).paddingBottom;
-                const heightIncrease = afterHeight - beforeHeight;
-                
-                Utils.log(`候选项所需高度(含margin): ${candidateHeight}px`);
-                Utils.log(`最终设置padding: ${finalPadding}px (初始${initialPaddingValue}px + 候选项${candidateHeight}px)`);
-                Utils.log(`transform向上移动距离: ${candidateHeight}px`);
-                Utils.log(`实际应用padding: ${actualPaddingBottom}`);
-                Utils.log(`Chat更新后高度: ${afterHeight}px`);
-                Utils.log(`实际高度增加: ${heightIncrease}px (应约等于${candidateHeight}px)`);
-                Utils.log(`=== 候选框布局更新完成 ===`);
-            });
-        });
+        return Boolean(candidateList);
     },
     
     /**
@@ -360,8 +280,6 @@ export const UIManager = {
         Utils.log('=== 移除CSS布局修复 ===');
         
         const chatArea = document.querySelector('.layout-Player-chat');
-        const chat = chatArea ? chatArea.querySelector('.Chat') : null;
-        
         if (!chatArea) {
             Utils.log('未找到聊天区域，跳过布局恢复');
             return;
@@ -378,12 +296,7 @@ export const UIManager = {
         document.documentElement.style.removeProperty('--ddp-capsule-total-height');
         document.documentElement.style.removeProperty('--ddp-capsule-item-padding');
         
-        // 重置padding为空字符串，恢复CSS默认值
-        if (chat) {
-            chat.style.paddingBottom = '';
-        }
-        
-        Utils.log('已移除 ddp-candidates-visible 类，清理所有CSS变量和padding，布局已恢复');
+        Utils.log('已移除 ddp-candidates-visible 类，聊天布局已恢复');
         Utils.log('=== CSS布局恢复完成 ===');
     },
     
@@ -831,22 +744,6 @@ export const UIManager = {
      * 绑定组件间事件通信
      */
     bindComponentEvents() {
-        // 全局监控所有失焦事件
-        document.addEventListener('blur', (event) => {
-            if (event.target && event.target.matches && event.target.matches('input, textarea')) {
-                console.log('🔍 全局检测到输入框失焦:', event.target.className, 'value:', event.target.value);
-            }
-        }, true);
-        
-        // 全局监控所有自定义事件
-        const originalDispatchEvent = document.dispatchEvent;
-        document.dispatchEvent = function(event) {
-            if (event.type.includes('input') || event.type.includes('blur') || event.type.includes('focus')) {
-                console.log('🎯 自定义事件被触发:', event.type, event.detail);
-            }
-            return originalDispatchEvent.call(this, event);
-        };
-        
         // 监听候选项选择事件
         document.addEventListener('candidateSelected', (event) => {
             const { candidate } = event.detail;

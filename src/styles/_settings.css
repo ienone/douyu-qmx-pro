@@ -90,10 +90,8 @@
     gap: 6px;
 }
 
-.qmx-settings-item small {
-    font-size: 12px;
-    color: var(--md-sys-color-on-surface-variant);
-    opacity: 0.8;
+.qmx-settings-item-wide {
+    grid-column: 1 / -1;
 }
 
 /* --- 设置警告提示 --- */
@@ -108,48 +106,46 @@
 
 /* --- 关于页面样式 --- */
 #tab-about {
-    line-height: 1.7;
-    font-size: 14px;
+    min-height: 132px;
 }
 
-#tab-about h4 {
-    color: var(--md-sys-color-primary);
+.qmx-about-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 2px 22px;
     font-size: 16px;
-    font-weight: 500;
-    margin-top: 20px;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid var(--md-sys-color-outline);
 }
 
-#tab-about h4:first-child {
-    margin-top: 0;
-}
-
-#tab-about p {
-    margin-bottom: 10px;
-    color: var(--md-sys-color-on-surface-variant);
-}
-
-#tab-about .version-tag {
+.qmx-about-identity .version-tag {
     display: inline-block;
-    background-color: var(--md-sys-color-tertiary);
-    color: var(--md-sys-color-on-primary);
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 13px;
+    background-color: color-mix(in srgb, var(--md-sys-color-primary) 15%, transparent);
+    color: var(--md-sys-color-primary);
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11px;
     font-weight: 500;
-    margin-left: 8px;
 }
 
-#tab-about a {
+.qmx-about-links {
+    display: flex;
+    gap: 10px;
+}
+
+.qmx-about-links a {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 16px;
     color: var(--md-sys-color-tertiary);
     text-decoration: none;
+    text-align: center;
     font-weight: 500;
-    transition: color 0.2s;
+    transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 
-#tab-about a:hover {
-    color: #FFD6E1;
-    text-decoration: underline;
+.qmx-about-links a:hover {
+    border-color: var(--md-sys-color-primary);
+    background: color-mix(in srgb, var(--md-sys-color-primary) 9%, transparent);
+    color: var(--md-sys-color-primary);
 }

@@ -15,23 +15,12 @@ export const CONFIG = {
     // --- 核心标识 ---
     SCRIPT_PREFIX: '[全民星推荐助手]', // 脚本在控制台输出日志时使用的前缀，便于识别和过滤。
     CONTROL_ROOM_ID: '6657', // 控制室的房间号，只有在此房间页面，脚本的控制面板UI才会加载。
-    TEMP_CONTROL_ROOM_RID: '6979222', // 备用的控制室房间号（例如斗鱼官方活动页的RID），用于兼容特殊页面。
+    TEMP_CONTROL_ROOM_RID: '6979222', // 由控制室房间号自动解析出的真实 RID，不直接暴露给用户。
+    CONTROL_ROOM_RESOLVED_FROM: '6657', // 标记真实 RID 对应的可见控制室房间号，用于自动迁移旧设置。
 
     // --- 时间控制 (ms) ---
-    POPUP_WAIT_TIMEOUT: 20000, // 点击红包后，等待领取弹窗出现的最长超时时间。
-    PANEL_WAIT_TIMEOUT: 10000, // 查找通用UI面板或元素、等待失联的默认等待超时时间。
-    ELEMENT_WAIT_TIMEOUT: 30000, // 等待播放器加载完成的超时时间，用以判断页面是否可用。
-    RED_ENVELOPE_LOAD_TIMEOUT: 15000, // 在工作标签页中，等待右下角红包活动区域加载的超时时间。
-    MIN_DELAY: 1000, // 模拟人类操作的随机延迟时间范围的最小值，用于点击等操作，避免行为过于机械。
-    MAX_DELAY: 2500, // 模拟人类操作的随机延迟时间范围的最大值。
-    CLOSE_TAB_DELAY: 1500, // 旧标签页在打开新标签页后，等待多久再关闭自己，以确保新页面已成功接管任务。
-    OPEN_TAB_INTERVAL: 2000, // 控制中心从队列打开新标签页的最小间隔时间。
     INITIAL_SCRIPT_DELAY: 3000, // 页面加载完成后，脚本延迟多久再开始执行，以避开页面初始化时的高资源占用期。
-    UNRESPONSIVE_TIMEOUT: 15 * 60 * 1000, // 工作标签页多久未向控制中心汇报心跳后，在面板上被标记为“无响应”状态。
-    SWITCHING_CLEANUP_TIMEOUT: 30000, // 处于“切换中”状态的标签页，超过此时间后将被自动清理，防止卡死。
-    HEALTHCHECK_INTERVAL: 10000, // 工作页中，哨兵检查UI倒计时的时间间隔。
-    DISCONNECTED_GRACE_PERIOD: 10000, // 已断开的标签页在被清理前，等待其重连的宽限时间。
-    STATS_UPDATE_INTERVAL: 4000, // 统计信息更新的时间间隔，单位为毫秒。
+    ROOM_PREWARM_DURATION: 3000, // 实测 2.2 秒可完成服务端初始化，统一留出 3 秒安全窗口。
 
     // --- UI 与交互 ---
     DRAGGABLE_BUTTON_ID: 'douyu-qmx-starter-button', // 主悬浮按钮的HTML ID。
@@ -41,22 +30,16 @@ export const CONFIG = {
     // --- API 相关 ---
     API_URL: 'https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/square/list', // 获取可领取红包直播间列表的官方API地址。
     COIN_LIST_URL: 'https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/coin/record/list', // 获取金币历史的API地址
-    API_RETRY_COUNT: 3, // API请求失败时的最大重试次数。
+    API_RETRY_COUNT: 3, // 内部 API 请求失败时的最大重试次数。
     API_RETRY_DELAY: 5000, // 每次API请求重试之间的等待时间。
-
+    API_ROOM_PROBE_CONCURRENCY: 6, // 并发查询候选房间 room/list 的上限，用于按奖池大小排序。
+    API_ROOM_PROBE_TIMEOUT: 5000, // 单个候选房间奖池查询的超时时间。
     // --- 业务逻辑配置 ---
-    MAX_WORKER_TABS: 24, // 允许同时运行的最大工作标签页（直播间）数量。
+    MAX_CONCURRENT_TASKS: 24, // 允许同时运行的控制页领取任务数量。
     DAILY_LIMIT_ACTION: 'CONTINUE_DORMANT', // 当达到每日领取上限时的处理策略。可选值: 'STOP_ALL'(停止所有任务), 'CONTINUE_DORMANT'(进入休眠等待第二天)。
-    AUTO_PAUSE_ENABLED: true, // 是否启用在工作标签页中自动暂停视频播放的功能，以节省系统资源。
-    AUTO_PAUSE_DELAY_AFTER_ACTION: 5000, // 在执行领取等操作后，需要等待多久才能再次尝试自动暂停视频。
-    PRELOAD_MODE_ENABLED: true, // 是否启用预载模式。开启时新标签页前台打开，关闭时新标签页后台打开。
-    CALIBRATION_MODE_ENABLED: false, // 是否启用校准模式，提高倒计时精准度，尤其适用于禁用P2P的环境。
-    SHOW_STATS_IN_PANEL: false, // 是否在控制面板中显示统计信息标签页。
-    // 根据构建版本设置默认值，避免未定义
-    ENABLE_DANMU_PRO: typeof __ENABLE_DANMU_PRO__ !== 'undefined' ? __ENABLE_DANMU_PRO__ : true,
 
     // --- 存储键名 ---
-    STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state', // 用于在油猴存储中记录脚本核心状态（如所有工作标签页信息）的键名。
+    STATE_STORAGE_KEY: 'douyu_qmx_dashboard_state', // 用于记录控制页任务状态的键名。
     DAILY_LIMIT_REACHED_KEY: 'douyu_qmx_daily_limit_reached', // 用于在油猴存储中记录“每日上限”状态的键名。
     STATS_INFO_STORAGE_KEY: 'douyu_qmx_stats', // 存储统计信息的键名
 
@@ -68,58 +51,14 @@ export const CONFIG = {
     UI_FEEDBACK_DELAY: 2000, // UI上临时反馈信息（如“无新房间”）的显示时长。
     DRAG_BUTTON_DEFAULT_PADDING: 20, // 主悬浮按钮距离屏幕边缘的默认像素间距。
     CONVERT_LEGACY_POSITION: true, // 是否自动将旧的像素位置转换为新的比例位置，仅执行一次。
+};
 
-    // --- 选择器 ---
-    SELECTORS: {
-        // 1. 外层容器：用于查找红包区域
-        redEnvelopeContainer: 'div.activeItem__d6uUm, div[class*="activeItem"]',
-        
-        // 2. 可点击的内层容器
-        clickableContainer: 'div.container__0Xsh2, div[class*="container__"]',
-        
-        // 3. 倒计时文本容器
-        countdownTimer: 'div.boxContent__N0d-3, div[class*="boxContent"]',
-        
-        // 4. 状态文本容器（包含"倒计时"/"可领取"等）
-        statusHeadline: 'div.boxHeadline__GP-am, div[class*="boxHeadline"]',
-        
-        // 5. 红包图标容器（用于确认是红包而非其他活动）
-        boxIcon: 'div.boxIcon__H-44m, div[class*="boxIcon"]',
-        
-        // 6. 弹窗主模态框
-        popupModal: 'div.LiveNewAnchorSupportT-pop--inner, div[class*="pop--inner"]',
-        
-        // 7. 弹窗中的红包主体
-        singleBag: 'div.LiveNewAnchorSupportT-singleBag, div[class*="singleBag"]',
-        
-        // 8. 打开/领取按钮（文本可能是"立即抢"或"122秒后可抢"）
-        openButton: 'div.LiveNewAnchorSupportT-singleBag--btn, div[class*="singleBag--btn"]',
-        
-        // 9. 关闭按钮
-        closeButton: 'div.LiveNewAnchorSupportT-pop--close, div[class*="pop--close"]',
-        
-        // 10. 播放器控制
-        criticalElement: '#js-player-video',
-        pauseButton: '#js-player-controlbar [class*="left-"] i:nth-child(1), [class*="icon-pause"], .icon-c8be96',
-        
-        // 11. 成功状态指示器
-        rewardSuccessIndicator: '[class*="singleBagOpened"]',
-        
-        // 12. 其他
-        limitReachedPopup: 'div.dy-Message-custom-content.dy-Message-info',
-        rankListContainer: '#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank',
-        anchorName: 'h3.anchorName__6NXv9, h3[class*="anchorName"], div.Title-anchorName > h2.Title-anchorNameH2',
-        
-        // 13. 奖励提取 - 优化后的选择器
-        prizeContainer: 'div.LiveNewAnchorSupportT-singleBag--awards, div[class*="singleBag--awards"]',
-        prizeItem: 'div.LiveNewAnchorSupportT-singleBag--prize, div[class*="singleBag--prize"]',
-        prizeImage: 'img',
-        prizeCount: 'span',
-    },
-    
-    // =======================================================
-    // 弹幕助手模块配置
-    // =======================================================
+// 弹幕助手恢复构建时再合并；独立导出可让当前星推荐包完整摇树移除。
+export const DANMU_CONFIG = {
+    ENABLE_DANMU_PRO: true,
+    ENABLE_THEATER_COMPOSER: true,
+    DANMU_REMOTE_BASE_URL: 'https://hguofichp.cn:10086',
+    DANMU_REMOTE_ENABLED: true,
 
     // 静态配置常量
 
