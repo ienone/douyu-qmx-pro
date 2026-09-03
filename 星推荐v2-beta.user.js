@@ -1,25 +1,20 @@
 // ==UserScript==
-// @name             斗鱼全民星推荐助手+弹幕助手-beta
+// @name             斗鱼全民星推荐助手-beta
 // @namespace        http://tampermonkey.net/
-// @version          beta-15-beta
+// @version          beta-16-beta.1
 // @author           ienone&Truthss
-// @description      斗鱼全民星推荐自动领取 + 弹幕智能助手 - 集成红包自动领取与弹幕补全功能的完整版
+// @description      斗鱼全民星推荐自动领取脚本 - 控制页服务端领取、收益统计与可视化任务面板
 // @license          MIT
 // @match            *://www.douyu.com/*
-// @connect          list-www.douyu.com
-// @connect          data.ienone.top
-// @connect          localhost:*
+// @connect          www.douyu.com
 // @grant            GM_addStyle
-// @grant            GM_cookie
 // @grant            GM_deleteValue
 // @grant            GM_getValue
-// @grant            GM_listValues
 // @grant            GM_log
-// @grant            GM_notification
 // @grant            GM_openInTab
 // @grant            GM_setValue
 // @grant            GM_xmlhttpRequest
-// @grant            window.close
+// @grant            unsafeWindow
 // @run-at           document-idle
 // @noframes
 // @original-author  ysl-ovo (https://greasyfork.org/zh-CN/users/1453821-ysl-ovo)
@@ -37,21 +32,10 @@
 SCRIPT_PREFIX: "[全民星推荐助手]",
 CONTROL_ROOM_ID: "6657",
 TEMP_CONTROL_ROOM_RID: "6979222",
+CONTROL_ROOM_RESOLVED_FROM: "6657",
 
-POPUP_WAIT_TIMEOUT: 2e4,
-PANEL_WAIT_TIMEOUT: 1e4,
-ELEMENT_WAIT_TIMEOUT: 3e4,
-RED_ENVELOPE_LOAD_TIMEOUT: 15e3,
-MIN_DELAY: 1e3,
-MAX_DELAY: 2500,
-CLOSE_TAB_DELAY: 1500,
-OPEN_TAB_INTERVAL: 2e3,
 INITIAL_SCRIPT_DELAY: 3e3,
-UNRESPONSIVE_TIMEOUT: 15 * 60 * 1e3,
-SWITCHING_CLEANUP_TIMEOUT: 3e4,
-HEALTHCHECK_INTERVAL: 1e4,
-DISCONNECTED_GRACE_PERIOD: 1e4,
-STATS_UPDATE_INTERVAL: 4e3,
+ROOM_PREWARM_DURATION: 3e3,
 
 DRAGGABLE_BUTTON_ID: "douyu-qmx-starter-button",
 BUTTON_POS_STORAGE_KEY: "douyu_qmx_button_position",
@@ -61,16 +45,12 @@ API_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/redbag/squ
 COIN_LIST_URL: "https://www.douyu.com/japi/livebiznc/web/anchorstardiscover/coin/record/list",
 API_RETRY_COUNT: 3,
 API_RETRY_DELAY: 5e3,
+API_ROOM_PROBE_CONCURRENCY: 6,
+API_ROOM_PROBE_TIMEOUT: 5e3,
 
-MAX_WORKER_TABS: 24,
+MAX_CONCURRENT_TASKS: 24,
 DAILY_LIMIT_ACTION: "CONTINUE_DORMANT",
-AUTO_PAUSE_ENABLED: true,
-AUTO_PAUSE_DELAY_AFTER_ACTION: 5e3,
-PRELOAD_MODE_ENABLED: true,
-CALIBRATION_MODE_ENABLED: false,
-SHOW_STATS_IN_PANEL: false,
 
-ENABLE_DANMU_PRO: true,
 STATE_STORAGE_KEY: "douyu_qmx_dashboard_state",
 DAILY_LIMIT_REACHED_KEY: "douyu_qmx_daily_limit_reached",
 STATS_INFO_STORAGE_KEY: "douyu_qmx_stats",
@@ -81,177 +61,124 @@ INJECT_TARGET_INTERVAL: 500,
 API_ROOM_FETCH_COUNT: 10,
 UI_FEEDBACK_DELAY: 2e3,
 DRAG_BUTTON_DEFAULT_PADDING: 20,
-CONVERT_LEGACY_POSITION: true,
-
-SELECTORS: {
-redEnvelopeContainer: 'div.activeItem__d6uUm, div[class*="activeItem"]',
-clickableContainer: 'div.container__0Xsh2, div[class*="container__"]',
-countdownTimer: 'div.boxContent__N0d-3, div[class*="boxContent"]',
-statusHeadline: 'div.boxHeadline__GP-am, div[class*="boxHeadline"]',
-boxIcon: 'div.boxIcon__H-44m, div[class*="boxIcon"]',
-popupModal: 'div.LiveNewAnchorSupportT-pop--inner, div[class*="pop--inner"]',
-singleBag: 'div.LiveNewAnchorSupportT-singleBag, div[class*="singleBag"]',
-openButton: 'div.LiveNewAnchorSupportT-singleBag--btn, div[class*="singleBag--btn"]',
-closeButton: 'div.LiveNewAnchorSupportT-pop--close, div[class*="pop--close"]',
-criticalElement: "#js-player-video",
-      pauseButton: '#js-player-controlbar [class*="left-"] i:nth-child(1), [class*="icon-pause"], .icon-c8be96',
-rewardSuccessIndicator: '[class*="singleBagOpened"]',
-limitReachedPopup: "div.dy-Message-custom-content.dy-Message-info",
-      rankListContainer: "#layout-Player-aside > div.layout-Player-asideMainTop > div.layout-Player-rank",
-      anchorName: 'h3.anchorName__6NXv9, h3[class*="anchorName"], div.Title-anchorName > h2.Title-anchorNameH2',
-prizeContainer: 'div.LiveNewAnchorSupportT-singleBag--awards, div[class*="singleBag--awards"]',
-      prizeItem: 'div.LiveNewAnchorSupportT-singleBag--prize, div[class*="singleBag--prize"]',
-      prizeImage: "img",
-      prizeCount: "span"
-    },
-
-
-
-
-
-
-DB_NAME: "DouyuDanmukuPro",
-    DB_VERSION: 2,
-    DB_STORE_NAME: "danmuku_templates",
-SETTINGS_KEY_PREFIX: "dda_",
-CSS_CLASSES: {
-      POPUP: "dda-popup",
-      POPUP_SHOW: "show",
-      POPUP_CONTENT: "dda-popup-content",
-      POPUP_ITEM: "dda-popup-item",
-      POPUP_ITEM_ACTIVE: "dda-popup-item-active",
-      POPUP_ITEM_TEXT: "dda-popup-item-text",
-      POPUP_EMPTY: "dda-popup-empty",
-      EMPTY_MESSAGE: "dda-empty-message"
-    },
-KEYBOARD: {
-      ENTER: "Enter",
-      ESCAPE: "Escape",
-      ARROW_UP: "ArrowUp",
-      ARROW_DOWN: "ArrowDown",
-      ARROW_LEFT: "ArrowLeft",
-      ARROW_RIGHT: "ArrowRight",
-      TAB: "Tab",
-      BACKSPACE: "Backspace"
-    },
-API: {
-      BASE_URL: "https://api.example.com",
-      TIMEOUT: 5e3,
-      RETRY_ATTEMPTS: 3
-    },
-DEBUG: false,
-LOG_LEVEL: "info",
-
-
-minSearchLength: 1,
-maxSuggestions: 10,
-debounceDelay: 300,
-
-sortBy: "relevance",
-autoImportMaxPages: 5,
-autoImportPageSize: 50,
-autoImportSortByPopularity: true,
-
-enterSelectionModeKey: "ArrowUp",
-exitSelectionModeKey: "ArrowDown",
-expandCandidatesKey: "ArrowUp",
-navigationLeftKey: "ArrowLeft",
-navigationRightKey: "ArrowRight",
-selectKey: "Enter",
-cancelKey: "Escape",
-
-popupShowDelay: 100,
-popupHideDelay: 200,
-animationDuration: 200,
-
-maxPopupHeight: 300,
-itemHeight: 40,
-maxCandidateWidth: 200,
-
-capsule: {
-      maxWidth: 150,
-height: 24,
-padding: 16,
-margin: 16,
-totalHeight: 40,
-fontSize: 12,
-itemsPerRow: 4,
-singleRowMaxItems: 8,
-
-preview: {
-        enabled: true,
-showDelay: 500,
-hideDelay: 100,
-maxWidth: 300,
-animationDuration: 200,
-keyboardShowDelay: 150,
-verticalOffset: 8,
-horizontalOffset: 0,
-preferredPosition: "top"
-}
-    },
-enableAutoComplete: true,
-enableKeyboardShortcuts: true,
-enableSelectionMode: true,
-enableSound: false,
-
-enableSync: false,
-syncInterval: 3e5,
-
-maxCacheSize: 1e3,
-cacheExpireTime: 864e5
+CONVERT_LEGACY_POSITION: true
 };
+  var _GM_deleteValue = (() => typeof GM_deleteValue != "undefined" ? GM_deleteValue : void 0)();
+  var _GM_getValue = (() => typeof GM_getValue != "undefined" ? GM_getValue : void 0)();
+  var _GM_log = (() => typeof GM_log != "undefined" ? GM_log : void 0)();
+  var _GM_openInTab = (() => typeof GM_openInTab != "undefined" ? GM_openInTab : void 0)();
+  var _GM_setValue = (() => typeof GM_setValue != "undefined" ? GM_setValue : void 0)();
+  var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
+  var _unsafeWindow = (() => typeof unsafeWindow != "undefined" ? unsafeWindow : void 0)();
+  const USER_SETTING_KEYS = Object.freeze([
+    "CONTROL_ROOM_ID",
+    "TEMP_CONTROL_ROOM_RID",
+    "CONTROL_ROOM_RESOLVED_FROM",
+    "ROOM_PREWARM_DURATION",
+    "DAILY_LIMIT_ACTION",
+    "MODAL_DISPLAY_MODE"
+  ]);
+  const pickUserSettings = (value) => Object.fromEntries(
+    USER_SETTING_KEYS.filter((key) => Object.hasOwn(value || {}, key)).map((key) => [key, value[key]])
+  );
+  const normalizeUserSettings = (value) => {
+    const settings = pickUserSettings(value);
+    if (Object.hasOwn(settings, "ROOM_PREWARM_DURATION")) {
+      const duration = Number(settings.ROOM_PREWARM_DURATION);
+      settings.ROOM_PREWARM_DURATION = Math.round(
+        Math.min(15e3, Math.max(500, Number.isFinite(duration) ? duration : 3e3))
+      );
+    }
+    return settings;
+  };
+  const normalizeRuntimePatch = (value) => {
+    const settings = { ...value || {} };
+    if (Object.hasOwn(settings, "ROOM_PREWARM_DURATION")) {
+      settings.ROOM_PREWARM_DURATION = normalizeUserSettings(settings).ROOM_PREWARM_DURATION;
+    }
+    return settings;
+  };
   const SettingsManager = {
     STORAGE_KEY: "douyu_qmx_user_settings",
 get() {
-      const userSettings = GM_getValue(this.STORAGE_KEY, {});
-      const themeSetting = GM_getValue(
+      const storedSettings = _GM_getValue(this.STORAGE_KEY, {});
+      const userSettings = normalizeUserSettings(storedSettings);
+      const storedKeys = Object.keys(storedSettings || {}).sort().join(",");
+      const userKeys = Object.keys(userSettings).sort().join(",");
+      if (storedKeys !== userKeys) {
+        _GM_setValue(this.STORAGE_KEY, userSettings);
+      }
+      const themeSetting = _GM_getValue(
         "douyu_qmx_theme",
         CONFIG.DEFAULT_THEME
       );
-      return Object.assign({}, CONFIG, userSettings, { THEME: themeSetting });
+      const runtimeSettings2 = Object.assign({}, CONFIG, userSettings, { THEME: themeSetting });
+      if (!Object.hasOwn(userSettings, "CONTROL_ROOM_RESOLVED_FROM")) {
+        runtimeSettings2.CONTROL_ROOM_RESOLVED_FROM = "";
+      }
+      return runtimeSettings2;
     },
 save(settingsToSave) {
-      if (Object.hasOwn(settingsToSave, "THEME")) {
-        const theme = settingsToSave.THEME;
-        GM_setValue("douyu_qmx_theme", theme);
-        delete settingsToSave.THEME;
+      const normalized = { ...settingsToSave || {} };
+      if (Object.hasOwn(normalized, "THEME")) {
+        const theme = normalized.THEME;
+        _GM_setValue("douyu_qmx_theme", theme);
+        delete normalized.THEME;
       }
-      delete settingsToSave.OPEN_TAB_DELAY;
-      GM_setValue(this.STORAGE_KEY, settingsToSave);
+      _GM_setValue(this.STORAGE_KEY, normalizeUserSettings(normalized));
     },
 update(newSettings) {
-      Object.assign(SETTINGS, newSettings);
-      const currentStored = GM_getValue(this.STORAGE_KEY, {});
-      const mergedToSave = Object.assign({}, currentStored, newSettings);
+      const normalizedSettings = normalizeRuntimePatch(newSettings);
+      Object.assign(SETTINGS, normalizedSettings);
+      const currentStored = _GM_getValue(this.STORAGE_KEY, {});
+      const mergedToSave = Object.assign({}, currentStored, normalizedSettings);
       this.save(mergedToSave);
-      window.dispatchEvent(new CustomEvent("qmx-settings-update", { detail: newSettings }));
+      window.dispatchEvent(new CustomEvent("qmx-settings-update", { detail: normalizedSettings }));
     },
 reset() {
-      GM_deleteValue(this.STORAGE_KEY);
-      GM_deleteValue("douyu_qmx_theme");
+      _GM_deleteValue(this.STORAGE_KEY);
+      _GM_deleteValue("douyu_qmx_theme");
     }
   };
   const SETTINGS = SettingsManager.get();
-  SETTINGS.THEME = GM_getValue("douyu_qmx_theme", SETTINGS.DEFAULT_THEME);
-  const STATE = {
-    isSwitchingRoom: false,
-    lastActionTime: 0
-  };
+  SETTINGS.THEME = _GM_getValue("douyu_qmx_theme", SETTINGS.DEFAULT_THEME);
   const Utils = {
 log(message) {
       const logMsg = `${SETTINGS.SCRIPT_PREFIX} ${message}`;
       try {
-        GM_log(logMsg);
+        _GM_log(logMsg);
       } catch (e) {
         console.log(e);
         console.log(logMsg);
       }
     },
+claimLog(source, message, details = {}) {
+      const allowedKeys = new Set([
+        "roomId",
+        "bagId",
+        "result",
+        "error",
+        "msg",
+        "remainingSec",
+        "intervalMs",
+        "durationMs",
+        "reason",
+        "httpStatus",
+        "rewardText"
+      ]);
+      const safeDetails = Object.fromEntries(Object.entries(details).filter(([key]) => allowedKeys.has(key)).map(([key, value]) => [key, typeof value === "string" ? value.slice(0, 160) : value]));
+      const suffix = Object.keys(safeDetails).length ? ` ${JSON.stringify(safeDetails)}` : "";
+      const logMsg = `${SETTINGS.SCRIPT_PREFIX} [领取路径:${source}] ${message}${suffix}`;
+      console.info(logMsg);
+      try {
+        _GM_log(logMsg);
+      } catch {
+      }
+    },
 sleep(ms) {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
-getRandomDelay(min = SETTINGS.MIN_DELAY, max = SETTINGS.MAX_DELAY) {
+getRandomDelay(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     },
 getCurrentRoomId() {
@@ -285,23 +212,6 @@ formatDateAsBeijing(date) {
       const month = String(beijingDate.getUTCMonth() + 1).padStart(2, "0");
       const day = String(beijingDate.getUTCDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
-    },
-lockChecker: function(lockKey, callback, ...args) {
-      if (GM_getValue(lockKey, false)) {
-        setTimeout(() => callback(...args), 50);
-        return false;
-      }
-      return true;
-    },
-setLocalValueWithLock: function(lockKey, storageKey, value, nickname) {
-      try {
-        GM_setValue(lockKey, true);
-        GM_setValue(storageKey, value);
-      } catch (e) {
-        Utils.log(`[${nickname}-写] 严重错误：GM_setValue 写入失败！ 错误信息: ${e.message}`);
-      } finally {
-        GM_setValue(lockKey, false);
-      }
     },
 debounce(func, delay) {
       let timeoutId;
@@ -480,420 +390,656 @@ getElementWithRetry: async function(selector, parentNode = document, retries = 5
       console.log(logPrefix + "Initialisation failed - HTML5 Web Worker is not supported");
     }
   }
-  const ControlPanelRefactoredCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-primary-container: #4F378B;--md-sys-color-on-primary-container: #EADDFF;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-primary-container: #EADDFF;--md-sys-color-on-primary-container: #21005D;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}.is-dragging{transition:none!important}.qmx-flex-center{display:flex;align-items:center;justify-content:center}.qmx-flex-between{display:flex;align-items:center;justify-content:space-between}.qmx-flex-column{display:flex;flex-direction:column}.qmx-modal-base{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}.qmx-modal-base.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}.qmx-backdrop.visible{opacity:.5;visibility:visible}.qmx-btn{padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-btn--primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-btn--primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-btn--danger{border-color:#f44336;color:#f44336}.qmx-btn--danger:hover{background-color:#f443361a}.qmx-btn--icon{width:36px;height:36px;padding:0;border-radius:50%;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary)}.qmx-btn--icon:hover{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);transform:scale(1.05) rotate(180deg)}.qmx-styled-list{list-style:none;padding-left:0}.qmx-styled-list li{position:relative;padding-left:20px;margin-bottom:8px}.qmx-styled-list li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}.qmx-scrollbar::-webkit-scrollbar{width:10px}.qmx-scrollbar::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-scrollbar::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-scrollbar::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}.qmx-input{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:12px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-input:hover{border-color:var(--md-sys-color-primary)}.qmx-input:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-input[type=number]::-webkit-inner-spin-button,.qmx-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.qmx-input[type=number]{margin-left:5px;margin-bottom:9px;-moz-appearance:textfield;appearance:textfield}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:background-color .3s,border-color .3s}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}.qmx-tooltip-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background-color:var(--md-sys-color-outline);color:var(--md-sys-color-surface-container);font-size:12px;font-weight:700;cursor:help;-webkit-user-select:none;user-select:none}#qmx-global-tooltip{position:fixed;background-color:var(--surface-container-highest);color:var(--md-sys-color-on-surface);padding:8px 12px;border-radius:8px;box-shadow:0 4px 12px #0003;font-size:12px;font-weight:400;line-height:1.5;z-index:10002;max-width:250px;opacity:0;visibility:hidden;transform:translateY(-5px);transition:opacity .2s ease,transform .2s ease,visibility .2s;pointer-events:none}#qmx-global-tooltip.visible{opacity:1;visibility:visible;transform:translateY(0)}.theme-switch{position:relative;display:block;width:60px;height:34px;cursor:pointer;transition:none}.theme-switch input{opacity:0;width:0;height:0}.theme-switch-wrapper{align-self:center}.slider-track{position:absolute;top:0;left:0;width:34px;height:34px;background-color:var(--surface-container-highest);border-radius:17px;box-shadow:inset 2px 2px 4px #0003,inset -2px -2px 4px #ffffff0d;transition:width .3s ease,left .3s ease,border-radius .3s ease,box-shadow .3s ease}.theme-switch:hover .slider-track{width:60px}.theme-switch input:checked+.slider-track{left:26px}.theme-switch:hover input:checked+.slider-track{left:0}.slider-dot{position:absolute;height:26px;width:26px;left:4px;top:4px;background-color:var(--md-sys-color-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 8px #0000004d;transition:transform .3s cubic-bezier(.4,0,.2,1),background-color .3s ease,box-shadow .3s ease}.theme-switch input:checked~.slider-dot{transform:translate(26px);background-color:var(--primary-container)}.slider-dot .icon{position:absolute;width:20px;height:20px;color:var(--md-sys-color-on-primary);transition:opacity .3s ease,transform .3s cubic-bezier(.4,0,.2,1)}.sun{opacity:1;transform:translateY(0) rotate(0)}.moon{opacity:0;transform:translateY(20px) rotate(-45deg)}.theme-switch input:checked~.slider-dot .sun{opacity:0;transform:translateY(-20px) rotate(45deg)}.theme-switch input:checked~.slider-dot .moon{opacity:1;transform:translateY(0) rotate(0);color:var(--md-sys-color-on-surface)}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:10px 20px 4px;font-size:20px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:background-color .2s,transform .2s;position:relative;flex-shrink:0}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:var(--md-sys-color-primary);transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{padding:0 24px;flex:1;min-height:0;max-height:80vh;display:flex;flex-direction:column;overflow-y:scroll}.qmx-modal-content h3{flex-shrink:0;font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:0 0 8px}.qmx-stats-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0;-webkit-user-select:none;user-select:none;transition:background-color .2s;border-radius:8px}.qmx-stats-header:hover{background-color:#ffffff0d}.qmx-stats-header h3{font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:8px 0}.qmx-stats-arrow{font-size:12px;color:var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-stats-header.expanded .qmx-stats-arrow{transform:rotate(180deg)}.qmx-stats-container{position:relative;overflow:hidden;padding:0}.qmx-stats-toggle{position:relative;height:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-user-select:none;user-select:none;transition:all .3s cubic-bezier(.25,.46,.45,.94);margin:4px 24px;border-radius:10px}.qmx-stats-indicator{font-size:15px;color:var(--md-sys-color-on-surface-variant);transition:all .3s cubic-bezier(.25,.46,.45,.94);position:absolute;z-index:2}.qmx-stats-label{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:0;transform:scale(.95);transition:all .3s cubic-bezier(.25,.46,.45,.94);position:absolute;z-index:1;white-space:nowrap}.qmx-stats-refresh{opacity:0;font-size:15px;transition:all .3s cubic-bezier(.25,.46,.45,.94);position:relative;background:transparent;border:none;color:var(--md-sys-color-on-surface-variant);padding:4px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}.qmx-stats-refresh:hover{background-color:#ffffff1a;color:var(--md-sys-color-primary)}.qmx-stats-refresh svg{width:20px;height:20px}.qmx-stats-refresh.rotating{animation:rotate360 1s linear}@keyframes rotate360{0%{transform:rotate(0)}to{transform:rotate(360deg)}}.qmx-stats-switcher{opacity:0;font-size:20px;transition:all .3s cubic-bezier(.25,.46,.45,.94);margin:8px 8px 12px}.qmx-stats-toggle:hover{background-color:#ffffff0d;margin:4px 24px 21px}.qmx-stats-toggle:hover .qmx-stats-indicator{transform:translateY(85%)}.qmx-stats-toggle:hover .qmx-stats-label{opacity:1;transform:scale(1)}.qmx-stats-toggle.expanded{height:28px;padding:0 12px;margin:6px 20px}.qmx-stats-toggle.expanded .qmx-stats-indicator{opacity:1;transform:rotate(180deg) scale(1.05);position:relative;margin:9px}.qmx-stats-toggle.expanded .qmx-stats-indicator.transitioning{opacity:0}.qmx-stats-toggle.expanded .qmx-stats-label{opacity:1;transform:scale(1.05);font-size:12px;font-weight:500;position:relative;transition:all .3s cubic-bezier(.25,.46,.45,.94);color:var(--md-sys-color-on-surface)}.qmx-stats-toggle.expanded .qmx-stats-label.transitioning{opacity:0}.qmx-stats-toggle.expanded .qmx-stats-refresh{opacity:1;cursor:pointer;transform:scale(1.05);margin:8px}.qmx-stats-toggle.expanded .qmx-stats-refresh.disabled{opacity:0;transform:translate(100%)}.qmx-stats-toggle.expanded .qmx-stats-switcher{cursor:pointer;opacity:1;position:absolute}.qmx-stats-toggle.expanded #qmx-stats-left{left:60px;transform:translate(-55px)}.qmx-stats-toggle.expanded #qmx-stats-right{right:60px;transform:translate(55px)}.qmx-stats-toggle.expanded .qmx-stats-switcher.disabled{cursor:not-allowed;color:#666}.qmx-stats-content{max-height:0;opacity:0;overflow:hidden;transition:max-height .3s cubic-bezier(.25,.46,.45,.94),opacity .2s cubic-bezier(.25,.46,.45,.94) .1s,padding .3s cubic-bezier(.25,.46,.45,.94);padding:0 24px}.qmx-stats-content.expanded{max-height:120px;opacity:1;padding:8px 24px 16px}.qmx-modal-stats{display:flex;gap:1px}.qmx-modal-stats-child{background-color:var(--md-sys-color-surface-bright);border-radius:12px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;transition:background-color .2s,transform .3s ease,opacity .3s ease;width:88px;float:left;margin-left:2%}.qmx-stat-info-avg,.qmx-stat-info-total,.qmx-stat-info-receivedCount{display:flex;flex-direction:column;flex-grow:1;gap:4px;font-size:14px;overflow:hidden}.qmx-stat-header{display:flex;align-items:baseline;justify-content:center}.qmx-stat-nickname{font-weight:500;color:var(--md-sys-color-on-surface);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:auto!important}.qmx-stat-details{opacity:1;display:flex;align-items:center;font-size:13px;color:var(--md-sys-color-on-surface-variant);transition:all .3s cubic-bezier(.25,.46,.45,.94);justify-content:center;flex-wrap:wrap}.qmx-stat-details.transitioning{opacity:0}.qmx-stat-stats{font-weight:500}#qmx-tab-list{overflow-y:auto;flex-grow:1;padding-right:4px;margin-right:-4px}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:16px;padding:8px 16px 8px 18px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:background-color .2s,transform .3s ease,opacity .3s ease;position:relative;overflow:hidden}.qmx-tab-list-item:hover{background-color:var(--surface-container-highest)}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:28px;border-radius:0 4px 4px 0;transition:all .3s cubic-bezier(.25,.46,.45,.94);flex-shrink:0}.qmx-tab-list-item:hover .qmx-tab-status-dot{height:32px;width:3px}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:2px;font-size:14px;overflow:hidden;min-width:0}.qmx-tab-header{display:flex;align-items:center;justify-content:flex-start;height:auto;overflow:visible;margin-bottom:2px}.qmx-tab-identity{position:relative;display:inline-flex;align-items:center;gap:0;padding:2px 4px;border-radius:999px;border:1px solid var(--md-sys-color-on-surface-variant);background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);font-size:13px;font-weight:500;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease,padding-left .2s ease;overflow:visible}.qmx-tab-identity:hover{padding-left:24px;border-color:var(--md-sys-color-primary);box-shadow:0 6px 16px #00000040}.qmx-tab-identity.copied{border-color:var(--status-color-waiting);box-shadow:0 0 0 2px #4caf5033}.qmx-tab-identity-icon{position:absolute;left:8px;top:50%;transform:translateY(-50%) translate(-100%);width:14px;height:14px;color:var(--md-sys-color-primary);opacity:0;transition:opacity .2s ease,transform .2s ease;pointer-events:none;z-index:10}.qmx-tab-identity:hover .qmx-tab-identity-icon{opacity:1;transform:translateY(-50%) translate(0);pointer-events:auto;cursor:pointer}.qmx-tab-identity-text{display:inline-flex;flex-direction:column;position:relative;overflow:hidden;pointer-events:none;min-width:0}.qmx-tab-identity-text span{transition:transform .25s ease,opacity .2s ease;white-space:nowrap;text-align:left}.qmx-tab-identity[data-state=nickname] .identity-roomid,.qmx-tab-identity[data-state=room] .identity-nickname{transform:translateY(-100%);opacity:0;position:absolute;left:0;top:0}.qmx-tab-identity[data-state=nickname] .identity-nickname,.qmx-tab-identity[data-state=room] .identity-roomid{position:relative;transform:translateY(0);opacity:1}.qmx-tab-details{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-prizes{display:flex;align-items:center;gap:4px;margin-left:auto;padding:4px 8px;background-color:var(--md-sys-color-surface-container, rgba(0, 0, 0, .05));flex-shrink:0}.qmx-tab-prizes.single-prize{flex-direction:row;border-radius:100px}.qmx-tab-prizes.multi-prizes{flex-direction:column;border-radius:12px;min-width:70px;padding:6px 10px}.qmx-tab-prize-item{display:inline-flex;align-items:center;gap:4px;background:transparent;padding:0;border:none;line-height:1;color:var(--md-sys-color-on-surface);font-weight:500;font-size:11px}.qmx-tab-prize-item:hover{opacity:.8}.qmx-tab-prize-item svg{display:block;width:12px;height:12px;flex-shrink:0}.qmx-tab-prize-text{font-weight:600;white-space:nowrap;color:inherit;font-size:11px;display:flex;align-items:center}.qmx-tab-close-btn{flex-shrink:0;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary);cursor:pointer;padding:0;transition:background-color .2s,transform .2s,color .2s;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%}.qmx-tab-close-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:3}.qmx-tab-close-btn:hover{color:var(--md-sys-color-on-primary);background-color:var(--md-sys-color-primary);transform:scale(1.1) rotate(90deg)}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}.qmx-modal-btn:hover{background-color:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn.primary:hover{background-color:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container);box-shadow:0 4px 8px #0003}.qmx-modal-btn.danger{border-color:var(--status-color-error);color:var(--status-color-error)}.qmx-modal-btn.danger:hover{background-color:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}.qmx-tab-header.show-id .qmx-tab-nickname{pointer-events:none!important}.qmx-tab-header.show-id .qmx-tab-room-id{pointer-events:auto!important}#qmx-settings-modal{width:500px;max-width:95vw}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:background-color .2s,color .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;overflow-x:hidden;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;justify-content:center;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}.qmx-settings-item small{font-size:12px;color:var(--md-sys-color-on-surface-variant);opacity:.8}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}#tab-about{line-height:1.7;font-size:14px}#tab-about h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:20px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#tab-about h4:first-child{margin-top:0}#tab-about p{margin-bottom:10px;color:var(--md-sys-color-on-surface-variant)}#tab-about .version-tag{display:inline-block;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);padding:2px 8px;border-radius:12px;font-size:13px;font-weight:500;margin-left:8px}#tab-about a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#tab-about a:hover{color:#ffd6e1;text-decoration:underline}#qmx-notice-modal{width:450px;max-width:90vw}#qmx-notice-modal .qmx-modal-content{padding:16px 24px}#qmx-notice-modal .qmx-modal-content p{margin-bottom:12px;line-height:1.6;font-size:15px;color:var(--md-sys-color-on-surface-variant)}#qmx-notice-modal .qmx-modal-content ul{margin:12px 0;padding-left:20px}#qmx-notice-modal .qmx-modal-content li{margin-bottom:10px;position:relative;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-modal-content li:before{content:"◆";position:absolute;left:-18px;color:var(--md-sys-color-primary);font-size:12px}#qmx-notice-modal h3{font-size:20px;font-weight:500;margin:0}#qmx-notice-modal h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:16px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#qmx-notice-modal .qmx-warning-text{background-color:#ffc1071a;border-left:4px solid #FFC107;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-warning-text strong{color:#ff8f00}#qmx-notice-modal a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#qmx-notice-modal a:hover{color:#ffd6e1;text-decoration:underline}#qmx-modal-backdrop,#qmx-notice-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible,#qmx-notice-backdrop.visible{opacity:.5;visibility:visible}#qmx-settings-modal,#qmx-notice-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible,#qmx-notice-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .2s,transform .2s,box-shadow .2s;-webkit-user-select:none;user-select:none}.qmx-modal-btn:hover{background-color:#d0bcff1a;transform:translateY(-2px);box-shadow:0 2px 4px #0000001a}.qmx-modal-btn:active{transform:translateY(0) scale(.98);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn.primary:hover{background-color:#c2b3ff;box-shadow:0 4px 8px #0003}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:#f443361a}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}';
+  const ControlPanelRefactoredCss = ':root{color-scheme:light dark;--motion-easing: cubic-bezier(.4, 0, .2, 1);--status-color-waiting: #4CAF50;--status-color-claiming: #2196F3;--status-color-switching: #FFC107;--status-color-error: #F44336;--status-color-opening: #9C27B0;--status-color-dormant: #757575;--status-color-unresponsive: #FFA000;--status-color-disconnected: #BDBDBD;--status-color-stalled: #9af39dff}body[data-theme=dark]{--md-sys-color-primary: #D0BCFF;--md-sys-color-on-primary: #381E72;--md-sys-color-primary-container: #4F378B;--md-sys-color-on-primary-container: #EADDFF;--md-sys-color-surface-container: #211F26;--md-sys-color-on-surface: #E6E1E5;--md-sys-color-on-surface-variant: #CAC4D0;--md-sys-color-outline: #938F99;--md-sys-color-surface-bright: #36343B;--md-sys-color-tertiary: #EFB8C8;--md-sys-color-scrim: #000000;--surface-container-highest: #3D3B42}body[data-theme=light]{--md-sys-color-primary: #6750A4;--md-sys-color-on-primary: #FFFFFF;--md-sys-color-primary-container: #EADDFF;--md-sys-color-on-primary-container: #21005D;--md-sys-color-surface-container: #F3EDF7;--md-sys-color-surface-bright: #FEF7FF;--md-sys-color-on-surface: #1C1B1F;--md-sys-color-on-surface-variant: #49454F;--md-sys-color-outline: #79747E;--md-sys-color-tertiary: #7D5260;--md-sys-color-scrim: #000000;--surface-container-highest: #E6E0E9}.qmx-hidden{display:none!important}.qmx-modal-open-scroll-lock{overflow:hidden!important}.is-dragging{transition:none!important}.qmx-flex-center{display:flex;align-items:center;justify-content:center}.qmx-flex-between{display:flex;align-items:center;justify-content:space-between}.qmx-flex-column{display:flex;flex-direction:column}.qmx-modal-base{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}.qmx-modal-base.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}.qmx-backdrop.visible{opacity:.5;visibility:visible}.qmx-btn{padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .18s var(--motion-easing),color .18s var(--motion-easing),border-color .18s var(--motion-easing),box-shadow .18s var(--motion-easing),transform .12s var(--motion-easing);-webkit-user-select:none;user-select:none}.qmx-btn:hover{border-color:color-mix(in srgb,var(--md-sys-color-primary) 72%,var(--md-sys-color-outline));background-color:color-mix(in srgb,var(--md-sys-color-primary) 10%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--md-sys-color-primary) 12%,transparent)}.qmx-btn:active{transform:scale(.975);box-shadow:none}.qmx-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-btn--primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-btn--primary:hover{background-color:color-mix(in srgb,var(--md-sys-color-primary) 88%,var(--md-sys-color-on-primary));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--md-sys-color-on-primary) 20%,transparent)}.qmx-btn--danger{border-color:#f44336;color:#f44336}.qmx-btn--danger:hover{background-color:#f443361a}.qmx-btn--icon{width:36px;height:36px;padding:0;border-radius:50%;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary)}.qmx-btn--icon:hover{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);transform:scale(1.05) rotate(180deg)}.qmx-styled-list{list-style:none;padding-left:0}.qmx-styled-list li{position:relative;padding-left:20px;margin-bottom:8px}.qmx-styled-list li:before{content:"◆";position:absolute;left:0;top:2px;color:var(--md-sys-color-primary);font-size:12px}.qmx-scrollbar::-webkit-scrollbar{width:10px}.qmx-scrollbar::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-scrollbar::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-scrollbar::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}.qmx-input{background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);color:var(--md-sys-color-on-surface);border-radius:8px;padding:12px;width:100%;box-sizing:border-box;transition:box-shadow .2s,border-color .2s}.qmx-input:hover{border-color:var(--md-sys-color-primary)}.qmx-input:focus{outline:none;border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-input[type=number]::-webkit-inner-spin-button,.qmx-input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.qmx-input[type=number]{margin-left:5px;margin-bottom:9px;-moz-appearance:textfield;appearance:textfield}.qmx-fieldset-unit{position:relative;padding:0;margin:0;border:1px solid var(--md-sys-color-outline);border-radius:8px;background-color:var(--md-sys-color-surface-container);transition:border-color .2s,box-shadow .2s;width:100%;box-sizing:border-box}.qmx-fieldset-unit:hover{border-color:var(--md-sys-color-primary)}.qmx-fieldset-unit:focus-within{border-color:var(--md-sys-color-primary);box-shadow:0 0 0 2px #d0bcff4d}.qmx-fieldset-unit input[type=number]{border:none;background:none;outline:none;box-shadow:none;color:var(--md-sys-color-on-surface);padding:3px 10px 4px;width:100%;box-sizing:border-box}.qmx-fieldset-unit legend{padding:0 6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);margin-left:auto;margin-right:12px;text-align:right;pointer-events:none}.qmx-toggle{position:relative;display:inline-block;width:52px;height:30px}.qmx-toggle input{opacity:0;width:0;height:0}.qmx-toggle .slider{position:absolute;cursor:pointer;inset:0;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:30px;transition:background-color .3s,border-color .3s}.qmx-toggle .slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background-color:var(--md-sys-color-on-surface-variant);border-radius:50%;box-shadow:0 1px 3px #0003;transition:all .3s cubic-bezier(.175,.885,.32,1.275)}.qmx-toggle input:checked+.slider{background-color:var(--md-sys-color-primary);border-color:var(--md-sys-color-primary)}.qmx-toggle input:checked+.slider:before{background-color:var(--md-sys-color-on-primary);transform:translate(22px)}.qmx-toggle:hover .slider{border-color:var(--md-sys-color-primary)}.qmx-select{position:relative;width:100%}.qmx-select-styled{position:relative;padding:10px 30px 10px 12px;background-color:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;cursor:pointer;transition:all .2s;-webkit-user-select:none;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 2px 4px #00000014}.qmx-select-styled:after{content:"";position:absolute;top:50%;right:12px;transform:translateY(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-on-surface-variant);transition:transform .3s ease}.qmx-select:hover .qmx-select-styled{border-color:var(--md-sys-color-primary)}.qmx-select.active .qmx-select-styled{border-color:var(--md-sys-color-primary);box-shadow:inset 0 3px 6px #0000001a,0 0 0 2px #d0bcff4d}.qmx-select.active .qmx-select-styled:after{transform:translateY(-50%) rotate(180deg)}.qmx-select-options{position:absolute;top:105%;left:0;right:0;z-index:10;background-color:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;max-height:0;overflow:hidden;opacity:0;transform:translateY(-10px);transition:all .3s ease;padding:4px 0}.qmx-select.active .qmx-select-options{max-height:200px;opacity:1;transform:translateY(0)}.qmx-select-options div{padding:10px 12px;cursor:pointer;transition:background-color .2s}.qmx-select-options div:hover{background-color:#d0bcff1a}.qmx-select-options div.selected{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-range-slider-wrapper{display:flex;flex-direction:column;gap:8px}.qmx-range-slider-container{position:relative;height:24px;display:flex;align-items:center}.qmx-range-slider-container input[type=range]{position:absolute;width:100%;height:4px;-webkit-appearance:none;appearance:none;background:none;pointer-events:none;margin:0}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-webkit-slider-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-container input[type=range]::-moz-range-thumb{pointer-events:auto;width:20px;height:20px;background-color:var(--md-sys-color-primary);border-radius:50%;cursor:grab;border:none;box-shadow:0 1px 3px #0000004d;transition:transform .2s}.qmx-range-slider-container input[type=range]::-moz-range-thumb:active{cursor:grabbing;transform:scale(1.1)}.qmx-range-slider-track-container{position:absolute;width:100%;height:4px;background-color:var(--md-sys-color-surface-container);border-radius:2px}.qmx-range-slider-progress{position:absolute;height:100%;background-color:var(--md-sys-color-primary);border-radius:2px}.qmx-range-slider-values{font-size:14px;color:var(--md-sys-color-primary);text-align:center;font-weight:500}#douyu-qmx-starter-button{position:fixed;top:0;left:0;z-index:10000;background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none;width:56px;height:56px;border-radius:16px;cursor:grab;box-shadow:0 4px 8px #0000004d;display:flex;align-items:center;justify-content:center;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(1);transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s cubic-bezier(.4,0,.2,1);will-change:transform,opacity}#douyu-qmx-starter-button .icon{font-size:28px}#douyu-qmx-starter-button.hidden{opacity:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0) scale(.5);pointer-events:none}#qmx-modal-container{background-color:var(--md-sys-color-surface-container);color:var(--md-sys-color-on-surface);display:flex;flex-direction:column}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{position:fixed;z-index:9999;width:335px;max-width:90vw;max-height:80vh;border-radius:28px;box-shadow:0 8px 24px #0006;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .2s ease-out;will-change:transform,opacity}#qmx-modal-container.visible{opacity:1;visibility:visible}#qmx-modal-container.mode-floating{top:0;left:0;transform:translate3d(var(--tx, 0px),var(--ty, 0px),0)}#qmx-modal-container.mode-floating .qmx-modal-header{cursor:move}#qmx-modal-container.mode-centered{top:50%;left:50%;transform:translate(-50%,-50%)}#qmx-modal-container.mode-inject-rank-list{position:relative;width:100%;flex:1;min-height:0;box-shadow:none;border-radius:0;transform:none!important}.qmx-modal-header{position:relative;padding:10px 20px 4px;font-size:20px;font-weight:400;color:var(--md-sys-color-on-surface);-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:space-between}.qmx-modal-close-icon{width:36px;height:36px;background-color:#d0bcff26;border:none;border-radius:50%;cursor:pointer;transition:background-color .2s,transform .2s;position:relative;flex-shrink:0;color:var(--md-sys-color-primary)}.qmx-modal-close-icon:hover{background-color:var(--md-sys-color-primary);transform:scale(1.05) rotate(180deg)}.qmx-modal-close-icon:before,.qmx-modal-close-icon:after{content:"";position:absolute;top:50%;left:50%;width:16px;height:2px;background-color:currentColor;transition:background-color .2s ease-in-out}.qmx-modal-close-icon:hover:before,.qmx-modal-close-icon:hover:after{background-color:var(--md-sys-color-on-primary)}.qmx-modal-close-icon:before{transform:translate(-50%,-50%) rotate(45deg)}.qmx-modal-close-icon:after{transform:translate(-50%,-50%) rotate(-45deg)}.qmx-modal-content{padding:0 24px;flex:1;min-height:0;max-height:80vh;display:flex;flex-direction:column;overflow-y:scroll}.qmx-modal-content h3{flex-shrink:0;font-size:16px;font-weight:500;color:var(--md-sys-color-on-surface-variant);margin:0 0 8px}#qmx-tab-list{overflow-y:auto;flex-grow:1;padding-right:4px;margin-right:-4px}.qmx-tab-list-item{background-color:var(--md-sys-color-surface-bright);border-radius:16px;padding:8px 16px 8px 18px;margin-bottom:8px;display:flex;align-items:center;gap:12px;transition:background-color .2s,transform .3s ease,opacity .3s ease;position:relative;overflow:hidden}.qmx-tab-list-item:hover{background-color:var(--surface-container-highest)}.qmx-item-enter{opacity:0;transform:translate(20px)}.qmx-item-enter-active{opacity:1;transform:translate(0)}.qmx-item-exit-active{position:absolute;opacity:0;transform:scale(.8);transition:all .3s ease;z-index:-1;pointer-events:none}.qmx-tab-status-dot{position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:28px;border-radius:0 4px 4px 0;transition:all .3s cubic-bezier(.25,.46,.45,.94);flex-shrink:0}.qmx-tab-list-item:hover .qmx-tab-status-dot{height:32px;width:3px}.qmx-tab-info{display:flex;flex-direction:column;flex-grow:1;gap:2px;font-size:14px;overflow:hidden;min-width:0}.qmx-tab-header{display:flex;align-items:center;justify-content:flex-start;height:auto;overflow:visible;margin-bottom:2px}.qmx-tab-identity{position:relative;display:inline-flex;align-items:center;gap:0;padding:2px 4px;border-radius:999px;border:1px solid var(--md-sys-color-on-surface-variant);background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);font-size:13px;font-weight:500;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease,border-color .2s ease,padding-left .2s ease;overflow:visible}.qmx-tab-identity:hover{padding-left:24px;border-color:var(--md-sys-color-primary);box-shadow:0 6px 16px #00000040}.qmx-tab-identity.copied{border-color:var(--status-color-waiting);box-shadow:0 0 0 2px #4caf5033}.qmx-tab-identity-icon{position:absolute;left:8px;top:50%;transform:translateY(-50%) translate(-100%);width:14px;height:14px;color:var(--md-sys-color-primary);opacity:0;transition:opacity .2s ease,transform .2s ease;pointer-events:none;z-index:10}.qmx-tab-identity:hover .qmx-tab-identity-icon{opacity:1;transform:translateY(-50%) translate(0);pointer-events:auto;cursor:pointer}.qmx-tab-identity-text{display:inline-flex;flex-direction:column;position:relative;overflow:hidden;pointer-events:none;min-width:0}.qmx-tab-identity-text span{transition:transform .25s ease,opacity .2s ease;white-space:nowrap;text-align:left}.qmx-tab-identity[data-state=nickname] .identity-roomid,.qmx-tab-identity[data-state=room] .identity-nickname{transform:translateY(-100%);opacity:0;position:absolute;left:0;top:0}.qmx-tab-identity[data-state=nickname] .identity-nickname,.qmx-tab-identity[data-state=room] .identity-roomid{position:relative;transform:translateY(0);opacity:1}.qmx-tab-details{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--md-sys-color-on-surface-variant);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qmx-tab-prizes{display:flex;align-items:center;gap:4px;margin-left:auto;padding:4px 8px;background-color:var(--md-sys-color-surface-container, rgba(0, 0, 0, .05));flex-shrink:0}.qmx-tab-prizes.single-prize{flex-direction:row;border-radius:100px}.qmx-tab-prizes.multi-prizes{flex-direction:column;border-radius:12px;min-width:70px;padding:6px 10px}.qmx-tab-prize-item{display:inline-flex;align-items:center;gap:4px;background:transparent;padding:0;border:none;line-height:1;color:var(--md-sys-color-on-surface);font-weight:500;font-size:11px}.qmx-tab-prize-item:hover{opacity:.8}.qmx-tab-prize-item svg{display:block;width:12px;height:12px;flex-shrink:0}.qmx-tab-prize-text{font-weight:600;white-space:nowrap;color:inherit;font-size:11px;display:flex;align-items:center}.qmx-tab-close-btn{flex-shrink:0;background-color:#d0bcff26;border:none;color:var(--md-sys-color-primary);cursor:pointer;padding:0;transition:background-color .2s,transform .2s,color .2s;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%}.qmx-tab-close-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:3}.qmx-tab-close-btn:hover{color:var(--md-sys-color-on-primary);background-color:var(--md-sys-color-primary);transform:scale(1.1) rotate(90deg)}.qmx-modal-footer{padding:16px 24px;display:flex;gap:8px}.qmx-modal-btn{flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .18s var(--motion-easing),color .18s var(--motion-easing),border-color .18s var(--motion-easing),box-shadow .18s var(--motion-easing),transform .12s var(--motion-easing);-webkit-user-select:none;user-select:none}.qmx-modal-btn.danger{border-color:var(--status-color-error);color:var(--status-color-error)}#qmx-modal-container.mode-floating,#qmx-modal-container.mode-centered{width:430px;height:min(620px,80vh)}.qmx-modal-header-actions{display:flex;align-items:center;gap:6px}.qmx-panel-title{position:relative;display:block;width:84px;height:28px;overflow:hidden;flex-shrink:0}.qmx-panel-title>span{position:absolute;inset:0;display:flex;align-items:center;white-space:nowrap;transition:opacity .19s ease,transform .23s cubic-bezier(.2,.75,.2,1)}.qmx-panel-title [data-panel-title=stats]{opacity:0;transform:translateY(8px)}#qmx-modal-container.is-stats-page .qmx-panel-title [data-panel-title=tasks]{opacity:0;transform:translateY(-8px)}#qmx-modal-container.is-stats-page .qmx-panel-title [data-panel-title=stats]{opacity:1;transform:translateY(0)}.qmx-header-icon-btn{width:36px;height:36px;padding:8px;border:0;border-radius:50%;background:#d0bcff1f;color:var(--md-sys-color-primary);cursor:pointer;position:relative;transition:background-color .16s ease,transform .16s ease}.qmx-header-icon-btn:hover{background:#d0bcff3d;transform:scale(1.04)}.qmx-header-icon-btn>svg:not(.qmx-page-icon){width:20px;height:20px}.qmx-theme-icon,.qmx-settings-icon-btn>svg{position:absolute;inset:8px}.qmx-theme-toggle-btn{isolation:isolate;overflow:hidden}.qmx-theme-toggle-btn:before{content:"";position:absolute;pointer-events:none}.qmx-theme-toggle-btn:before{inset:4px;z-index:-1;border-radius:50%;background:radial-gradient(circle,#ffbf4057,#ffbf4000 68%);opacity:.85;transform:scale(.88);transition:background .32s ease,opacity .24s ease,transform .42s cubic-bezier(.2,.7,.2,1)}.qmx-theme-icon{z-index:1;transition:opacity .22s ease,transform .46s cubic-bezier(.2,.8,.2,1)}.qmx-theme-icon-sun{opacity:1;transform:rotate(0) scale(1)}.qmx-theme-icon-moon{opacity:0;transform:rotate(-95deg) scale(.58)}.qmx-theme-toggle-btn[data-theme=dark]:before{background:radial-gradient(circle,#9b7bd857,#9b7bd800 70%);transform:scale(1.08)}.qmx-theme-toggle-btn[data-theme=dark] .qmx-theme-icon-sun{opacity:0;transform:rotate(100deg) scale(.52)}.qmx-theme-toggle-btn[data-theme=dark] .qmx-theme-icon-moon{opacity:1;transform:rotate(0) scale(1)}.qmx-theme-toggle-btn.is-switching:before{animation:qmx-theme-pulse .54s cubic-bezier(.2,.75,.15,1)}.qmx-page-icon{position:absolute;inset:8px;width:20px;height:20px;transition:opacity .15s ease,transform .18s ease}.qmx-page-icon-back{opacity:0;transform:translate(7px)}#qmx-modal-container.is-stats-page .qmx-page-icon-stats{opacity:0;transform:translate(-7px) scale(.84)}#qmx-modal-container.is-stats-page .qmx-page-icon-back{opacity:1;transform:translate(0)}.qmx-panel-viewport{flex:1;min-height:0;overflow:hidden}.qmx-panel-track{width:200%;height:100%;display:flex;transform:translate(0);transition:transform .18s ease-out;will-change:transform}#qmx-modal-container.is-stats-page .qmx-panel-track{transform:translate(-50%)}.qmx-panel-page{flex:0 0 50%;width:50%;min-width:0;min-height:0;box-sizing:border-box}.qmx-task-page{display:flex;flex-direction:column}.qmx-stats-disabled .qmx-panel-track{width:100%}.qmx-stats-disabled .qmx-panel-page{flex-basis:100%;width:100%}.qmx-stats-disabled .qmx-stats-page{display:none}.qmx-task-overview{display:flex;align-items:center;gap:9px;min-height:26px;padding:2px 24px 8px;color:var(--md-sys-color-on-surface-variant);font-size:13px;font-variant-numeric:tabular-nums}.qmx-overview-state{width:10px;height:10px;border-radius:50%;background:var(--status-color-disconnected, #8a8a8a);transition:background-color .16s ease,border-radius .16s ease,transform .16s ease}.qmx-overview-state[data-state=active],.qmx-overview-state[data-state=waiting]{background:var(--status-color-waiting, #64c889)}.qmx-overview-state[data-state=claiming]{background:var(--status-color-claiming, #f0bd52);border-radius:2px;transform:rotate(45deg) scale(.9)}.qmx-overview-state[data-state=error]{background:var(--status-color-error, #ef6b73);border-radius:2px;transform:scale(1.08)}.qmx-modal-content{max-height:none;overflow-y:auto}.qmx-tab-list-item{border:1px solid transparent}.qmx-tab-list-item[data-status=claiming]{transform:translate(2px);border-color:color-mix(in srgb,var(--status-color-claiming, #f0bd52) 38%,transparent)}.qmx-tab-list-item[data-status=error],.qmx-tab-list-item[data-status=unresponsive],.qmx-tab-list-item[data-status=disconnected]{border-color:color-mix(in srgb,var(--status-color-error, #ef6b73) 42%,transparent)}.qmx-tab-list-item[data-status=success]{border-color:color-mix(in srgb,#65c992 44%,transparent)}.qmx-tab-list-item[data-status=success] .qmx-tab-status-dot{width:9px;height:9px;border-radius:50%;background:#65c992!important}.qmx-tab-list-item[data-status=claiming] .qmx-tab-status-dot{width:8px;height:8px;left:5px;border-radius:2px;transform:translateY(-50%) rotate(45deg)}.qmx-tab-list-item[data-status=error] .qmx-tab-status-dot,.qmx-tab-list-item[data-status=unresponsive] .qmx-tab-status-dot,.qmx-tab-list-item[data-status=disconnected] .qmx-tab-status-dot{width:6px;height:20px;border-radius:0 3px 3px 0}.qmx-tab-status-name{font-weight:600;color:var(--md-sys-color-on-surface-variant)}.qmx-tab-status-text{opacity:.62;overflow:hidden;text-overflow:ellipsis}.layout-Player-asideMainTop.qmx-aside-slot-active{position:relative!important;overflow:hidden!important}.layout-Player-asideMainTop.qmx-aside-slot-active>:not(#qmx-modal-container){display:none!important}#qmx-modal-container.mode-inject-rank-list{position:absolute;inset:0;width:100%;height:100%;min-height:0;background:var(--md-sys-color-surface-container);border-radius:0;box-shadow:none;z-index:2}.qmx-stats-page{display:flex;flex-direction:column;min-height:0;padding:0 20px 18px}.qmx-stats-page-toolbar{display:flex;justify-content:space-between;align-items:center;min-height:36px;padding:0 2px 8px}.qmx-stats-range{display:inline-flex;gap:3px;padding:3px;border-radius:15px;background:var(--md-sys-color-surface-bright)}.qmx-stats-range button{height:24px;padding:0 10px;border:0;border-radius:12px;background:transparent;color:var(--md-sys-color-on-surface-variant);cursor:pointer;transition:color .15s ease,background-color .15s ease,transform .15s ease}.qmx-stats-range button.active{color:var(--md-sys-color-on-primary);background:var(--md-sys-color-primary);transform:scale(1.02)}.qmx-stats-refresh{width:32px;height:32px;padding:7px;border:0;border-radius:50%;color:var(--md-sys-color-primary);background:#d0bcff1f;cursor:pointer}.qmx-stats-refresh svg{width:100%;height:100%}.qmx-stats-refresh.rotating{animation:rotate360 .9s ease-in-out}.qmx-stats-content{flex:1;min-height:0;max-height:none;opacity:1;overflow-y:auto;padding:0 4px 0 0}.qmx-stats-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.qmx-stat-card{min-width:0;min-height:54px;padding:9px 8px 8px;border-radius:16px;background:var(--md-sys-color-surface-bright)}.qmx-stat-card strong,.qmx-stat-card span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.qmx-stat-card strong{font-size:18px;font-variant-numeric:tabular-nums}.qmx-stat-card span{margin-top:3px;color:var(--md-sys-color-on-surface-variant);font-size:10px}.qmx-stat-card[data-tone=success] strong{color:#52a979}.qmx-stat-card[data-tone=warning] strong{color:#c89236}.qmx-stat-card[data-tone=coin] strong{color:#c99529}.qmx-stat-card[data-tone=starlight] strong{color:#9b7bd8}.qmx-stats-section{margin-top:2px}.qmx-stats-section-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}.qmx-stats-section-title{margin-bottom:7px;color:var(--md-sys-color-on-surface-variant);font-size:12px;font-weight:600}.qmx-stats-section-heading .qmx-stats-section-title{margin-bottom:0}.qmx-trend-legend{display:flex;align-items:center;gap:10px;color:var(--md-sys-color-on-surface-variant);font-size:9px}.qmx-trend-legend span{display:inline-flex;align-items:center;gap:4px}.qmx-trend-legend i{width:7px;height:7px;border-radius:3px}[data-reward=coin]{color:#c99529}[data-reward=starlight]{color:#9b7bd8}.qmx-trend-legend [data-reward=coin] i,.qmx-trend-bars [data-reward=coin]{background:#d7a83f}.qmx-trend-legend [data-reward=starlight] i,.qmx-trend-bars [data-reward=starlight]{background:#9b7bd8}.qmx-stats-trend{height:118px;display:flex;align-items:flex-end;gap:4px;padding:10px 9px 5px;border-radius:18px;background:var(--md-sys-color-surface-bright)}.qmx-trend-column{flex:1;min-width:2px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}.qmx-trend-values{width:100%;min-height:11px;display:flex;justify-content:center;gap:4px;font-size:8px;font-variant-numeric:tabular-nums}.qmx-trend-values b{max-width:45%;overflow:hidden;text-overflow:ellipsis;font-weight:600}.qmx-trend-bars{width:100%;height:72px;display:flex;justify-content:center;align-items:flex-end;gap:3px}.qmx-trend-bars i{width:min(10px,35%);min-width:1px;border-radius:6px 6px 2px 2px;transition:height .18s ease-out,background-color .16s ease}.qmx-trend-column small{min-height:11px;font-size:9px;color:var(--md-sys-color-on-surface-variant);font-style:normal;font-variant-numeric:tabular-nums}.qmx-stats-trend.is-weekly{gap:12px}.qmx-stats-trend.is-weekly .qmx-trend-bars i{width:min(18px,34%)}.qmx-stats-trend.is-weekly .qmx-trend-column small{font-size:8px}.qmx-stats-log-toolbar{display:flex;margin-top:14px}.qmx-stats-diagnostics{margin-top:6px;border-radius:18px;background:var(--md-sys-color-surface-bright);overflow:hidden}.qmx-stats-diagnostics summary{min-height:40px;display:grid;grid-template-columns:8px 1fr auto 18px;align-items:center;gap:8px;padding:0 12px;color:var(--md-sys-color-on-surface-variant);cursor:pointer;list-style:none;font-size:11px;font-weight:600}.qmx-stats-diagnostics summary::-webkit-details-marker{display:none}.qmx-stats-diagnostics summary>i{width:7px;height:7px;border-radius:50%;background:#65c992}.qmx-stats-diagnostics[data-tone=warning] summary>i{border-radius:2px;background:#e6b45c;transform:rotate(45deg)}.qmx-stats-diagnostics summary b{min-width:20px;padding:2px 6px;border-radius:9px;background:color-mix(in srgb,var(--md-sys-color-outline) 20%,transparent);text-align:center;font-size:9px;font-variant-numeric:tabular-nums}.qmx-stats-diagnostics summary svg{width:18px;height:18px;transition:transform .16s ease}.qmx-stats-diagnostics[open] summary svg{transform:rotate(180deg)}.qmx-stats-timeline{display:grid;gap:5px;padding:0 7px 7px}.qmx-timeline-row{min-height:38px;display:grid;grid-template-columns:8px 54px 1fr auto;align-items:center;gap:7px;padding:0 8px;border-radius:13px;background:var(--md-sys-color-surface-container);font-size:10px}.qmx-timeline-row>i{width:7px;height:7px;border-radius:50%;background:#8d8d8d}.qmx-timeline-row[data-tone=warning]>i{background:#e6b45c;border-radius:2px;transform:rotate(45deg)}.qmx-timeline-row[data-tone=error]>i{background:#ef6b73;border-radius:2px}.qmx-timeline-row time{color:var(--md-sys-color-on-surface-variant);font-variant-numeric:tabular-nums}.qmx-timeline-row span,.qmx-timeline-row b,.qmx-timeline-row small{min-width:0}.qmx-timeline-row span{display:grid}.qmx-timeline-row b,.qmx-timeline-row small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.qmx-timeline-row small{margin-top:1px;color:var(--md-sys-color-outline);font-size:9px}.qmx-timeline-row em{color:var(--md-sys-color-on-surface-variant);font-size:9px;font-style:normal}.qmx-stats-empty{height:42px;display:grid;place-items:center;border-radius:16px;background:var(--md-sys-color-surface-bright)}.qmx-stats-empty i{width:18px;height:4px;border-radius:2px;background:var(--md-sys-color-outline);opacity:.45}@media (prefers-reduced-motion: reduce){.qmx-panel-track,.qmx-panel-title>span,.qmx-page-icon,.qmx-overview-state,.qmx-tab-status-dot,.qmx-trend-bars i,.qmx-stats-diagnostics summary svg,.qmx-theme-icon,.qmx-theme-toggle-btn:before{transition-duration:.01ms!important;animation-duration:.01ms!important}}.qmx-modal-btn.danger:hover{border-color:var(--status-color-error);background-color:color-mix(in srgb,var(--status-color-error) 10%,transparent);color:var(--status-color-error);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--status-color-error) 10%,transparent)}@keyframes rotate360{to{transform:rotate(360deg)}}@keyframes qmx-theme-pulse{0%{opacity:.55;transform:scale(.78)}52%{opacity:1;transform:scale(1.18)}to{opacity:.85;transform:scale(1)}}.qmx-tab-header.show-id .qmx-tab-nickname{pointer-events:none!important}.qmx-tab-header.show-id .qmx-tab-room-id{pointer-events:auto!important}#qmx-settings-modal{width:500px;max-width:95vw}.qmx-settings-header{padding:12px 24px;border-bottom:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-tabs{display:flex;gap:8px}.qmx-settings-tabs .tab-link{padding:8px 16px;border:none;background:none;color:var(--md-sys-color-on-surface-variant);cursor:pointer;border-radius:8px;transition:background-color .2s,color .2s;font-size:14px}.qmx-settings-tabs .tab-link:hover{background-color:#ffffff0d}.qmx-settings-tabs .tab-link.active{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);font-weight:500}.qmx-settings-content{padding:16px 24px;flex-grow:1;overflow-y:auto;overflow-x:hidden;max-height:60vh;scrollbar-gutter:stable}.qmx-settings-content .tab-content{display:none}.qmx-settings-content .tab-content.active{display:block}.qmx-settings-footer{padding:16px 24px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--md-sys-color-outline);flex-shrink:0}.qmx-settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px;align-items:start}.qmx-settings-item{display:flex;flex-direction:column;justify-content:center;gap:8px}.qmx-settings-item label{font-size:14px;font-weight:500;display:flex;align-items:center;gap:6px}.qmx-settings-item-wide{grid-column:1 / -1}.qmx-settings-warning{padding:12px;background-color:#f4433633;border:1px solid #F44336;color:#efb8c8;border-radius:8px;grid-column:1 / -1}#tab-about{min-height:132px}.qmx-about-identity{display:flex;align-items:center;gap:10px;padding:8px 2px 22px;font-size:16px}.qmx-about-identity .version-tag{display:inline-block;background-color:color-mix(in srgb,var(--md-sys-color-primary) 15%,transparent);color:var(--md-sys-color-primary);padding:3px 9px;border-radius:999px;font-size:11px;font-weight:500}.qmx-about-links{display:flex;gap:10px}.qmx-about-links a{flex:1;padding:10px 14px;border:1px solid var(--md-sys-color-outline);border-radius:16px;color:var(--md-sys-color-tertiary);text-decoration:none;text-align:center;font-weight:500;transition:color .18s ease,border-color .18s ease,background-color .18s ease}.qmx-about-links a:hover{border-color:var(--md-sys-color-primary);background:color-mix(in srgb,var(--md-sys-color-primary) 9%,transparent);color:var(--md-sys-color-primary)}#qmx-notice-modal{width:450px;max-width:90vw}#qmx-notice-modal .qmx-modal-content{padding:16px 24px}#qmx-notice-modal .qmx-modal-content p{margin-bottom:12px;line-height:1.6;font-size:15px;color:var(--md-sys-color-on-surface-variant)}#qmx-notice-modal .qmx-modal-content ul{margin:12px 0;padding-left:20px}#qmx-notice-modal .qmx-modal-content li{margin-bottom:10px;position:relative;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-modal-content li:before{content:"◆";position:absolute;left:-18px;color:var(--md-sys-color-primary);font-size:12px}#qmx-notice-modal h3{font-size:20px;font-weight:500;margin:0}#qmx-notice-modal h4{color:var(--md-sys-color-primary);font-size:16px;font-weight:500;margin-top:16px;margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--md-sys-color-outline)}#qmx-notice-modal .qmx-warning-text{background-color:#ffc1071a;border-left:4px solid #FFC107;padding:12px 16px;margin:16px 0;border-radius:4px;font-size:15px;line-height:1.6}#qmx-notice-modal .qmx-warning-text strong{color:#ff8f00}#qmx-notice-modal a{color:var(--md-sys-color-tertiary);text-decoration:none;font-weight:500;transition:color .2s}#qmx-notice-modal a:hover{color:#ffd6e1;text-decoration:underline}#qmx-modal-backdrop,#qmx-notice-backdrop{position:fixed;top:0;left:0;width:100vw;height:100vh;background-color:var(--md-sys-color-scrim);z-index:9998;opacity:0;visibility:hidden;transition:opacity .3s ease}#qmx-modal-backdrop.visible,#qmx-notice-backdrop.visible{opacity:.5;visibility:visible}#qmx-settings-modal,#qmx-notice-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.95);z-index:10001;background-color:var(--md-sys-color-surface-bright);color:var(--md-sys-color-on-surface);border-radius:28px;box-shadow:0 12px 32px #00000080;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:opacity .3s,visibility .3s,transform .3s}#qmx-settings-modal.visible,#qmx-notice-modal.visible{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}.qmx-modal-btn{position:relative;flex-grow:1;padding:10px 16px;border:1px solid var(--md-sys-color-outline);background-color:transparent;color:var(--md-sys-color-primary);border-radius:20px;font-size:14px;font-weight:500;cursor:pointer;transition:background-color .18s var(--motion-easing),color .18s var(--motion-easing),border-color .18s var(--motion-easing),box-shadow .18s var(--motion-easing),transform .12s var(--motion-easing);-webkit-user-select:none;user-select:none}.qmx-modal-btn:hover{border-color:color-mix(in srgb,var(--md-sys-color-primary) 72%,var(--md-sys-color-outline));background-color:color-mix(in srgb,var(--md-sys-color-primary) 10%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--md-sys-color-primary) 12%,transparent)}.qmx-modal-btn:active{transform:scale(.975);box-shadow:none}.qmx-modal-btn:disabled{opacity:.5;cursor:not-allowed}.qmx-modal-btn.primary{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary);border:none}.qmx-modal-btn.primary:hover{background-color:color-mix(in srgb,var(--md-sys-color-primary) 88%,var(--md-sys-color-on-primary));color:var(--md-sys-color-on-primary);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--md-sys-color-on-primary) 20%,transparent)}.qmx-settings-footer .qmx-modal-btn.primary[data-state]{color:transparent;border-radius:13px}.qmx-settings-footer .qmx-modal-btn.primary[data-state]:after{position:absolute;inset:0;display:grid;place-items:center;color:var(--md-sys-color-on-primary)}.qmx-settings-footer .qmx-modal-btn.primary[data-state=saving]:after{content:"";width:14px;height:14px;inset:50% auto auto 50%;border:2px solid color-mix(in srgb,var(--md-sys-color-on-primary) 35%,transparent);border-top-color:var(--md-sys-color-on-primary);border-radius:50%;animation:qmx-save-spin .65s linear infinite}.qmx-settings-footer .qmx-modal-btn.primary[data-state=saved]{background-color:#4f9f73}.qmx-settings-footer .qmx-modal-btn.primary[data-state=saved]:after{content:"✓";font-size:16px}.qmx-settings-footer .qmx-modal-btn.primary[data-state=error]{background-color:var(--status-color-error);animation:qmx-save-error .26s ease-out}.qmx-settings-footer .qmx-modal-btn.primary[data-state=error]:after{content:"!";font-weight:700}@keyframes qmx-save-spin{0%{transform:translate(-50%,-50%) rotate(0)}to{transform:translate(-50%,-50%) rotate(360deg)}}@keyframes qmx-save-error{0%,to{transform:translate(0)}35%{transform:translate(-3px)}70%{transform:translate(3px)}}@media (prefers-reduced-motion: reduce){.qmx-settings-footer .qmx-modal-btn.primary[data-state]:after,.qmx-settings-footer .qmx-modal-btn.primary[data-state=error]{animation-duration:.01ms!important}}.qmx-modal-btn.danger{border-color:#f44336;color:#f44336}.qmx-modal-btn.danger:hover{background-color:color-mix(in srgb,var(--status-color-error) 10%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--status-color-error) 10%,transparent)}.qmx-modal-content::-webkit-scrollbar,.qmx-settings-content::-webkit-scrollbar{width:10px}.qmx-modal-content::-webkit-scrollbar-track,.qmx-settings-content::-webkit-scrollbar-track{background:var(--md-sys-color-surface-bright);border-radius:10px}.qmx-modal-content::-webkit-scrollbar-thumb,.qmx-settings-content::-webkit-scrollbar-thumb{background-color:var(--md-sys-color-primary);border-radius:10px;border:2px solid var(--md-sys-color-surface-bright)}.qmx-modal-content::-webkit-scrollbar-thumb:hover,.qmx-settings-content::-webkit-scrollbar-thumb:hover{background-color:#e0d1ff}';
   importCSS(ControlPanelRefactoredCss);
   const statsPanelTemplate = `
-    <div class="qmx-stats-container">
-        <div class="qmx-stats-toggle" id="qmx-stats-toggle">
-            <button id="qmx-stats-left" class="qmx-stats-switcher"><</button>
-            <span class="qmx-stats-indicator">▼</span>
-            <span class="qmx-stats-label">今日统计</span>
-            <button class="qmx-stats-refresh">
-                <svg xmlns="http://www.w3.org/2000/svg" height="18px" viewBox="0 0 24 24" width="18px" fill="currentColor">
-                    <path d="M0 0h24v24H0V0z" fill="none"/>
-                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+    <section class="qmx-panel-page qmx-stats-page" id="qmx-stats-page" aria-label="数据统计">
+        <div class="qmx-stats-page-toolbar">
+            <div class="qmx-stats-range" aria-label="统计周期">
+                <button type="button" class="active" data-period="daily">7天</button>
+                <button type="button" data-period="weekly">4周</button>
+            </div>
+            <button class="qmx-stats-refresh" type="button" title="刷新统计数据" aria-label="刷新统计数据">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17.65 6.35A7.95 7.95 0 0012 4a8 8 0 107.73 10h-2.08A6 6 0 1116.22 7.78L13 11h7V4l-2.35 2.35z"/>
                 </svg>
             </button>
-            <button id="qmx-stats-right" class="qmx-stats-switcher">></button>
         </div>
         <div class="qmx-stats-content" id="qmx-stats-content">
-            <div class="qmx-modal-stats" id="qmx-stats-panel"></div>
+            <div class="qmx-stats-summary" id="qmx-stats-summary"></div>
+            <section class="qmx-stats-section">
+                <div class="qmx-stats-section-heading">
+                    <div class="qmx-stats-section-title">收益趋势</div>
+                    <div class="qmx-trend-legend" aria-label="图例">
+                        <span data-reward="coin"><i></i>金币</span>
+                        <span data-reward="starlight"><i></i>星光棒</span>
+                    </div>
+                </div>
+                <div class="qmx-stats-trend" id="qmx-stats-trend"></div>
+            </section>
+            <div class="qmx-stats-log-toolbar">
+                <div class="qmx-stats-range qmx-stats-log-range" aria-label="日志类型">
+                    <button type="button" class="active" data-log-mode="all">日志</button>
+                    <button type="button" data-log-mode="exceptions">异常日志</button>
+                </div>
+            </div>
+            <details class="qmx-stats-diagnostics" id="qmx-stats-diagnostics" open>
+                <summary>
+                    <i></i>
+                    <span id="qmx-stats-log-label">近期记录</span>
+                    <b id="qmx-stats-diagnostic-count">0</b>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 10 4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </summary>
+                <div class="qmx-stats-timeline" id="qmx-stats-timeline"></div>
+            </details>
         </div>
-    </div>
+    </section>
 `;
-  const mainPanelTemplate = (maxTabs) => `
+  const mainPanelTemplate = (maxTasks) => `
     <div class="qmx-modal-header">
-        <span>控制中心</span>
-        <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
+        <span id="qmx-panel-title" class="qmx-panel-title" aria-live="polite" aria-label="控制中心">
+            <span data-panel-title="tasks">控制中心</span>
+            <span data-panel-title="stats">数据统计</span>
+        </span>
+        <div class="qmx-modal-header-actions">
+            <button id="qmx-page-switch-btn" class="qmx-header-icon-btn qmx-page-switch-btn" type="button" title="查看统计" aria-label="切换任务与统计页面">
+                <svg class="qmx-page-icon qmx-page-icon-stats" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 10h3v9H5v-9zm5-5h3v14h-3V5zm5 8h3v6h-3v-6z" fill="currentColor"/></svg>
+                <svg class="qmx-page-icon qmx-page-icon-back" viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button id="qmx-theme-toggle-btn" class="qmx-header-icon-btn qmx-theme-toggle-btn" type="button" title="切换日夜模式" aria-label="切换日夜模式">
+                <svg class="qmx-theme-icon qmx-theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <svg class="qmx-theme-icon qmx-theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.2A8 8 0 018.8 3.5 8.5 8.5 0 1020.5 15.2z" fill="currentColor"/></svg>
+            </button>
+            <button id="qmx-modal-settings-btn" class="qmx-header-icon-btn qmx-settings-icon-btn" type="button" title="设置" aria-label="打开设置">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94a7.3 7.3 0 000-1.88l2.03-1.58-1.92-3.32-2.39.96a7.1 7.1 0 00-1.62-.94L14.88 3h-3.84l-.36 2.18c-.58.24-1.12.55-1.62.94l-2.39-.96-1.92 3.32 2.03 1.58a7.3 7.3 0 000 1.88l-2.03 1.58 1.92 3.32 2.39-.96c.5.39 1.04.7 1.62.94l.36 2.18h3.84l.36-2.18c.58-.24 1.12-.55 1.62-.94l2.39.96 1.92-3.32-2.03-1.58zM13 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z" fill="currentColor"/></svg>
+            </button>
+            <button id="qmx-modal-close-btn" class="qmx-modal-close-icon" title="关闭" aria-label="关闭控制中心"></button>
+        </div>
     </div>
-    ${statsPanelTemplate}
-    <div class="qmx-modal-content">
-        <h3>监控面板 (<span id="qmx-active-tabs-count">0</span>/${maxTabs})</h3>
-        <div id="qmx-tab-list"></div>
-    </div>
-    <div class="qmx-modal-footer">
-        <button id="qmx-modal-settings-btn" class="qmx-modal-btn">设置</button>
-        <button id="qmx-modal-close-all-btn" class="qmx-modal-btn danger">关闭所有</button>
-        <button id="qmx-modal-open-btn" class="qmx-modal-btn primary">打开新房间</button>
+    <div class="qmx-panel-viewport">
+        <div class="qmx-panel-track">
+            <section class="qmx-panel-page qmx-task-page" id="qmx-task-page" aria-label="当前工作">
+                <div class="qmx-task-overview">
+                    <span class="qmx-overview-state" id="qmx-overview-state" data-state="idle"></span>
+                    <span><strong id="qmx-active-tabs-count">0</strong> / ${maxTasks}</span>
+                </div>
+                <div class="qmx-modal-content">
+                    <div id="qmx-tab-list"></div>
+                </div>
+                <div class="qmx-modal-footer">
+                    <button id="qmx-modal-close-all-btn" class="qmx-modal-btn danger">停止所有</button>
+                    <button id="qmx-modal-open-btn" class="qmx-modal-btn primary">启动领取任务</button>
+                </div>
+            </section>
+            ${statsPanelTemplate}
+        </div>
     </div>
 `;
-  const createUnitInput = (id, label, settingsMeta) => {
-    const meta = settingsMeta[id];
-    return `
+  const settingsPanelTemplate = (SETTINGS2) => `
+    <div class="qmx-settings-header">
+        <div class="qmx-settings-tabs">
+            <button class="tab-link active" data-tab="star">星推荐</button>
+            ${""}
+            <button class="tab-link" data-tab="about">关于</button>
+        </div>
+    </div>
+    <div class="qmx-settings-content">
+        <div id="tab-star" class="tab-content active">
+            <div class="qmx-settings-grid">
                 <div class="qmx-settings-item">
-                    <label for="${id}">
-                        ${label}
-                        <span class="qmx-tooltip-icon" data-tooltip-key="${id.replace("setting-", "")}">?</span>
-                    </label>
-                    <fieldset class="qmx-fieldset-unit">
-                        <legend>${meta.unit}</legend>
-                        <input type="number" class="qmx-input" id="${id}" value="${meta.value}">
-                    </fieldset>
+                    <label for="setting-control-room-id">控制室房间号</label>
+                    <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS2.CONTROL_ROOM_ID}">
                 </div>
-            `;
-  };
-  const settingsPanelTemplate = (SETTINGS2) => {
-    const settingsMeta = {
-      "setting-initial-script-delay": { value: SETTINGS2.INITIAL_SCRIPT_DELAY / 1e3, unit: "秒" },
-      "setting-auto-pause-delay": { value: SETTINGS2.AUTO_PAUSE_DELAY_AFTER_ACTION / 1e3, unit: "秒" },
-      "setting-unresponsive-timeout": { value: SETTINGS2.UNRESPONSIVE_TIMEOUT / 6e4, unit: "分钟" },
-      "setting-red-envelope-timeout": { value: SETTINGS2.RED_ENVELOPE_LOAD_TIMEOUT / 1e3, unit: "秒" },
-      "setting-popup-wait-timeout": { value: SETTINGS2.POPUP_WAIT_TIMEOUT / 1e3, unit: "秒" },
-      "setting-worker-loading-timeout": { value: SETTINGS2.ELEMENT_WAIT_TIMEOUT / 1e3, unit: "秒" },
-      "setting-close-tab-delay": { value: SETTINGS2.CLOSE_TAB_DELAY / 1e3, unit: "秒" },
-      "setting-open-tab-interval": { value: SETTINGS2.OPEN_TAB_INTERVAL / 1e3, unit: "秒" },
-      "setting-api-retry-delay": { value: SETTINGS2.API_RETRY_DELAY / 1e3, unit: "秒" },
-      "setting-switching-cleanup-timeout": { value: SETTINGS2.SWITCHING_CLEANUP_TIMEOUT / 1e3, unit: "秒" },
-      "setting-healthcheck-interval": { value: SETTINGS2.HEALTHCHECK_INTERVAL / 1e3, unit: "秒" },
-      "setting-disconnected-grace-period": { value: SETTINGS2.DISCONNECTED_GRACE_PERIOD / 1e3, unit: "秒" },
-      "setting-stats-update-interval": { value: SETTINGS2.STATS_UPDATE_INTERVAL / 1e3, unit: "秒" }
-    };
-    return `
-        <div class="qmx-settings-header">
-            <div class="qmx-settings-tabs">
-                <button class="tab-link active" data-tab="basic">基本设置</button>
-                <button class="tab-link" data-tab="perf">性能与延迟</button>
-                <button class="tab-link" data-tab="advanced">高级设置</button>
-                ${'<button class="tab-link" data-tab="danmupro">弹幕助手</button>'}
-                <button class="tab-link" data-tab="about">关于</button>
-                <!-- 主题模式切换开关 -->
                 <div class="qmx-settings-item">
-                    <div class="theme-switch-wrapper">
-                        <label class="theme-switch">
-                            <input type="checkbox" id="setting-theme-mode" ${SETTINGS2.THEME === "dark" ? "checked" : ""}>
-
-                            <!-- 1. 背景轨道：只负责展开和收缩的动画 -->
-                            <span class="slider-track"></span>
-
-                            <!-- 2. 滑块圆点：只负责左右移动和图标切换 -->
-                            <span class="slider-dot">
-                                <span class="icon sun">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                        <circle cx="12" cy="12" r="5"></circle>
-                                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                                    </svg>
-                                </span>
-                                <span class="icon moon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-3.51 1.713-6.636 4.398-8.552a.75.75 0 01.818.162z" clip-rule="evenodd"></path></svg>
-                                </span>
-                            </span>
-                        </label>
+                    <label for="setting-prewarm-duration">后台页面停留时间（秒）</label>
+                    <input type="number" class="qmx-input" id="setting-prewarm-duration" min="0.5" max="15" step="0.5" value="${SETTINGS2.ROOM_PREWARM_DURATION / 1e3}">
+                </div>
+                <div class="qmx-settings-item">
+                    <label>达到上限后的行为</label>
+                    <div class="qmx-select" data-target-id="setting-daily-limit-action">
+                        <div class="qmx-select-styled"></div>
+                        <div class="qmx-select-options"></div>
+                        <select id="setting-daily-limit-action" style="display:none">
+                            <option value="CONTINUE_DORMANT" ${SETTINGS2.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT" ? "selected" : ""}>休眠并等待次日恢复</option>
+                            <option value="STOP_ALL" ${SETTINGS2.DAILY_LIMIT_ACTION === "STOP_ALL" ? "selected" : ""}>停止所有领取任务</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="qmx-settings-item">
+                    <label>控制中心显示方式</label>
+                    <div class="qmx-select" data-target-id="setting-modal-mode">
+                        <div class="qmx-select-styled"></div>
+                        <div class="qmx-select-options"></div>
+                        <select id="setting-modal-mode" style="display:none">
+                            <option value="floating" ${SETTINGS2.MODAL_DISPLAY_MODE === "floating" ? "selected" : ""}>浮动窗口</option>
+                            <option value="centered" ${SETTINGS2.MODAL_DISPLAY_MODE === "centered" ? "selected" : ""}>屏幕居中</option>
+                            <option value="inject-rank-list" ${SETTINGS2.MODAL_DISPLAY_MODE === "inject-rank-list" ? "selected" : ""}>侧栏模式</option>
+                        </select>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="qmx-settings-content">
-            <!-- ==================== Tab 1: 基本设置 ==================== -->
-            <div id="tab-basic" class="tab-content active">
-                <div class="qmx-settings-grid">
-                    <div class="qmx-settings-item">
-                        <label for="setting-control-room-id">控制室房间号 <span class="qmx-tooltip-icon" data-tooltip-key="control-room">?</span></label>
-                        <input type="number" class="qmx-input" id="setting-control-room-id" value="${SETTINGS2.CONTROL_ROOM_ID}">
-                    </div>
-                    <!-- 新增：第二房间号设置 -->
-                    <div class="qmx-settings-item">
-                        <label for="setting-temp-control-room-id">第二房间号(RID) <span class="qmx-tooltip-icon" data-tooltip-key="temp-control-room">?</span></label>
-                        <input type="number" class="qmx-input" id="setting-temp-control-room-id" value="${SETTINGS2.TEMP_CONTROL_ROOM_RID}">
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label>自动暂停后台视频 <span class="qmx-tooltip-icon" data-tooltip-key="auto-pause">?</span></label>
-                        <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-auto-pause" ${SETTINGS2.AUTO_PAUSE_ENABLED ? "checked" : ""}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label>预载模式 <span class="qmx-tooltip-icon" data-tooltip-key="preload-mode">?</span></label>
-                        <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-preload-mode" ${SETTINGS2.PRELOAD_MODE_ENABLED ? "checked" : ""}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label>展示数据统计 <span class="qmx-tooltip-icon" data-tooltip-key="stats-info">?</span></label>
-                        <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-stats-info" ${SETTINGS2.SHOW_STATS_IN_PANEL ? "checked" : ""}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label>启用校准模式 <span class="qmx-tooltip-icon" data-tooltip-key="calibration-mode">?</span></label>
-                        <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-calibration-mode" ${SETTINGS2.CALIBRATION_MODE_ENABLED ? "checked" : ""}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    ${`
-                    <div class="qmx-settings-item">
-                        <label>启用弹幕助手😋<span class="qmx-tooltip-icon" data-tooltip-key="danmupro-mode">?</span></label>
-                        <label class="qmx-toggle">
-                            <input type="checkbox" id="setting-danmupro-mode" ${SETTINGS2.ENABLE_DANMU_PRO ? "checked" : ""}>
-                            <span class="slider"></span>
-                        </label>
-                    </div>`}
-                    <div class="qmx-settings-item">
-                        <label>达到上限后的行为</label>
-                        <div class="qmx-select" data-target-id="setting-daily-limit-action">
-                            <div class="qmx-select-styled"></div>
-                            <div class="qmx-select-options"></div>
-                            <select id="setting-daily-limit-action" style="display: none;">
-                                <option value="STOP_ALL" ${SETTINGS2.DAILY_LIMIT_ACTION === "STOP_ALL" ? "selected" : ""}>直接关停所有任务</option>
-                                <option value="CONTINUE_DORMANT" ${SETTINGS2.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT" ? "selected" : ""}>进入休眠模式，等待刷新</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label>控制中心显示模式</label>
-                        <div class="qmx-select" data-target-id="setting-modal-mode">
-                            <div class="qmx-select-styled"></div>
-                            <div class="qmx-select-options"></div>
-                            <select id="setting-modal-mode" style="display: none;">
-                                <option value="floating" ${SETTINGS2.MODAL_DISPLAY_MODE === "floating" ? "selected" : ""}>浮动窗口</option>
-                                <option value="centered" ${SETTINGS2.MODAL_DISPLAY_MODE === "centered" ? "selected" : ""}>屏幕居中</option>
-                                <option value="inject-rank-list" ${SETTINGS2.MODAL_DISPLAY_MODE === "inject-rank-list" ? "selected" : ""}>替换排行榜显示</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+
+        ${""}
+
+        <div id="tab-about" class="tab-content">
+            <div class="qmx-about-identity">
+                <strong>全民星推荐助手</strong>
+                <span class="version-tag">v2.1.0 Beta</span>
             </div>
-
-            <!-- ==================== Tab 2: 性能与延迟 ==================== -->
-            <div id="tab-perf" class="tab-content">
-                <div class="qmx-settings-grid">
-                    ${createUnitInput("setting-initial-script-delay", "脚本初始启动延迟", settingsMeta)}
-                    ${createUnitInput("setting-auto-pause-delay", "领取后暂停延迟", settingsMeta)}
-                    ${createUnitInput("setting-unresponsive-timeout", "工作页失联超时", settingsMeta)}
-                    ${createUnitInput("setting-red-envelope-timeout", "红包活动加载超时", settingsMeta)}
-                    ${createUnitInput("setting-popup-wait-timeout", "红包弹窗等待超时", settingsMeta)}
-                    ${createUnitInput("setting-worker-loading-timeout", "播放器加载超时", settingsMeta)}
-                    ${createUnitInput("setting-close-tab-delay", "关闭标签页延迟", settingsMeta)}
-                    ${createUnitInput("setting-open-tab-interval", "新标签页打开间隔", settingsMeta)}
-                    ${createUnitInput("setting-switching-cleanup-timeout", "切换中状态兜底超时", settingsMeta)}
-                    ${createUnitInput("setting-healthcheck-interval", "哨兵健康检查间隔", settingsMeta)}
-                    ${createUnitInput("setting-disconnected-grace-period", "断开连接清理延迟", settingsMeta)}
-                    ${createUnitInput("setting-api-retry-delay", "API重试延迟", settingsMeta)}
-                    ${createUnitInput("setting-stats-update-interval", "统计信息更新间隔", settingsMeta)}
-                    
-                    <div class="qmx-settings-item" style="grid-column: 1 / -1;">
-                        <label>模拟操作延迟范围 (秒) <span class="qmx-tooltip-icon" data-tooltip-key="range-delay">?</span></label>
-                        <div class="qmx-range-slider-wrapper">
-                            <div class="qmx-range-slider-container">
-                                <div class="qmx-range-slider-track-container"><div class="qmx-range-slider-progress"></div></div>
-                                <input type="range" id="setting-min-delay" min="0.1" max="5" step="0.1" value="${SETTINGS2.MIN_DELAY / 1e3}">
-                                <input type="range" id="setting-max-delay" min="0.1" max="5" step="0.1" value="${SETTINGS2.MAX_DELAY / 1e3}">
-                            </div>
-                            <div class="qmx-range-slider-values"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ==================== Tab 3: 高级设置 ==================== -->
-            <div id="tab-advanced" class="tab-content">
-                <div class="qmx-settings-grid">
-                    <div class="qmx-settings-item">
-                        <label for="setting-max-tabs">最大工作标签页数量 <span class="qmx-tooltip-icon" data-tooltip-key="max-worker-tabs">?</span></label>
-                        <input type="number" class="qmx-input" id="setting-max-tabs" value="${SETTINGS2.MAX_WORKER_TABS}">
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label for="setting-api-fetch-count">单次API获取房间数 <span class="qmx-tooltip-icon" data-tooltip-key="api-room-fetch-count">?</span></label>
-                        <input type="number" class="qmx-input" id="setting-api-fetch-count" value="${SETTINGS2.API_ROOM_FETCH_COUNT}">
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label for="setting-api-retry-count">API请求重试次数 <span class="qmx-tooltip-icon" data-tooltip-key="api-retry-count">?</span></label>
-                        <input type="number" class="qmx-input" id="setting-api-retry-count" value="${SETTINGS2.API_RETRY_COUNT}">
-                    </div>
-
-                    
-
-                    <!-- 新增：添加两个空的占位符，使网格平衡为 2x3 -->
-                    <div class="qmx-settings-item"></div>
-                    <div class="qmx-settings-item"></div>
-                </div>
-            </div>
-
-            <!-- ==================== Tab 4: 弹幕助手 ==================== -->
-            ${`
-            <div id="tab-danmupro" class="tab-content">
-                <h4>关于斗鱼弹幕助手功能</h4>
-                <ul class="qmx-styled-list">
-                    <li>启用后，可以在弹幕输入框中使用自动弹幕推荐等功能。</li>
-                    <li>弹幕智能补全：在聊天输入框输入时，根据关键字自动匹配并显示相关的弹幕模板。</li>
-                    <li>全键盘操作：
-                        <ul>
-                            <li>1. 正常输入模式：打出关键字如‘niko’‘三楼’</li>
-                            <li>2. 如果弹幕库中有匹配到的话，会在输入框上方显示几个候选项</li>
-                            <li>3. 点击 <code>↑</code> 键进入选择模式</li>
-                            <li>4. 点击 <code>←</code> / <code>→</code> 在候选项之间导航</li>
-                            <li>5. 点击 <code>Enter</code> 选择并填充弹幕（连点两下<code>Enter</code>就是直接发送弹幕）</li>
-                            <li>6. 点击 <code>↓</code> 退出选择模式回到正常输入模式，或点击 <code>Esc</code> 关闭候选框</li>
-                            <li>在第2步之后也可以直接鼠标点击选择候选项填充到输入框</li>
-                        </ul>
-                    </li>
-                    <li>长文本预览：当鼠标悬停或键盘选择到内容过长的候选项时，会显示一个悬浮框来展示完整内容。</li>
-                </ul>
-            </div>`}
-            <!-- ==================== Tab 5: 关于 ==================== -->
-            <div id="tab-about" class="tab-content">
-                <!-- 调试工具 - 仅在开发时启用
-                <h4>调试工具 <span style="color: #ff6b6b;">⚠️ 仅供测试使用</span></h4>
-                <div class="qmx-settings-grid">
-                    <div class="qmx-settings-item">
-                        <label>模拟达到每日上限</label>
-                        <button id="test-daily-limit-btn" class="qmx-modal-btn" style="background-color: #ff6b6b; color: white;">
-                            设置为已达上限
-                        </button>
-                        <small style="color: #888; display: block; margin-top: 5px;">
-                            点击后将模拟达到每日红包上限，触发休眠模式（如果启用）
-                        </small>
-                    </div>
-                    <div class="qmx-settings-item">
-                        <label>重置每日上限状态</label>
-                        <button id="reset-daily-limit-btn" class="qmx-modal-btn">
-                            重置上限状态
-                        </button>
-                        <small style="color: #888; display: block; margin-top: 5px;">
-                            清除上限标记，恢复正常运行模式
-                        </small>
-                    </div>
-                </div>
-                -->
-                
-                <h4>关于脚本 <span class="version-tag">v2.0.9</span></h4>
-                <h4>致谢</h4>
-                <ul class="qmx-styled-list">
-                    <li>本脚本基于<a href="https://greasyfork.org/zh-CN/users/1453821-ysl-ovo" target="_blank" rel="noopener noreferrer">ysl-ovo</a>的插件<a href="https://greasyfork.org/zh-CN/scripts/532514-%E6%96%97%E9%B1%BC%E5%85%A8%E6%B0%91%E6%98%9F%E6%8E%A8%E8%8D%90%E8%87%AA%E5%8A%A8%E9%A2%86%E5%8F%96" target="_blank" rel="noopener noreferrer">《斗鱼全民星推荐自动领取》</a>
-                        进行一些功能改进(也许)与界面美化，同样遵循MIT许可证开源。感谢原作者的分享</li>
-                    <li>兼容斗鱼新版UI的相关功能与项目重构主要由<a href="https://github.com/Truthss" target="_blank" rel="noopener noreferrer">@Truthss</a> 贡献，非常感谢！</li>
-                </ul>
-                <h4>⚠️ 重要提示</h4>
-                <ul class="qmx-styled-list">
-                    <li><strong>斗鱼Ex插件冲突</strong>：如需使用本脚本抢红包，请暂时关闭斗鱼Ex插件，否则红包会消失。</li>
-                    <li><strong>浏览器DNS设置</strong>：请在浏览器设置中搜索"DNS"，将"使用安全的DNS"选项关闭，否则红包也会消失。</li>
-                    <li><strong>新版UI适配</strong>：控制面板"替换排行榜"模式暂不可用，请使用"浮动窗口"或"屏幕居中"模式。</li>
-                    <li>启用统计功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！</li>
-                    <li>每天大概1000左右金币到上限。</li>
-                </ul>
-                <h4>脚本更新日志 (v2.0.9)</h4>
-                <ul class="qmx-styled-list">
-                    <li>【新增】全新统计面板：支持查看今日及最近7天的红包数量与金币总数。</li>
-                    <li>【新增】奖励显示：控制面板现在可以直接显示每个红包的具体奖励信息（金币/荧光棒）。</li>
-                    <li>【优化】设置体验升级：修改设置选项后不再需要刷新页面即可生效。</li>
-                    <li>【优化】界面与布局：调整了控制面板样式，位置随窗口大小自动调整。</li>
-                    <li>【修复】适配斗鱼新版直播间界面（部分功能受限）。</li>
-                    <li>【修复】修复了重新打开控制页面时会残留已关闭的直播间信息的问题。</li>
-                </ul>
-                <h4>源码与社区</h4>
-                <ul class="qmx-styled-list">
-                    <li>可以在 <a href="https://github.com/ienone/douyu-qmx-pro/" target="_blank" rel="noopener noreferrer">GitHub</a> 查看本脚本源码</li>
-                    <li>发现BUG或有功能建议，欢迎提交 <a href="https://github.com/ienone/douyu-qmx-pro/issues" target="_blank" rel="noopener noreferrer">Issue</a>（不过大概率不会修……）</li>
-                    <li>如果你有能力进行改进，非常欢迎提交 <a href="https://github.com/ienone/douyu-qmx-pro/pulls" target="_blank" rel="noopener noreferrer">Pull Request</a>！</li>
-                </ul>
+            <div class="qmx-about-links">
+                <a href="https://github.com/ienone/douyu-qmx-pro/" target="_blank" rel="noopener noreferrer">源码</a>
+                <a href="https://github.com/ienone/douyu-qmx-pro/issues" target="_blank" rel="noopener noreferrer">反馈</a>
             </div>
         </div>
-        <div class="qmx-settings-footer">
-            <button id="qmx-settings-cancel-btn" class="qmx-modal-btn">取消</button>
-            <button id="qmx-settings-reset-btn" class="qmx-modal-btn danger">恢复默认</button>
-            <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存</button>
-        </div>
-        `;
-  };
+    </div>
+    <div class="qmx-settings-footer">
+        <button id="qmx-settings-cancel-btn" class="qmx-modal-btn">取消</button>
+        <button id="qmx-settings-reset-btn" class="qmx-modal-btn danger">恢复默认</button>
+        <button id="qmx-settings-save-btn" class="qmx-modal-btn primary">保存</button>
+    </div>
+`;
   const ThemeManager = {
 applyTheme(theme) {
       document.body.setAttribute("data-theme", theme);
       SETTINGS.THEME = theme;
-      GM_setValue("douyu_qmx_theme", theme);
+      _GM_setValue("douyu_qmx_theme", theme);
     }
   };
   const GlobalState = {
 get() {
-      let state = GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tabs: {} });
-      if (!state || typeof state !== "object") {
-        state = { tabs: {} };
+      let state2 = _GM_getValue(SETTINGS.STATE_STORAGE_KEY, { tasks: {} });
+      if (!state2 || typeof state2 !== "object") {
+        state2 = { tasks: {} };
       }
-      return state;
-    },
-set(state) {
-      const lockKey = "douyu_qmx_state_lock";
-      if (!Utils.lockChecker(lockKey, () => this.set(), state)) {
-        return;
+      if (!state2.tasks || typeof state2.tasks !== "object") state2.tasks = {};
+      if (Object.hasOwn(state2, "tabs")) {
+        delete state2.tabs;
+        _GM_setValue(SETTINGS.STATE_STORAGE_KEY, state2);
       }
-      Utils.setLocalValueWithLock(lockKey, SETTINGS.STATE_STORAGE_KEY, state, "更新全局状态");
+      return state2;
     },
-updateWorker(roomId, status, statusText, options = {}) {
+set(state2) {
+      _GM_setValue(SETTINGS.STATE_STORAGE_KEY, state2);
+    },
+updateTask(roomId, status, statusText, options = {}) {
       if (!roomId) return;
-      const state = this.get();
-      const oldTabData = state.tabs[roomId] || {};
-      if (status === "DISCONNECTED" && oldTabData.status === "SWITCHING") {
-        Utils.log(`[状态管理] 检测到正在切换的标签页已断开连接，判定为成功关闭，立即清理。`);
-        this.removeWorker(roomId);
-        return;
-      }
-      if (Object.keys(state.tabs).length === 0 && status === "SWITCHING") {
-        Utils.log(`[状态管理] 检测到全局状态已清空，忽略残留的SWITCHING状态更新 (房间: ${roomId})`);
-        return;
-      }
+      const state2 = this.get();
+      const oldTaskData = state2.tasks[roomId] || {};
       const updates = {
         status,
         statusText,
         lastUpdateTime: Date.now(),
         ...options
       };
-      const newTabData = { ...oldTabData, ...updates };
-      for (const key in newTabData) {
-        if (newTabData[key] === null) {
-          delete newTabData[key];
+      const newTaskData = { ...oldTaskData, ...updates };
+      for (const key in newTaskData) {
+        if (newTaskData[key] === null) {
+          delete newTaskData[key];
         }
       }
-      state.tabs[roomId] = newTabData;
-      this.set(state);
+      state2.tasks[roomId] = newTaskData;
+      this.set(state2);
     },
-removeWorker(roomId) {
+removeTask(roomId) {
       if (!roomId) return;
-      const state = this.get();
-      delete state.tabs[roomId];
-      this.set(state);
+      const state2 = this.get();
+      delete state2.tasks[roomId];
+      this.set(state2);
     },
 setDailyLimit(reached) {
-      GM_setValue(SETTINGS.DAILY_LIMIT_REACHED_KEY, { reached, timestamp: Date.now() });
+      _GM_setValue(SETTINGS.DAILY_LIMIT_REACHED_KEY, { reached, timestamp: Date.now() });
     },
 getDailyLimit() {
-      return GM_getValue(SETTINGS.DAILY_LIMIT_REACHED_KEY);
+      return _GM_getValue(SETTINGS.DAILY_LIMIT_REACHED_KEY);
+    },
+    setAccountRisk(suspected, details = {}) {
+      const state2 = this.get();
+      if (suspected) {
+        state2.accountRisk = { ...details, suspected: true, timestamp: Date.now() };
+      } else {
+        delete state2.accountRisk;
+      }
+      this.set(state2);
+    },
+    getAccountRisk() {
+      const risk = this.get().accountRisk;
+      if (!risk?.suspected) return void 0;
+      if (Number(risk.expiresAt) > Date.now()) return risk;
+      this.setAccountRisk(false);
+      return void 0;
     }
   };
-  var _GM_cookie = (() => typeof GM_cookie != "undefined" ? GM_cookie : void 0)();
-  var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
+  let isGlobalClickListenerAdded = false;
+  function activateCustomSelects(parentElement) {
+    parentElement.querySelectorAll(".qmx-select").forEach((wrapper) => {
+      const nativeSelect = wrapper.querySelector("select");
+      const styledSelect = wrapper.querySelector(".qmx-select-styled");
+      const optionsList = wrapper.querySelector(".qmx-select-options");
+      styledSelect.textContent = nativeSelect.options[nativeSelect.selectedIndex].text;
+      optionsList.innerHTML = "";
+      for (const option of nativeSelect.options) {
+        const optionDiv = document.createElement("div");
+        optionDiv.textContent = option.text;
+        optionDiv.dataset.value = option.value;
+        if (option.selected) {
+          optionDiv.classList.add("selected");
+        }
+        optionsList.appendChild(optionDiv);
+      }
+      styledSelect.addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.querySelectorAll(".qmx-select.active").forEach((el) => {
+          if (el !== wrapper) {
+            el.classList.remove("active");
+          }
+        });
+        wrapper.classList.toggle("active");
+      });
+      optionsList.querySelectorAll("div").forEach((optionDiv) => {
+        optionDiv.addEventListener("click", () => {
+          styledSelect.textContent = optionDiv.textContent;
+          nativeSelect.value = optionDiv.dataset.value;
+          optionsList.querySelector(".selected")?.classList.remove("selected");
+          optionDiv.classList.add("selected");
+          wrapper.classList.remove("active");
+        });
+      });
+    });
+    if (!isGlobalClickListenerAdded) {
+      document.addEventListener("click", () => {
+        document.querySelectorAll(".qmx-select.active").forEach((el) => {
+          el.classList.remove("active");
+        });
+      });
+      isGlobalClickListenerAdded = true;
+    }
+  }
+  const extractDouyuCsrfConfig = (source) => {
+    const text = String(source || "").replaceAll('\\"', '"').replaceAll("\\'", "'");
+    const cookieKey = text.match(/(?:["']?tvk["']?)\s*:\s*["']([^"']+)["']/)?.[1] || "";
+    const cookiePrefix = text.match(/(?:["']?cookie_pre["']?)\s*:\s*["']([^"']*)["']/)?.[1] || "";
+    return {
+      fieldName: text.match(/(?:["']?tn["']?)\s*:\s*["']([^"']+)["']/)?.[1] || "",
+      cookieName: cookieKey && cookiePrefix && !cookieKey.startsWith(cookiePrefix) ? `${cookiePrefix}${cookieKey}` : cookieKey
+    };
+  };
+  const SNATCH_OUTCOME = Object.freeze({
+    SUCCESS: "success",
+    NOT_READY: "not_ready",
+    EXHAUSTED: "exhausted",
+    DAILY_LIMIT: "daily_limit",
+    AUTH_FAILED: "auth_failed",
+    ALREADY_CLAIMED: "already_claimed",
+    UNKNOWN: "unknown"
+  });
+  const asNumber = (value, fallback = 0) => {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  };
+  const getRedBagKey = (bag, roomId = bag?.rid) => [
+    String(roomId || ""),
+    String(bag?.id || ""),
+    String(bag?.code || "")
+  ].join(":");
+  const normalizeRedBag = (bag, roomId) => ({
+    rid: String(roomId || bag?.rid || ""),
+    id: asNumber(bag?.id),
+    code: String(bag?.code || ""),
+    status: asNumber(bag?.status, -1),
+    waitSec: Math.max(0, asNumber(bag?.waitSec)),
+    createTime: asNumber(bag?.createTime),
+    rbType: asNumber(bag?.rbType),
+    prizeList: Array.isArray(bag?.prizeList) ? bag.prizeList : []
+  });
+  const summarizePrizePool = (prizeList) => (Array.isArray(prizeList) ? prizeList : []).reduce((summary, prize) => {
+    const amount = Math.max(0, asNumber(prize?.num));
+    const prizeType = asNumber(prize?.ptype ?? prize?.prizeType, -1);
+    if (prizeType === 9) summary.coins += amount;
+    if (prizeType === 2) summary.starlight += amount;
+    summary.total = summary.coins + summary.starlight;
+    return summary;
+  }, { coins: 0, starlight: 0, total: 0 });
+  const summarizeRedBagPrizePool = (bag) => summarizePrizePool(bag?.prizeList);
+  const compareRedBagPrizeValue = (left, right) => {
+    const leftPool = summarizeRedBagPrizePool(left);
+    const rightPool = summarizeRedBagPrizePool(right);
+    if (leftPool.total !== rightPool.total) return rightPool.total - leftPool.total;
+    if (leftPool.coins !== rightPool.coins) return rightPool.coins - leftPool.coins;
+    return rightPool.starlight - leftPool.starlight;
+  };
+  const selectActiveRedBag = ({
+    redBagList,
+    roomId,
+    completedKeys = new Set()
+  }) => {
+    const active = (Array.isArray(redBagList) ? redBagList : []).map((bag) => normalizeRedBag(bag, roomId)).filter((bag) => bag.id && bag.code && bag.status === 0).filter((bag) => !completedKeys.has(getRedBagKey(bag)));
+    active.sort((left, right) => {
+      const prizeOrder = compareRedBagPrizeValue(left, right);
+      if (prizeOrder !== 0) return prizeOrder;
+      if (left.waitSec !== right.waitSec) return left.waitSec - right.waitSec;
+      if (left.createTime !== right.createTime) return left.createTime - right.createTime;
+      return left.id - right.id;
+    });
+    return active[0] || null;
+  };
+  const createRedBagBinding = (bag, receivedAt = Date.now()) => {
+    const normalized = normalizeRedBag(bag, bag?.rid);
+    return {
+      key: getRedBagKey(normalized),
+      bag: normalized,
+      firstReceivedAt: receivedAt
+    };
+  };
+  const getSnatchAttemptOffsets = (waitSec) => {
+    const wait = Math.max(30, Math.round(asNumber(waitSec)));
+    const first = Math.round(wait * (wait >= 300 ? 2 / 3 : 1 / 2));
+    const nearEnd = Math.max(first + 10, wait - 20);
+    return [first, nearEnd, wait, wait + 20, wait + 50].map((seconds) => seconds * 1e3);
+  };
+  const classifySnatchResponse = (response) => {
+    const error = Number(response?.error);
+    const message = String(response?.msg || "");
+    if (error === 0) return SNATCH_OUTCOME.SUCCESS;
+    if (error === 12006) return SNATCH_OUTCOME.NOT_READY;
+    if (error === 12001 || /已派完|已抢完|已结束|已过期/.test(message)) {
+      return SNATCH_OUTCOME.EXHAUSTED;
+    }
+    if (error === -1 && /上限|次数/.test(message)) return SNATCH_OUTCOME.DAILY_LIMIT;
+    if (/登录|鉴权|csrf|token|凭证/i.test(message)) return SNATCH_OUTCOME.AUTH_FAILED;
+    if (/已领取|领取过|重复领取/.test(message)) return SNATCH_OUTCOME.ALREADY_CLAIMED;
+    return SNATCH_OUTCOME.UNKNOWN;
+  };
+  const countConsecutiveImmediate12001 = (events, now = Date.now()) => {
+    const bagKeys = new Set();
+    const cutoff = now - 30 * 60 * 1e3;
+    for (const event of Array.isArray(events) ? events : []) {
+      const timestamp = Number(event?.timestamp);
+      if (!Number.isFinite(timestamp) || timestamp < cutoff) break;
+      if (event?.phase !== "claim") continue;
+      if (event.result !== "exhausted" || Number(event.error) !== 12001 || Number(event.attemptCount) !== 1) break;
+      const bagKey = String(event.bagKey || `${event.roomId || ""}:${event.bagId || ""}`);
+      if (bagKey !== ":") bagKeys.add(bagKey);
+    }
+    return bagKeys.size;
+  };
+  const toDisplayPrizes = (prizeList) => (Array.isArray(prizeList) ? prizeList : []).filter((prize) => Number(prize?.num) > 0).map((prize) => ({
+    img: String(prize?.img || ""),
+    name: String(prize?.name || ""),
+    text: `×${Number(prize.num)}`
+  }));
   const ROOM_POOL_KEY = "douyu_qmx_room_pool";
   const ROOM_POOL_LOCK_KEY = "douyu_qmx_room_pool_lock";
+  const CSRF_CONFIG_KEY = "douyu_qmx_csrf_config";
+  const RED_BAG_ROOM_LIST_PATH = "/japi/livebiznc/web/anchorstardiscover/redbag/room/list";
+  const RED_BAG_SNATCH_PATH = "/japi/livebiznc/web/anchorstardiscover/redbag/snatch";
+  const CSRF_COOKIE_PATH = "/wgapi/livenc/liveweb/csrfApi/getCsrfCookie";
+  const mapWithConcurrency = async (items, concurrency, mapper) => {
+    const results = new Array(items.length);
+    let cursor = 0;
+    const workerCount = Math.min(items.length, Math.max(1, Number(concurrency) || 1));
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (cursor < items.length) {
+        const index = cursor;
+        cursor += 1;
+        results[index] = await mapper(items[index], index);
+      }
+    });
+    await Promise.all(workers);
+    return results;
+  };
+  const normalizeSquareCandidates = (items, limit) => {
+    const seenRoomIds = new Set();
+    const candidates = [];
+    for (const item of Array.isArray(items) ? items : []) {
+      const rid = String(item?.rid || "");
+      if (!/^\d+$/.test(rid) || seenRoomIds.has(rid)) continue;
+      seenRoomIds.add(rid);
+      candidates.push({
+        rid,
+        rbId: Number(item?.rbId) || 0,
+        rbType: Number(item?.rbType) || 0,
+        sourceIndex: candidates.length
+      });
+      if (candidates.length >= limit) break;
+    }
+    return candidates;
+  };
+  const createRequestError = (message, kind = "transport", details = {}) => Object.assign(
+    new Error(message),
+    { kind, ...details }
+  );
+  const readDocumentCookie = (pageWindow, cookieName) => {
+    const cookieText = String(pageWindow?.document?.cookie || "");
+    const item = cookieText.split(";").map((part) => part.trim()).find(
+      (part) => part.startsWith(`${cookieName}=`)
+    );
+    if (!item) return "";
+    const value = item.slice(cookieName.length + 1);
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return value;
+    }
+  };
+  const readEmbeddedCsrfConfig = (pageWindow) => {
+    const scripts = Array.from(pageWindow?.document?.scripts || []);
+    const source = scripts.map((script) => script.textContent || "").filter((text) => /(?:cookie_pre|["']?tvk["']?\s*:|["']?tn["']?\s*:)/.test(text)).join("\n");
+    return extractDouyuCsrfConfig(source);
+  };
+  const isCompleteCsrfConfig = (config) => Boolean(config?.fieldName && config?.cookieName);
   const DouyuAPI = {
+    getPageWindow() {
+      if (typeof _unsafeWindow !== "undefined" && _unsafeWindow?.fetch) return _unsafeWindow;
+      return window;
+    },
+    async pageFetchJson(path, options = {}) {
+      const pageWindow = this.getPageWindow();
+      const { timeout = 1e4, ...fetchOptions } = options;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await pageWindow.fetch.call(pageWindow, path, {
+          credentials: "include",
+          ...fetchOptions,
+          signal: controller.signal
+        });
+        const text = await response.text();
+        let payload;
+        try {
+          payload = JSON.parse(text);
+        } catch {
+          throw createRequestError("斗鱼接口返回了非 JSON 响应", "protocol", {
+            httpStatus: response.status
+          });
+        }
+        if (!response.ok) {
+          throw createRequestError(`斗鱼接口 HTTP ${response.status}`, "transport", {
+            httpStatus: response.status,
+            payload
+          });
+        }
+        return payload;
+      } catch (error) {
+        if (error?.kind) throw error;
+        const message = error?.name === "AbortError" ? "斗鱼接口请求超时" : String(error?.message || error);
+        throw createRequestError(message, "transport");
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    async pageFetchText(path, options = {}) {
+      const pageWindow = this.getPageWindow();
+      const { timeout = 15e3, ...fetchOptions } = options;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      try {
+        const response = await pageWindow.fetch.call(pageWindow, path, {
+          credentials: "include",
+          ...fetchOptions,
+          signal: controller.signal
+        });
+        const text = await response.text();
+        if (!response.ok) {
+          throw createRequestError(`斗鱼页面 HTTP ${response.status}`, "transport", {
+            httpStatus: response.status
+          });
+        }
+        return { text, url: response.url || String(path), status: response.status };
+      } catch (error) {
+        if (error?.kind) throw error;
+        const message = error?.name === "AbortError" ? "斗鱼页面请求超时" : String(error?.message || error);
+        throw createRequestError(message, "transport");
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    async resolveRoomIdentity(roomId) {
+      const inputRoomId = String(roomId || "").trim();
+      if (!/^\d+$/.test(inputRoomId)) {
+        throw createRequestError("控制室房间号必须是纯数字", "protocol");
+      }
+      const { text, url } = await this.pageFetchText(`/${inputRoomId}`, { method: "GET" });
+      const realRoomId = text.match(/window\.room_id\s*=\s*(\d+)/)?.[1] || "";
+      const canonicalTag = text.match(/<link\b[^>]*\brel=["'][^"']*canonical[^"']*["'][^>]*>/i)?.[0] || "";
+      const canonicalUrl = canonicalTag.match(/\bhref=["']([^"']+)/i)?.[1] || "";
+      const getPathRoomId = (value) => {
+        try {
+          return new URL(value, window.location.origin).pathname.match(/^\/(\d+)\/?$/)?.[1] || "";
+        } catch {
+          return "";
+        }
+      };
+      const controlRoomId = getPathRoomId(canonicalUrl) || getPathRoomId(url) || inputRoomId;
+      if (!realRoomId) {
+        throw createRequestError("未能从直播间页面解析真实 RID", "protocol");
+      }
+      return { controlRoomId, realRoomId };
+    },
+    async getDynamicCsrf() {
+      const pageWindow = this.getPageWindow();
+      const embedded = readEmbeddedCsrfConfig(pageWindow);
+      if (isCompleteCsrfConfig(embedded)) {
+        _GM_setValue(CSRF_CONFIG_KEY, embedded);
+      }
+      const config = isCompleteCsrfConfig(embedded) ? embedded : _GM_getValue(CSRF_CONFIG_KEY, {});
+      const fieldName = String(config?.fieldName || "");
+      const cookieName = String(config?.cookieName || "");
+      if (!fieldName || !cookieName) {
+        throw createRequestError("当前页及共享缓存中没有动态 CSRF 配置", "auth");
+      }
+      let token = readDocumentCookie(pageWindow, cookieName);
+      if (!token) {
+        await this.pageFetchJson(CSRF_COOKIE_PATH, { method: "GET" });
+        token = readDocumentCookie(pageWindow, cookieName);
+      }
+      if (!token) {
+        throw createRequestError("动态 CSRF Cookie 不可用", "auth");
+      }
+      return { fieldName, token };
+    },
+    cachePageCsrfConfig() {
+      const embedded = readEmbeddedCsrfConfig(this.getPageWindow());
+      if (!isCompleteCsrfConfig(embedded)) return false;
+      _GM_setValue(CSRF_CONFIG_KEY, embedded);
+      return true;
+    },
+    async getRoomRedBags(rid, options = {}) {
+      const payload = await this.pageFetchJson(
+        `${RED_BAG_ROOM_LIST_PATH}?rid=${encodeURIComponent(rid)}`,
+        { method: "GET", timeout: options.timeout }
+      );
+      if (Number(payload?.error) !== 0 || !Array.isArray(payload?.data?.redBagList)) {
+        throw createRequestError(
+          String(payload?.msg || "红包列表响应结构异常"),
+          "protocol",
+          { businessError: payload?.error }
+        );
+      }
+      return { ...payload.data, receivedAt: Date.now() };
+    },
+    async rankSquareCandidates(candidates) {
+      const probes = await mapWithConcurrency(
+        candidates,
+        SETTINGS.API_ROOM_PROBE_CONCURRENCY,
+        async (candidate) => {
+          try {
+            const roomData = await this.getRoomRedBags(candidate.rid, {
+              timeout: SETTINGS.API_ROOM_PROBE_TIMEOUT
+            });
+            const bag = selectActiveRedBag({
+              redBagList: roomData.redBagList,
+              roomId: candidate.rid
+            });
+            if (!bag) return { candidate, state: "stale", bag: null };
+            return { candidate, state: "ranked", bag };
+          } catch (error) {
+            return { candidate, state: "unverified", bag: null, error };
+          }
+        }
+      );
+      const ranked = probes.filter((probe) => probe.state === "ranked");
+      ranked.sort((left, right) => {
+        const prizeOrder = compareRedBagPrizeValue(left.bag, right.bag);
+        if (prizeOrder !== 0) return prizeOrder;
+        if (left.bag.waitSec !== right.bag.waitSec) return left.bag.waitSec - right.bag.waitSec;
+        return left.candidate.sourceIndex - right.candidate.sourceIndex;
+      });
+      const unverified = probes.filter((probe) => probe.state === "unverified");
+      const staleCount = probes.length - ranked.length - unverified.length;
+      Utils.log(
+        `[房间优选] 已探测 ${probes.length} 个候选：有效 ${ranked.length}，已失效 ${staleCount}，查询失败 ${unverified.length}。`
+      );
+      if (ranked[0]) {
+        const pool = summarizeRedBagPrizePool(ranked[0].bag);
+        Utils.log(
+          `[房间优选] 当前最高奖池房间 ${ranked[0].candidate.rid}：金币 ${pool.coins}，星光棒 ${pool.starlight}，总量 ${pool.total}，等待 ${ranked[0].bag.waitSec} 秒。`
+        );
+      }
+      return [...ranked, ...unverified].map((probe) => `https://www.douyu.com/${probe.candidate.rid}`);
+    },
+    async snatchRedBag({ rid, id, code }) {
+      if (!rid || !id || !code) {
+        throw createRequestError("红包身份参数不完整", "protocol");
+      }
+      const { fieldName, token } = await this.getDynamicCsrf();
+      const body = new URLSearchParams({
+        code: String(code),
+        id: String(id),
+        rid: String(rid),
+        [fieldName]: token
+      });
+      return this.pageFetchJson(RED_BAG_SNATCH_PATH, {
+        method: "POST",
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body: body.toString()
+      });
+    },
 getRoomPool() {
-      const pool = GM_getValue(ROOM_POOL_KEY, []);
+      const pool = _GM_getValue(ROOM_POOL_KEY, []);
       return Array.isArray(pool) ? pool : [];
     },
 setRoomPool(pool) {
-      GM_setValue(ROOM_POOL_KEY, Array.isArray(pool) ? pool : []);
+      _GM_setValue(ROOM_POOL_KEY, Array.isArray(pool) ? pool : []);
     },
 getRoomIdFromUrl(url) {
       if (!url || typeof url !== "string") return null;
       return url.match(/\/(\d+)/)?.[1] || null;
     },
 async acquireRoomPoolLock() {
-      while (GM_getValue(ROOM_POOL_LOCK_KEY, false)) {
+      while (_GM_getValue(ROOM_POOL_LOCK_KEY, false)) {
         await Utils.sleep(20);
       }
-      GM_setValue(ROOM_POOL_LOCK_KEY, true);
+      _GM_setValue(ROOM_POOL_LOCK_KEY, true);
     },
 releaseRoomPoolLock() {
-      GM_setValue(ROOM_POOL_LOCK_KEY, false);
+      _GM_setValue(ROOM_POOL_LOCK_KEY, false);
     },
 async getRoom(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
+      this.cachePageCsrfConfig();
       const consumeFromPool = () => {
         const uniquePool = Array.from(new Set(this.getRoomPool()));
         if (uniquePool.length === 0) {
@@ -947,9 +1093,17 @@ getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
             timeout: 1e4,
             onload: (response) => {
               if (response.status === 200 && response.response?.error === 0 && Array.isArray(response.response.data?.redBagList)) {
-                const rooms = response.response.data.redBagList.map((item) => item.rid).filter(Boolean).slice(0, count * 2).map((rid2) => `https://www.douyu.com/${rid2}`);
-                Utils.log(`API 成功返回 ${rooms.length} 个房间URL。`);
-                resolve(rooms);
+                const candidates = normalizeSquareCandidates(
+                  response.response.data.redBagList,
+                  count * 2
+                );
+                this.rankSquareCandidates(candidates).then((rooms) => {
+                  Utils.log(`API 成功返回并排序 ${rooms.length} 个房间URL。`);
+                  resolve(rooms);
+                }).catch((error) => {
+                  Utils.log(`候选房间奖池排序失败，保留 square/list 原顺序: ${error.message}`);
+                  resolve(candidates.map((item) => `https://www.douyu.com/${item.rid}`));
+                });
               } else {
                 const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || "未知错误"}`;
                 Utils.log(errorMsg);
@@ -978,228 +1132,50 @@ getRooms(count, rid, retries = SETTINGS.API_RETRY_COUNT) {
         attempt(retries);
       });
     },
-getCookie: function(cookieName) {
-      return new Promise((resolve, reject) => {
-        _GM_cookie.list({ name: cookieName }, function(cookies, error) {
-          if (error) {
-            Utils.log(error);
-            reject(error);
-          } else if (cookies && cookies.length > 0) {
-            resolve(cookies[0]);
-          } else {
-            resolve(null);
-          }
-        });
+async getCoinRecord(current, count, retries = SETTINGS.API_RETRY_COUNT) {
+      const query2 = new URLSearchParams({
+        current: String(Math.max(1, Number(current) || 1)),
+        pageSize: String(Math.min(100, Math.max(10, Number(count) || 20)))
       });
-    },
-getCoinRecord: function(current, count, rid, retries = SETTINGS.API_RETRY_COUNT) {
-      return new Promise((resolve, reject) => {
-        this.getCookie("acf_auth").then((acfCookie) => {
-          if (!acfCookie) {
-            Utils.log("获取cookie错误");
-            reject(new Error("获取cookie错误"));
-            return;
-          }
-          const fullUrl = `${SETTINGS.COIN_LIST_URL}?current=${current}&pageSize=${count}&rid=${rid}`;
-          const attempt = (remainingTries) => {
-            Utils.log(
-              `开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`
+      const requestUrl = `${SETTINGS.COIN_LIST_URL}?${query2.toString()}`;
+      const retryCount = Math.max(0, Number(retries) || 0);
+      for (let attempt = 0; attempt <= retryCount; attempt += 1) {
+        const remainingTries = retryCount - attempt;
+        Utils.log(`开始调用 API 获取金币历史列表... (剩余重试次数: ${remainingTries})`);
+        try {
+          const payload = await this.pageFetchJson(requestUrl, { method: "GET" });
+          const businessError = Number(payload?.error);
+          if (businessError !== 0) {
+            throw createRequestError(
+              String(payload?.msg || "金币记录接口返回失败"),
+              businessError === -9 ? "auth" : "business",
+              { businessError }
             );
-            _GM_xmlhttpRequest({
-              method: "GET",
-              url: fullUrl,
-              headers: {
-                Referer: "https://www.douyu.com/",
-                "User-Agent": navigator.userAgent
-              },
-              cookie: acfCookie["value"],
-              responseType: "json",
-              timeout: 1e4,
-              onload: (response) => {
-                if (response.status === 200 && response.response?.error === 0 && Array.isArray(response.response.data.list)) {
-                  const coinListData = response.response.data.list.filter(
-                    (item) => item.opDirection === 1 && item.remark.includes("红包")
-                  );
-                  Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
-                  resolve(coinListData);
-                } else {
-                  const errorMsg = `API 数据格式错误或失败: ${response.response?.msg || "未知错误"}`;
-                  Utils.log(errorMsg);
-                  if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                  else reject(new Error(errorMsg));
-                }
-              },
-              onerror: (error) => {
-                const errorMsg = `API 请求网络错误: ${error.statusText || "未知"}`;
-                Utils.log(errorMsg);
-                if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                else reject(new Error(errorMsg));
-              },
-              ontimeout: () => {
-                const errorMsg = "API 请求超时";
-                Utils.log(errorMsg);
-                if (remainingTries > 0) retry(remainingTries - 1, errorMsg);
-                else reject(new Error(errorMsg));
-              }
-            });
-          };
-          const retry = (remainingTries, reason) => {
-            Utils.log(`${reason}，将在 ${SETTINGS.API_RETRY_DELAY / 1e3} 秒后重试...`);
-            setTimeout(() => attempt(remainingTries), SETTINGS.API_RETRY_DELAY);
-          };
-          attempt(retries);
-        }).catch((error) => {
-          Utils.log(error);
-          reject(error);
-        });
-      });
+          }
+          if (!Array.isArray(payload?.data?.list)) {
+            throw createRequestError("金币记录响应结构异常", "protocol");
+          }
+          const coinListData = payload.data.list.filter(
+            (item) => Number(item?.opDirection) === 1 && String(item?.remark || "").includes("红包")
+          );
+          Utils.log(`API 成功返回 ${coinListData.length} 个红包记录。`);
+          return coinListData;
+        } catch (error) {
+          if (error?.kind !== "transport" || remainingTries === 0) throw error;
+          Utils.log(
+            `${error.message}，将在 ${SETTINGS.API_RETRY_DELAY / 1e3} 秒后重试...`
+          );
+          await Utils.sleep(SETTINGS.API_RETRY_DELAY);
+        }
+      }
+      return [];
     }
   };
-  let isGlobalClickListenerAdded = false;
-  function activateCustomSelects(parentElement) {
-    parentElement.querySelectorAll(".qmx-select").forEach((wrapper) => {
-      const nativeSelect = wrapper.querySelector("select");
-      const styledSelect = wrapper.querySelector(".qmx-select-styled");
-      const optionsList = wrapper.querySelector(".qmx-select-options");
-      styledSelect.textContent = nativeSelect.options[nativeSelect.selectedIndex].text;
-      optionsList.innerHTML = "";
-      for (const option of nativeSelect.options) {
-        const optionDiv = document.createElement("div");
-        optionDiv.textContent = option.text;
-        optionDiv.dataset.value = option.value;
-        if (option.selected) {
-          optionDiv.classList.add("selected");
-        }
-        optionsList.appendChild(optionDiv);
-      }
-      styledSelect.addEventListener("click", (e) => {
-        e.stopPropagation();
-        document.querySelectorAll(".qmx-select.active").forEach((el) => {
-          if (el !== wrapper) {
-            el.classList.remove("active");
-          }
-        });
-        wrapper.classList.toggle("active");
-      });
-      optionsList.querySelectorAll("div").forEach((optionDiv) => {
-        optionDiv.addEventListener("click", () => {
-          styledSelect.textContent = optionDiv.textContent;
-          nativeSelect.value = optionDiv.dataset.value;
-          optionsList.querySelector(".selected")?.classList.remove("selected");
-          optionDiv.classList.add("selected");
-          wrapper.classList.remove("active");
-        });
-      });
-    });
-    if (!isGlobalClickListenerAdded) {
-      document.addEventListener("click", () => {
-        document.querySelectorAll(".qmx-select.active").forEach((el) => {
-          el.classList.remove("active");
-        });
-      });
-      isGlobalClickListenerAdded = true;
-    }
-  }
-  function activateRangeSlider(parentElement) {
-    const wrapper = parentElement.querySelector(".qmx-range-slider-wrapper");
-    if (!wrapper) {
-      return;
-    }
-    const minSlider = wrapper.querySelector("#setting-min-delay");
-    const maxSlider = wrapper.querySelector("#setting-max-delay");
-    const sliderValues = wrapper.querySelector(".qmx-range-slider-values");
-    const progress = wrapper.querySelector(".qmx-range-slider-progress");
-    if (!minSlider || !maxSlider || !sliderValues || !progress) {
-      console.error("范围滑块组件缺少必要的子元素 (min/max slider, values, progress)。");
-      return;
-    }
-    function updateSliderView() {
-      if (parseFloat(minSlider.value) > parseFloat(maxSlider.value)) {
-        maxSlider.value = minSlider.value;
-      }
-      sliderValues.textContent = `${minSlider.value} s - ${maxSlider.value} s`;
-      const minPercent = (minSlider.value - minSlider.min) / (minSlider.max - minSlider.min) * 100;
-      const maxPercent = (maxSlider.value - maxSlider.min) / (maxSlider.max - minSlider.min) * 100;
-      progress.style.left = `${minPercent}%`;
-      progress.style.width = `${maxPercent - minPercent}%`;
-    }
-    minSlider.addEventListener("input", updateSliderView);
-    maxSlider.addEventListener("input", updateSliderView);
-    updateSliderView();
-  }
-  let tooltipElement = null;
-  function _ensureTooltipElement() {
-    if (!tooltipElement) {
-      tooltipElement = document.createElement("div");
-      tooltipElement.id = "qmx-global-tooltip";
-      document.body.appendChild(tooltipElement);
-    }
-  }
-  function activateToolTips(parentElement, tooltipData) {
-    if (!parentElement || typeof tooltipData !== "object") {
-      console.warn("[Tooltip] 调用失败：必须提供 parentElement 和 tooltipData。");
-      return;
-    }
-    _ensureTooltipElement();
-    parentElement.addEventListener("mouseover", (e) => {
-      const trigger = e.target.closest(".qmx-tooltip-icon");
-      if (!trigger) return;
-      const key = trigger.dataset.tooltipKey;
-      const text = tooltipData[key];
-      if (text) {
-        tooltipElement.textContent = text;
-        const triggerRect = trigger.getBoundingClientRect();
-        const left = triggerRect.left + triggerRect.width / 2;
-        const top = triggerRect.top;
-        tooltipElement.style.left = `${left}px`;
-        tooltipElement.style.top = `${top}px`;
-        tooltipElement.style.transform = `translate(-50%, calc(-100% - 8px))`;
-        tooltipElement.classList.add("visible");
-      }
-    });
-    parentElement.addEventListener("mouseout", (e) => {
-      const trigger = e.target.closest(".qmx-tooltip-icon");
-      if (trigger) {
-        tooltipElement.classList.remove("visible");
-      }
-    });
-  }
   const SettingsPanel = {
-
-RELOAD_REQUIRED_KEYS: [
-],
 show() {
       const modal = document.getElementById("qmx-settings-modal");
-      const allTooltips = {
-        "control-room": "只有在此房间号的直播间中才能看到插件面板，看准了再改！(修改后不会立即刷新，下次进入该房间生效)",
-        "temp-control-room": "备用的控制室房间号（真实RID），用于兼容特殊活动页或Topic页面。",
-        "auto-pause": "自动暂停非控制直播间的视频播放，大幅降低资源占用。",
-        "preload-mode": "开启后新标签页会直接切到前台；关闭后新标签页会在后台打开。",
-        "initial-script-delay": "页面加载后等待多久再运行脚本，可适当增加以确保页面完全加载。",
-        "auto-pause-delay": "领取红包后等待多久再次尝试暂停视频。",
-        "unresponsive-timeout": '工作页多久未汇报任何状态后，在面板上标记为"无响应"。',
-        "red-envelope-timeout": "进入直播间后，最长等待多久来寻找红包活动，超时后将切换房间。（默认15秒）",
-        "popup-wait-timeout": "点击红包后，等待领取弹窗出现的最长时间。注意：系统会在发现新红包时提前提取奖励信息。",
-        "worker-loading-timeout": "新开的直播间卡在加载状态多久还没显示播放组件，被判定为加载失败或缓慢。",
-        "range-delay": "脚本在每次点击等操作前后随机等待的时间范围，模拟真人行为。",
-        "close-tab-delay": "旧页面在打开新页面后，等待多久再关闭自己，确保新页面已接管。",
-        "open-tab-interval": "控制中心从开页队列中取出并打开新标签页的时间间隔。",
-        "switching-cleanup-timeout": "处于“切换中”状态的标签页，超过此时间后将被强行清理，避免残留。",
-        "max-worker-tabs": "同时运行的直播间数量上限。",
-        "api-room-fetch-count": "每次从API获取的房间数。增加可提高找到新房间的几率。",
-        "api-retry-count": "获取房间列表失败时的重试次数。",
-        "api-retry-delay": "API请求失败后，等待多久再重试。",
-        "healthcheck-interval": "哨兵检查后台UI的频率。值越小，UI节流越快，但会增加资源占用。",
-        "disconnected-grace-period": "刷新或关闭的标签页，在被彻底清理前等待重连的宽限时间。",
-        "calibration-mode": "启用校准模式可提高倒计时精准度。注意：启用此项前请先关闭DouyuEx的 阻止P2P上传 功能",
-        "stats-info": '此功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！ 在控制面板中显示统计信息标签页，记录每日领取的红包数量和金币总额。',
-        "stats-update-interval": "统计信息面板中数据更新的频率，值越小更新越及时，但会增加API使用次数。",
-        "danmupro-mode": "启用斗鱼弹幕助手功能，可以在弹幕输入框中使用自动弹幕推荐等功能。"
-      };
       modal.innerHTML = settingsPanelTemplate(SETTINGS);
-      activateToolTips(modal, allTooltips);
       activateCustomSelects(modal);
-      activateRangeSlider(modal);
       this.bindPanelEvents(modal);
       document.getElementById("qmx-modal-backdrop").classList.add("visible");
       modal.classList.add("visible");
@@ -1217,87 +1193,74 @@ hide() {
 getSettingsFromUI() {
       return {
 CONTROL_ROOM_ID: document.getElementById("setting-control-room-id").value,
-        TEMP_CONTROL_ROOM_RID: document.getElementById("setting-temp-control-room-id").value,
-        AUTO_PAUSE_ENABLED: document.getElementById("setting-auto-pause").checked,
-        PRELOAD_MODE_ENABLED: document.getElementById("setting-preload-mode").checked,
-...{ ENABLE_DANMU_PRO: document.getElementById("setting-danmupro-mode").checked },
+        ROOM_PREWARM_DURATION: Math.round(
+          Math.min(15, Math.max(0.5, Number(document.getElementById("setting-prewarm-duration").value) || 3)) * 1e3
+        ),
         DAILY_LIMIT_ACTION: document.getElementById("setting-daily-limit-action").value,
         MODAL_DISPLAY_MODE: document.getElementById("setting-modal-mode").value,
-        SHOW_STATS_IN_PANEL: document.getElementById("setting-stats-info").checked,
-        THEME: document.getElementById("setting-theme-mode").checked ? "dark" : "light",
-
-INITIAL_SCRIPT_DELAY: parseFloat(document.getElementById("setting-initial-script-delay").value) * 1e3,
-        AUTO_PAUSE_DELAY_AFTER_ACTION: parseFloat(document.getElementById("setting-auto-pause-delay").value) * 1e3,
-        SWITCHING_CLEANUP_TIMEOUT: parseFloat(document.getElementById("setting-switching-cleanup-timeout").value) * 1e3,
-        UNRESPONSIVE_TIMEOUT: parseInt(document.getElementById("setting-unresponsive-timeout").value, 10) * 6e4,
-        RED_ENVELOPE_LOAD_TIMEOUT: parseFloat(document.getElementById("setting-red-envelope-timeout").value) * 1e3,
-        POPUP_WAIT_TIMEOUT: parseFloat(document.getElementById("setting-popup-wait-timeout").value) * 1e3,
-        CALIBRATION_MODE_ENABLED: document.getElementById("setting-calibration-mode").checked,
-        ELEMENT_WAIT_TIMEOUT: parseFloat(document.getElementById("setting-worker-loading-timeout").value) * 1e3,
-        MIN_DELAY: parseFloat(document.getElementById("setting-min-delay").value) * 1e3,
-        MAX_DELAY: parseFloat(document.getElementById("setting-max-delay").value) * 1e3,
-        CLOSE_TAB_DELAY: parseFloat(document.getElementById("setting-close-tab-delay").value) * 1e3,
-        OPEN_TAB_INTERVAL: parseFloat(document.getElementById("setting-open-tab-interval").value) * 1e3,
-        HEALTHCHECK_INTERVAL: parseFloat(document.getElementById("setting-healthcheck-interval").value) * 1e3,
-        DISCONNECTED_GRACE_PERIOD: parseFloat(document.getElementById("setting-disconnected-grace-period").value) * 1e3,
-        STATS_UPDATE_INTERVAL: parseFloat(document.getElementById("setting-stats-update-interval").value) * 1e3,
-MAX_WORKER_TABS: parseInt(document.getElementById("setting-max-tabs").value, 10),
-        API_ROOM_FETCH_COUNT: parseInt(document.getElementById("setting-api-fetch-count").value, 10),
-        API_RETRY_COUNT: parseInt(document.getElementById("setting-api-retry-count").value, 10),
-        API_RETRY_DELAY: parseFloat(document.getElementById("setting-api-retry-delay").value) * 1e3
+...{}
       };
     },
 updateSaveButtonState() {
       const newSettings = this.getSettingsFromUI();
-      let needReload = false;
-      for (const key of Object.keys(newSettings)) {
-        if (SETTINGS[key] !== newSettings[key]) {
-          if (this.RELOAD_REQUIRED_KEYS.includes(key)) {
-            needReload = true;
-            break;
-          }
-        }
-      }
       const saveBtn = document.getElementById("qmx-settings-save-btn");
       if (saveBtn) {
-        if (saveBtn.textContent.includes("已保存")) return { newSettings, needReload };
-        if (needReload) {
-          saveBtn.textContent = "保存并刷新";
-        } else {
-          saveBtn.textContent = "保存";
+        saveBtn.textContent = "保存";
+        if (saveBtn.dataset.state !== "saving") {
+          delete saveBtn.dataset.state;
+          saveBtn.removeAttribute("title");
         }
       }
-      return { newSettings, needReload };
+      return { newSettings };
     },
-save() {
-      const { newSettings, needReload } = this.updateSaveButtonState();
-      const existingUserSettings = GM_getValue(SettingsManager.STORAGE_KEY, {});
-      const finalSettingsToSave = Object.assign(existingUserSettings, newSettings);
-      delete finalSettingsToSave.OPEN_TAB_DELAY;
-      SettingsManager.save(finalSettingsToSave);
-      if (needReload) {
-        window.location.reload();
-      } else {
-        SettingsManager.update(newSettings);
-        const saveBtn = document.getElementById("qmx-settings-save-btn");
-        if (saveBtn) {
-          const originalText = saveBtn.textContent;
-          saveBtn.textContent = "已保存~";
-          saveBtn.style.backgroundColor = "var(--status-color-success, #4CAF50)";
-          setTimeout(() => {
-            saveBtn.textContent = originalText;
-            saveBtn.style.backgroundColor = "";
-            this.hide();
-            this.updateSaveButtonState();
-          }, 600);
+async save() {
+      const { newSettings } = this.updateSaveButtonState();
+      const saveBtn = document.getElementById("qmx-settings-save-btn");
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.dataset.state = "saving";
+        saveBtn.title = "正在保存";
+      }
+      try {
+        const enteredRoomId = String(newSettings.CONTROL_ROOM_ID || "").trim();
+        const mappingIsCurrent = enteredRoomId === String(SETTINGS.CONTROL_ROOM_RESOLVED_FROM || "") && Boolean(SETTINGS.TEMP_CONTROL_ROOM_RID);
+        if (mappingIsCurrent) {
+          newSettings.TEMP_CONTROL_ROOM_RID = SETTINGS.TEMP_CONTROL_ROOM_RID;
+          newSettings.CONTROL_ROOM_RESOLVED_FROM = SETTINGS.CONTROL_ROOM_RESOLVED_FROM;
         } else {
-          this.hide();
+          const identity = await DouyuAPI.resolveRoomIdentity(enteredRoomId);
+          newSettings.CONTROL_ROOM_ID = identity.controlRoomId;
+          newSettings.TEMP_CONTROL_ROOM_RID = identity.realRoomId;
+          newSettings.CONTROL_ROOM_RESOLVED_FROM = identity.controlRoomId;
         }
+        SettingsManager.update(newSettings);
+      } catch (error) {
+        Utils.log(`[设置] 控制室房间号校验失败: ${String(error?.message || error)}`);
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.dataset.state = "error";
+          saveBtn.title = "控制室校验失败";
+          setTimeout(() => {
+            delete saveBtn.dataset.state;
+            saveBtn.removeAttribute("title");
+          }, 1400);
+        }
+        return;
+      }
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.dataset.state = "saved";
+        saveBtn.title = "已保存";
+        setTimeout(() => {
+          this.hide();
+        }, 600);
+      } else {
+        this.hide();
       }
     },
 bindPanelEvents(modal) {
       modal.querySelector("#qmx-settings-cancel-btn").onclick = () => this.hide();
-      modal.querySelector("#qmx-settings-save-btn").onclick = () => this.save();
+      modal.querySelector("#qmx-settings-save-btn").onclick = () => void this.save();
       modal.querySelector("#qmx-settings-reset-btn").onclick = () => {
         if (confirm("确定要恢复所有默认设置吗？此操作会刷新页面。")) {
           SettingsManager.reset();
@@ -1324,46 +1287,37 @@ bindPanelEvents(modal) {
           modal.querySelector(`#tab-${tabId}`).classList.add("active");
         };
       });
-      const themeToggle = modal.querySelector("#setting-theme-mode");
-      if (themeToggle) {
-        themeToggle.addEventListener("change", (e) => {
-          const newTheme = e.target.checked ? "dark" : "light";
-          ThemeManager.applyTheme(newTheme);
-          this.updateSaveButtonState();
-        });
-      }
     }
-
-};
+  };
   const FirstTimeNotice = {
-showCalibrationNotice() {
-      const NOTICE_SHOWN_KEY = "douyu_qmx_calibration_notice_shown";
-      const hasShownNotice = GM_getValue(NOTICE_SHOWN_KEY, false);
+showFirstUseNotice() {
+      const NOTICE_SHOWN_KEY = "douyu_qmx_first_use_notice_v2_1_shown";
+      const hasShownNotice = _GM_getValue(NOTICE_SHOWN_KEY, false);
       if (!hasShownNotice) {
         const noticeHTML = `
                 <div class="qmx-modal-header">
-                    <h3>⚠️ 重要更新提示</h3>
+                    <h3>使用说明</h3>
                     <button id="qmx-notice-close-btn" class="qmx-modal-close-icon" title="关闭"></button>
                 </div>
                 <div class="qmx-modal-content">
-                    <h4 style="color: var(--accent-color, #ff6b6b); margin-top: 0;">斗鱼网页UI更新说明</h4>
-                    <p>斗鱼已更新直播间界面，脚本正在适配中。目前基本功能可用，但请注意：</p>
+                    <h4 style="color: var(--status-color-error, #f44336); margin-top: 0;">账号风险提示</h4>
+                    <p><strong>自动领取很可能触发斗鱼活动风控，即使领取数量不多也可能被限制。</strong>风控提示只负责提醒，不会自动停止领取。</p>
+
+                    <h4 style="color: var(--status-color-success, #4CAF50); margin-top: 0;">星推荐领取方式</h4>
+                    <p>领取任务由控制页统一执行，工作直播间只用于获取必要信息，不需要持续保留：</p>
                     <ul style="margin: 10px 0; padding-left: 20px;">
-                        <li><strong>控制面板"替换排行榜"模式暂不可用</strong>，请使用"浮动窗口"或"屏幕居中"模式</li>
-                        <li><strong>刚开始打开的几个工作标签页</strong>可能需要手动切换激活一下才能正常加载</li>
-                        <li><strong>弹幕助手功能</strong>正在适配中，暂时可能无法使用</li>
+                        <li>脚本会在后台短暂打开候选直播间，完成初始化后自动关闭</li>
+                        <li>控制页根据红包等待时长安排最多 5 次领取请求</li>
+                        <li>红包是否可领以斗鱼接口响应为准，不依赖页面倒计时和模拟点击</li>
                     </ul>
-                    
-                    <h4 style="color: var(--accent-color, #ff6b6b);">⚠️使用前必读</h4>
+
+                    <h4 style="color: var(--accent-color, #ff6b6b);">使用前确认</h4>
                     <ul style="margin: 10px 0; padding-left: 20px;">
-                        <li><strong>斗鱼Ex插件冲突</strong>：如需使用本脚本抢红包，请暂时关闭斗鱼Ex插件，否则红包会消失。后续会尝试沟通解决此问题</li>
-                        <li><strong>浏览器DNS设置</strong>：请在浏览器设置中搜索"DNS"，将"使用安全的DNS"选项关闭，否则红包也会消失</li>
+                        <li>请保持控制室页面登录斗鱼账号</li>
+                        <li>如出现鉴权失败，请先检查登录状态和油猴脚本权限</li>
+                        <li>控制室房间号可在设置中修改，真实 RID 会自动关联，不需要手动填写</li>
                     </ul>
-                    
-                    <h4 style="color: var(--status-color-success, #4CAF50);">✨ 新增功能</h4>
-                    <p>控制面板现在会显示每个红包的具体奖励信息🎁</p>
-                    <p>启用统计功能需要把"油猴管理面板->设置->安全->允许脚本访问 Cookie"改为ALL！！</p>
-                    
+
                     <h4 style="margin-bottom: 5px;">⭐️点点star吧~</h4>
                     <p style="margin-top: 5px;">项目地址：<a href="https://github.com/ienone/douyu-qmx-pro" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color, #ff6b6b);">douyu-qmx-pro</a>，觉得好用请给个star🌟~~</p>
                 </div>
@@ -1388,7 +1342,7 @@ showCalibrationNotice() {
             noticeContainer.remove();
             backdrop.remove();
           }, 300);
-          GM_setValue(NOTICE_SHOWN_KEY, true);
+          _GM_setValue(NOTICE_SHOWN_KEY, true);
         };
         document.getElementById("qmx-notice-close-btn").onclick = closeNotice;
         document.getElementById("qmx-notice-ok-btn").onclick = closeNotice;
@@ -1399,5195 +1353,876 @@ showCalibrationNotice() {
       }
     }
   };
-  const typedSettings = SETTINGS;
-  const globalValue = {
-    currentDatePage: Utils.formatDateAsBeijing( new Date()),
-updateIntervalID: void 0,
-    statElements: new Map()
+  const STORAGE_KEY = "douyu_qmx_claim_events_v1";
+  const LOCK_KEY = "douyu_qmx_claim_events_lock";
+  const MAX_EVENTS = 2e3;
+  const RETENTION_MS = 30 * 24 * 60 * 60 * 1e3;
+  const readEvents = () => {
+    const value = _GM_getValue(STORAGE_KEY, []);
+    return Array.isArray(value) ? value : [];
+  };
+  const prune = (events, now = Date.now()) => events.filter((event) => Number(event.timestamp) >= now - RETENTION_MS).sort((a, b) => Number(b.timestamp) - Number(a.timestamp)).slice(0, MAX_EVENTS);
+  const getAttemptKey = (event) => {
+    if (event.bagKey) return String(event.bagKey);
+    if (event.bagId !== void 0 && event.bagId !== null && event.bagId !== "") {
+      return `${String(event.roomId || "unknown")}:${String(event.bagId)}`;
+    }
+    return String(event.id || `legacy-${event.timestamp}-${Math.random()}`);
+  };
+  const ClaimEventStore = {
+    record(event) {
+      const payload = {
+        id: `claim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        timestamp: Date.now(),
+        result: "unknown",
+        ...event
+      };
+      const commit = () => {
+        if (_GM_getValue(LOCK_KEY, false)) {
+          setTimeout(commit, 40);
+          return;
+        }
+        _GM_setValue(LOCK_KEY, true);
+        try {
+          _GM_setValue(STORAGE_KEY, prune([payload, ...readEvents()]));
+        } finally {
+          _GM_setValue(LOCK_KEY, false);
+        }
+        window.dispatchEvent(new CustomEvent("qmx-claim-event", { detail: payload }));
+      };
+      commit();
+      return payload;
+    },
+    list({ days = 30 } = {}) {
+      const threshold = Date.now() - Math.max(1, days) * 24 * 60 * 60 * 1e3;
+      return prune(readEvents()).filter((event) => Number(event.timestamp) >= threshold);
+    },
+    summarize({ days = 7 } = {}) {
+      const events = this.list({ days });
+      const attemptMap = events.filter((event) => event.phase === "claim").reduce((map, event) => {
+        const key = getAttemptKey(event);
+        const attempt = map.get(key) || { key, events: [] };
+        attempt.events.push(event);
+        map.set(key, attempt);
+        return map;
+      }, new Map());
+      const attemptList = Array.from(attemptMap.values());
+      const successfulAttempts = attemptList.filter(
+        (attempt) => attempt.events.some((event) => event.result === "success")
+      );
+      const success = successfulAttempts.length;
+      const attempts = attemptList.length;
+      const byResult = events.reduce((acc, event) => {
+        acc[event.result] = (acc[event.result] || 0) + 1;
+        return acc;
+      }, {});
+      const successBySource = successfulAttempts.reduce((acc, attempt) => {
+        const successEvent = attempt.events.find((event) => event.result === "success");
+        const source = String(successEvent?.source || "legacy");
+        acc[source] = (acc[source] || 0) + 1;
+        return acc;
+      }, {});
+      return {
+        events,
+        success,
+        attempts,
+        successRate: attempts ? Math.round(success / attempts * 100) : 0,
+        byResult,
+        successBySource
+      };
+    }
+  };
+  const runtimeSettings = SETTINGS;
+  const getErrorMessage = (error) => error instanceof Error ? error.message : String(error);
+  const RESULT_META = {
+    success: { label: "领取成功", tone: "success" },
+    empty_or_failed: { label: "空包或失败", tone: "warning" },
+    open_failed: { label: "打开失败", tone: "error" },
+    exhausted: { label: "红包已派完", tone: "idle" },
+    already_claimed: { label: "已经领取", tone: "idle" },
+    auth_failed: { label: "鉴权失败", tone: "error" },
+    daily_limit: { label: "达到上限", tone: "idle" },
+    risk_suspected: { label: "疑似风控", tone: "error" },
+    unknown: { label: "其他", tone: "idle" }
+  };
+  const EXCEPTION_LOG_RESULTS = new Set([
+    "empty_or_failed",
+    "open_failed",
+    "auth_failed",
+    "risk_suspected",
+    "unknown"
+  ]);
+  const state = {
+    initialized: false,
+    days: 7,
+    period: "daily",
+    logMode: "all",
+    claimHandler: null,
+    visibilityHandler: null,
+    remoteRefreshPromise: null,
+    postClaimRefreshTimer: null
+  };
+  const escapeHtml = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+  const getRewardHistory = () => {
+    const history = _GM_getValue(runtimeSettings.STATS_INFO_STORAGE_KEY, {});
+    return history && typeof history === "object" ? history : {};
+  };
+  const formatTime = (timestamp) => new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).format(new Date(timestamp));
+  const formatNumber = (value) => new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 0
+  }).format(Number(value) || 0);
+  const getEventDate = (event) => Utils.formatDateAsBeijing(new Date(event.timestamp));
+  const getDateRange = (days) => Array.from({ length: days }, (_, index) => {
+    const date = new Date(Date.now() - (days - index - 1) * 864e5);
+    return Utils.formatDateAsBeijing(date);
+  });
+  const getSuccessfulClaimCount = (events) => {
+    const keys = new Set();
+    events.filter((event) => event.result === "success").forEach((event) => {
+      const key = event.bagKey || (event.bagId !== void 0 ? `${event.roomId || "unknown"}:${event.bagId}` : event.id || `legacy:${event.timestamp}`);
+      keys.add(String(key));
+    });
+    return keys.size;
+  };
+  const getRewardTotals = (events) => events.reduce((totals, event) => {
+    if (event.result !== "success" || !event.rewards) return totals;
+    const coins = Number(event.rewards.coins);
+    const starlight = Number(event.rewards.starlight);
+    if (Number.isFinite(coins)) totals.coins += coins;
+    if (Number.isFinite(starlight)) totals.starlight += starlight;
+    totals.coveredClaims += 1;
+    return totals;
+  }, { coins: 0, starlight: 0, coveredClaims: 0 });
+  const getRewardText = (event) => {
+    const coins = Number(event.rewards?.coins) || 0;
+    const starlight = Number(event.rewards?.starlight) || 0;
+    const parts = [
+      coins > 0 ? `金币 ${formatNumber(coins)}` : "",
+      starlight > 0 ? `星光棒 ${formatNumber(starlight)}` : ""
+    ].filter(Boolean);
+    if (parts.length) return parts.join(" · ");
+    if (event.rewardText) return event.rewardText;
+    return "未记录奖励详情";
   };
   const StatsInfo = {
-    init: async function() {
-      let stats;
-      try {
-        stats = await Utils.getElementWithRetry(".qmx-stats-content");
-      } catch (error) {
-        Utils.log(`[数据统计] 初始化失败，错误: ${error}`);
-        return;
-      }
-      const statsConfigs = [
-        ["receivedCount", "已领个数"],
-        ["total", "总金币"],
-        ["avg", "平均每个"]
-      ];
-      for (const [name, nickname] of statsConfigs) {
-        const element = this.initRender(name, nickname);
-        stats.appendChild(element);
-        try {
-          const details = await Utils.getElementWithRetry(".qmx-stat-details", element);
-          if (details) {
-            globalValue.statElements.set(
-              name,
-              details
-            );
-          }
-        } catch (error) {
-          Utils.log(`[数据统计] 缓存元素获取失败: ${error}`);
-        }
-      }
-      GM_setValue("douyu_qmx_stats_lock", false);
-      this.ensureTodayDataExists();
-      this.updateTodayData();
-      await this.getCoinListUpdate();
-      this.removeExpiredData();
+    init() {
+      if (state.initialized || !document.getElementById("qmx-stats-page")) return;
+      state.initialized = true;
       this.bindEvents();
-      this.updateInterval();
-      setInterval(() => {
-        this.updateDataForDailyReset();
-      }, 60 * 1e3);
+      this.removeExpiredData();
+      this.refresh();
     },
-updateInterval: function() {
-      if (globalValue.updateIntervalID) {
-        clearInterval(globalValue.updateIntervalID);
-        globalValue.updateIntervalID = void 0;
-      }
-      globalValue.updateIntervalID = setInterval(() => {
-        this.checkUpdate();
-      }, typedSettings.STATS_UPDATE_INTERVAL);
-    },
-destroy: function() {
-      if (globalValue.updateIntervalID) {
-        clearInterval(globalValue.updateIntervalID);
-        globalValue.updateIntervalID = void 0;
-      }
-      globalValue.statElements.clear();
-    },
-ensureTodayDataExists: function() {
-      const today = Utils.formatDateAsBeijing( new Date());
-      let allData = GM_getValue(typedSettings.STATS_INFO_STORAGE_KEY, null);
-      if (!allData || typeof allData !== "object") {
-        allData = {};
-      }
-      if (!allData[today]) {
-        allData[today] = {
-          receivedCount: 0,
-          avg: 0,
-          total: 0
+    bindEvents() {
+      document.querySelectorAll(".qmx-stats-range [data-period]").forEach((button) => {
+        button.onclick = () => {
+          state.period = button.dataset.period === "weekly" ? "weekly" : "daily";
+          state.days = state.period === "weekly" ? 28 : 7;
+          document.querySelectorAll(".qmx-stats-range [data-period]").forEach((item) => {
+            item.classList.toggle("active", item === button);
+          });
+          this.refresh();
         };
-        GM_setValue(typedSettings.STATS_INFO_STORAGE_KEY, allData);
-      }
-      return { allData, todayData: allData[today], today };
-    },
-bindEvents: function() {
-      try {
-        this.bindRefreshEvent();
-        this.bindSwitcherLeft();
-        this.bindSwitcherRight();
-      } catch (e) {
-        Utils.log(`[数据统计] 绑定事件异常: ${e}`);
-        setTimeout(() => {
-          this.bindEvents();
-        }, 500);
-      }
-    },
-bindRefreshEvent: function() {
+      });
+      document.querySelectorAll(".qmx-stats-log-range [data-log-mode]").forEach((button) => {
+        button.onclick = () => {
+          state.logMode = button.dataset.logMode === "exceptions" ? "exceptions" : "all";
+          document.querySelectorAll(".qmx-stats-log-range [data-log-mode]").forEach((item) => {
+            item.classList.toggle("active", item === button);
+          });
+          this.refresh();
+        };
+      });
       const refreshButton = document.querySelector(".qmx-stats-refresh");
-      const today = Utils.formatDateAsBeijing( new Date());
-      if (!refreshButton) {
-        throw new Error("无法找到刷新按钮元素");
-      }
-      if (globalValue.currentDatePage !== today) {
-        refreshButton.classList.add("disabled");
-        refreshButton.onclick = null;
-        return;
-      }
-      setTimeout(() => {
-        refreshButton.classList.remove("disabled");
-      }, 300);
-      refreshButton.onclick = async (e) => {
-        e.stopPropagation();
-        void refreshButton.offsetWidth;
-        refreshButton.classList.add("rotating");
-        setTimeout(() => {
+      if (refreshButton) {
+        refreshButton.onclick = async () => {
           refreshButton.classList.remove("rotating");
-        }, 1e3);
+          void refreshButton.offsetWidth;
+          refreshButton.classList.add("rotating");
+          await this.refreshFromSources();
+          window.setTimeout(() => refreshButton.classList.remove("rotating"), 900);
+        };
+      }
+      state.claimHandler = ((event) => {
+        this.refresh();
+        const claimEvent = event.detail;
+        if (claimEvent?.result !== "success") return;
+        if (state.postClaimRefreshTimer) window.clearTimeout(state.postClaimRefreshTimer);
+        state.postClaimRefreshTimer = window.setTimeout(() => {
+          state.postClaimRefreshTimer = null;
+          void this.refreshFromSources();
+        }, 2e3);
+      });
+      state.visibilityHandler = (() => {
+        if (document.visibilityState === "visible") this.refresh();
+      });
+      window.addEventListener("qmx-claim-event", state.claimHandler);
+      document.addEventListener("visibilitychange", state.visibilityHandler);
+    },
+    destroy() {
+      if (state.claimHandler) window.removeEventListener("qmx-claim-event", state.claimHandler);
+      if (state.visibilityHandler) document.removeEventListener("visibilitychange", state.visibilityHandler);
+      state.claimHandler = null;
+      state.visibilityHandler = null;
+      state.remoteRefreshPromise = null;
+      if (state.postClaimRefreshTimer) window.clearTimeout(state.postClaimRefreshTimer);
+      state.postClaimRefreshTimer = null;
+      state.initialized = false;
+    },
+    async refreshFromSources() {
+      if (!state.initialized) return;
+      if (state.remoteRefreshPromise) return state.remoteRefreshPromise;
+      state.remoteRefreshPromise = (async () => {
         await this.getCoinListUpdate();
-      };
+        this.refresh();
+      })().finally(() => {
+        state.remoteRefreshPromise = null;
+      });
+      return state.remoteRefreshPromise;
     },
-bindSwitcher: function(direction) {
-      const { allData, today } = this.ensureTodayDataExists();
-      globalValue.currentDatePage = globalValue.currentDatePage ?? today;
-      const dateList = Object.keys(allData);
-      const currentIndex = dateList.indexOf(globalValue.currentDatePage);
-      const statsLable = document.querySelector(".qmx-stats-label");
-      const indecator = document.querySelector(".qmx-stats-indicator");
-      const button = document.querySelector(`#qmx-stats-${direction}`);
-      if (!statsLable || !indecator || !button) {
-        Utils.log("[数据统计] 切换按钮绑定失败，正在重试");
-        setTimeout(() => {
-          this.bindSwitcher(direction);
-        }, 500);
+    async getCoinListUpdate() {
+      try {
+        const coinList = await DouyuAPI.getCoinRecord(1, 100, 3);
+        if (!Array.isArray(coinList)) return;
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const todayRecords = coinList.filter((item) => Number(item.createTime) > startOfToday.getTime() / 1e3);
+        const total = todayRecords.reduce((sum, item) => sum + (Number(item.balanceDiff) || 0), 0);
+        const today = Utils.formatDateAsBeijing( new Date());
+        const history = getRewardHistory();
+        history[today] = {
+          receivedCount: todayRecords.length,
+          total,
+          avg: todayRecords.length ? Number((total / todayRecords.length).toFixed(2)) : 0
+        };
+        _GM_setValue(runtimeSettings.STATS_INFO_STORAGE_KEY, history);
+      } catch (error) {
+        Utils.log(`[数据统计] 金币记录刷新失败: ${getErrorMessage(error)}`);
+      }
+    },
+    refresh() {
+      if (!state.initialized) return;
+      const summary = ClaimEventStore.summarize({ days: state.days });
+      const history = getRewardHistory();
+      this.renderSummary(summary, history);
+      this.renderTrend(summary.events, history);
+      this.renderLogs(summary.events);
+    },
+    renderSummary(summary, history) {
+      const container = document.getElementById("qmx-stats-summary");
+      if (!container) return;
+      const today = Utils.formatDateAsBeijing( new Date());
+      const todayEvents = summary.events.filter((event) => getEventDate(event) === today);
+      const localRewards = getRewardTotals(todayEvents);
+      const accountReward = history[today] || { receivedCount: 0, total: 0 };
+      const todayClaims = Math.max(getSuccessfulClaimCount(todayEvents), accountReward.receivedCount);
+      const cards = [
+        { value: todayClaims, label: "今日领取", tone: "success" },
+        { value: formatNumber(Math.max(accountReward.total, localRewards.coins)), label: "今日金币", tone: "coin" },
+        { value: formatNumber(localRewards.starlight), label: "今日星光棒", tone: "starlight" },
+        {
+          value: `${summary.successRate}%`,
+          label: state.period === "weekly" ? "4周成功率" : "7天成功率",
+          tone: summary.successRate >= 60 ? "success" : "warning"
+        }
+      ];
+      container.innerHTML = cards.map((card) => `
+            <div class="qmx-stat-card" data-tone="${card.tone}">
+                <strong>${escapeHtml(card.value)}</strong>
+                <span>${escapeHtml(card.label)}</span>
+            </div>
+        `).join("");
+    },
+    renderTrend(events, history) {
+      const container = document.getElementById("qmx-stats-trend");
+      if (!container) return;
+      const dates = getDateRange(state.days);
+      const dateGroups = state.period === "weekly" ? Array.from({ length: 4 }, (_, index) => dates.slice(index * 7, index * 7 + 7)) : dates.map((date) => [date]);
+      const values = dateGroups.map((group) => {
+        const dateSet = new Set(group);
+        const rewards = getRewardTotals(events.filter((event) => dateSet.has(getEventDate(event))));
+        const accountCoins = group.reduce((sum, date) => sum + (Number(history[date]?.total) || 0), 0);
+        return {
+          coins: Math.max(accountCoins, rewards.coins),
+          starlight: rewards.starlight
+        };
+      });
+      const max = Math.max(1, ...values.flatMap((reward) => [reward.coins, reward.starlight]));
+      const getHeight = (value) => value > 0 ? Math.max(4, Math.round(value / max * 72)) : 0;
+      container.classList.toggle("is-weekly", state.period === "weekly");
+      container.innerHTML = dateGroups.map((group, index) => {
+        const reward = values[index];
+        const firstDate = group[0];
+        const lastDate = group[group.length - 1];
+        const label = state.period === "weekly" ? `${firstDate.slice(5).replace("-", "/")}–${lastDate.slice(5).replace("-", "/")}` : firstDate.slice(5);
+        const title = state.period === "weekly" ? `${firstDate} 至 ${lastDate}` : firstDate;
+        return `
+            <div class="qmx-trend-column has-label"
+                 title="${title}：金币 ${reward.coins}，星光棒 ${reward.starlight}">
+                <span class="qmx-trend-values">
+                    <b data-reward="coin">${formatNumber(reward.coins)}</b>
+                    <b data-reward="starlight">${formatNumber(reward.starlight)}</b>
+                </span>
+                <span class="qmx-trend-bars">
+                    <i data-reward="coin" style="height:${getHeight(reward.coins)}px"></i>
+                    <i data-reward="starlight" style="height:${getHeight(reward.starlight)}px"></i>
+                </span>
+                <small>${label}</small>
+            </div>
+        `;
+      }).join("");
+    },
+    renderLogs(events) {
+      const container = document.getElementById("qmx-stats-timeline");
+      const details = document.getElementById("qmx-stats-diagnostics");
+      const count = document.getElementById("qmx-stats-diagnostic-count");
+      const label = document.getElementById("qmx-stats-log-label");
+      if (!container || !details || !count || !label) return;
+      const claimEvents = events.filter((event) => event.phase === "claim");
+      const logs = state.logMode === "exceptions" ? claimEvents.filter((event) => EXCEPTION_LOG_RESULTS.has(event.result)) : claimEvents;
+      const hasExceptions = logs.some((event) => EXCEPTION_LOG_RESULTS.has(event.result));
+      details.dataset.tone = hasExceptions ? "warning" : "stable";
+      label.textContent = state.logMode === "exceptions" ? "异常记录" : "领取记录";
+      count.textContent = String(logs.length);
+      if (logs.length === 0) {
+        container.innerHTML = '<div class="qmx-stats-empty"><i></i></div>';
         return;
       }
-      const shouldDisableButton = direction === "left" ? dateList.length <= 1 || currentIndex - 1 < 0 : dateList.length <= 1 || currentIndex + 1 >= dateList.length;
-      if (shouldDisableButton) {
-        button.classList.add("disabled");
-        button.onclick = null;
-        return;
-      }
-      button.classList.remove("disabled");
-      button.onclick = (e) => {
-        e.stopPropagation();
-        const newIndex = direction === "left" ? currentIndex - 1 : currentIndex + 1;
-        if (newIndex >= 0 && newIndex < dateList.length) {
-          globalValue.currentDatePage = dateList[newIndex];
-          this.refreshUI(allData[globalValue.currentDatePage]);
-          this.bindEvents();
-        }
-        this.itemTransiton(indecator);
-        if (globalValue.currentDatePage !== today) {
-          this.contentTransition(statsLable, globalValue.currentDatePage);
-        } else {
-          this.contentTransition(statsLable, "今日统计");
-        }
-        if (globalValue.currentDatePage === today) {
-          this.updateInterval();
-          this.getCoinListUpdate();
-        } else {
-          clearInterval(globalValue.updateIntervalID);
-          globalValue.updateIntervalID = void 0;
-        }
-      };
-    },
-bindSwitcherLeft: function() {
-      this.bindSwitcher("left");
-    },
-bindSwitcherRight: function() {
-      this.bindSwitcher("right");
-    },
-contentTransition: function(element, newText, duration = 300) {
-      element.classList.add("transitioning");
-      setTimeout(() => {
-        element.textContent = newText;
-        element.classList.remove("transitioning");
-      }, duration);
-    },
-itemTransiton: function(element, duration = 300) {
-      element.classList.add("transitioning");
-      setTimeout(() => {
-        element.classList.remove("transitioning");
-      }, duration);
-    },
-initRender: function(name, nickname) {
-      const newItem = document.createElement("div");
-      newItem.className = "qmx-modal-stats-child";
-      const className = "qmx-stat-info-" + name;
-      newItem.innerHTML = `
-                <div class=${className}>
-                    <div class="qmx-stat-header">
-                        <span class="qmx-stat-nickname">${nickname}</span>
-                    </div>
-                    <div class="qmx-stat-details">
-                        <span class="qmx-stat-item">0</span>
-                    </div>
+      container.innerHTML = logs.slice(0, 12).map((event) => {
+        const meta = RESULT_META[event.result] || RESULT_META.unknown;
+        const roomLabel = event.roomName ? `${event.roomName}${event.roomId ? ` · ${event.roomId}` : ""}` : event.roomId ? `房间 ${event.roomId}` : "未知直播间";
+        const context = event.result === "success" ? getRewardText(event) : event.reason || meta.label;
+        return `
+                <div class="qmx-timeline-row" data-tone="${meta.tone}">
+                    <i></i>
+                    <time datetime="${new Date(event.timestamp).toISOString()}">${formatTime(event.timestamp)}</time>
+                    <span>
+                        <b title="${escapeHtml(roomLabel)}">${escapeHtml(roomLabel)}</b>
+                        <small title="${escapeHtml(context)}">${escapeHtml(context)}</small>
+                    </span>
+                    <em>${escapeHtml(meta.label)}</em>
                 </div>
             `;
-      return newItem;
+      }).join("");
     },
-updateTodayData: function() {
-      const { allData, todayData } = this.ensureTodayDataExists();
-      if (!todayData) return;
-      todayData.avg = todayData.receivedCount ? parseFloat((todayData.total / todayData.receivedCount).toFixed(2)) : 0;
-      if (!Utils.lockChecker("douyu_qmx_stats_lock", this.updateTodayData.bind(this))) return;
-      Utils.setLocalValueWithLock(
-        "douyu_qmx_stats_lock",
-        typedSettings.STATS_INFO_STORAGE_KEY,
-        allData,
-        "更新今日统计数据"
-      );
-      this.refreshUI(todayData);
-    },
-set: function(name, value) {
-      const { allData, todayData } = this.ensureTodayDataExists();
-      if (!todayData) return;
-      todayData[name] = value;
-      if (!Utils.lockChecker("douyu_qmx_stats_lock", this.set.bind(this), name, value)) return;
-      Utils.setLocalValueWithLock(
-        "douyu_qmx_stats_lock",
-        typedSettings.STATS_INFO_STORAGE_KEY,
-        allData,
-        "更新统计数据"
-      );
-      this.refreshUI(todayData);
-    },
-getCoinListUpdate: async function() {
-      const currentRoomId = Utils.getCurrentRoomId();
-      if (!currentRoomId) {
-        Utils.log("[统计] 无法获取当前房间ID，跳过金币记录更新。");
-        return;
-      }
-      const coinList = await DouyuAPI.getCoinRecord(1, 100, currentRoomId, 3);
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const filteredData = coinList.filter(
-        (item) => item.createTime > startOfToday.getTime() / 1e3
-      );
-      const totalCoin = filteredData.reduce((sum, item) => sum + item.balanceDiff, 0);
-      const updateList = [
-        ["receivedCount", filteredData.length],
-        ["total", totalCoin]
-      ];
-      updateList.forEach(([name, value]) => {
-        this.set(name, value);
-      });
-      this.updateTodayData();
-    },
-refreshUI: function(todayData) {
-      for (const key in todayData) {
-        try {
-          const typedKey = key;
-          const element = globalValue.statElements.get(typedKey);
-          if (!element) continue;
-          this.contentTransition(element, todayData[typedKey].toString());
-        } catch (e) {
-          Utils.log(`[StatsInfo] UI刷新异常: ${e}`);
-          continue;
-        }
-      }
-    },
-removeExpiredData: function() {
-      const allData = this.ensureTodayDataExists().allData;
-      const newAllData = Object.keys(allData).filter((dateString) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const date = new Date(dateString);
-        const diff = today.getTime() - date.getTime();
-        const dayDiff = diff / (1e3 * 60 * 60 * 24);
-        return dayDiff <= 6;
-      }).reduce((obj, key) => {
-        return Object.assign(obj, { [key]: allData[key] });
-      }, {});
-      GM_setValue(typedSettings.STATS_INFO_STORAGE_KEY, newAllData);
-      Utils.log("[数据统计]：已清理过期数据");
-    },
-updateDataForDailyReset: function() {
-      const allData = GM_getValue(
-        typedSettings.STATS_INFO_STORAGE_KEY,
-        null
-      );
-      if (!allData || typeof allData !== "object") {
-        this.ensureTodayDataExists();
-        this.updateTodayData();
-        this.removeExpiredData();
-        return;
-      }
-      const lastDate = Object.keys(allData).at(-1);
-      const nowDate = Utils.formatDateAsBeijing( new Date());
-      if (lastDate !== nowDate) {
-        this.updateTodayData();
-        this.removeExpiredData();
-      }
-    },
-checkUpdate: function() {
-      const state = GlobalState.get();
-      const tabList = document.getElementById("qmx-tab-list");
-      if (!tabList) return;
-      const tabIds = Object.keys(state.tabs);
-      tabIds.forEach((roomId) => {
-        const tabData = state.tabs[roomId];
-        const currentStatusText = tabData.statusText;
-        if (typedSettings.SHOW_STATS_IN_PANEL) {
-          if (currentStatusText.includes("领取到")) {
-            this.getCoinListUpdate();
-          }
-        }
-      });
+    removeExpiredData() {
+      const history = getRewardHistory();
+      const cutoff = Date.now() - 30 * 864e5;
+      const retained = Object.fromEntries(Object.entries(history).filter(([date]) => {
+        const timestamp = ( new Date(`${date}T00:00:00+08:00`)).getTime();
+        return Number.isFinite(timestamp) && timestamp >= cutoff;
+      }));
+      _GM_setValue(runtimeSettings.STATS_INFO_STORAGE_KEY, retained);
     }
   };
-  var commonjsGlobal = typeof globalThis !== "undefined" ? globalThis : typeof window !== "undefined" ? window : typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : {};
-  function getAugmentedNamespace(n) {
-    if (Object.prototype.hasOwnProperty.call(n, "__esModule")) return n;
-    var f = n.default;
-    if (typeof f == "function") {
-      var a = function a2() {
-        var isInstance = false;
-        try {
-          isInstance = this instanceof a2;
-        } catch {
-        }
-        if (isInstance) {
-          return Reflect.construct(f, arguments, this.constructor);
-        }
-        return f.apply(this, arguments);
-      };
-      a.prototype = f.prototype;
-    } else a = {};
-    Object.defineProperty(a, "__esModule", { value: true });
-    Object.keys(n).forEach(function(k) {
-      var d = Object.getOwnPropertyDescriptor(n, k);
-      Object.defineProperty(a, k, d.get ? d : {
-        enumerable: true,
-        get: function() {
-          return n[k];
-        }
-      });
-    });
-    return a;
-  }
-  var flexsearch_bundle_min$1 = { exports: {} };
-  const __viteBrowserExternal = {};
-  const __viteBrowserExternal$1 = Object.freeze( Object.defineProperty({
-    __proto__: null,
-    default: __viteBrowserExternal
-  }, Symbol.toStringTag, { value: "Module" }));
-  const require$$0 = getAugmentedNamespace(__viteBrowserExternal$1);
-  var flexsearch_bundle_min = flexsearch_bundle_min$1.exports;
-  var hasRequiredFlexsearch_bundle_min;
-  function requireFlexsearch_bundle_min() {
-    if (hasRequiredFlexsearch_bundle_min) return flexsearch_bundle_min$1.exports;
-    hasRequiredFlexsearch_bundle_min = 1;
-    (function(module) {
-      (function _f(self2) {
-        self2 = module;
-        self2._factory = _f;
-        var w;
-        function H(a, c, b) {
-          const e = typeof b, d = typeof a;
-          if (e !== "undefined") {
-            if (d !== "undefined") {
-              if (b) {
-                if (d === "function" && e === d) return function(k) {
-                  return a(b(k));
-                };
-                c = a.constructor;
-                if (c === b.constructor) {
-                  if (c === Array) return b.concat(a);
-                  if (c === Map) {
-                    var f = new Map(b);
-                    for (var g of a) f.set(g[0], g[1]);
-                    return f;
-                  }
-                  if (c === Set) {
-                    g = new Set(b);
-                    for (f of a.values()) g.add(f);
-                    return g;
-                  }
-                }
-              }
-              return a;
-            }
-            return b;
-          }
-          return d === "undefined" ? c : a;
-        }
-        function aa(a, c) {
-          return typeof a === "undefined" ? c : a;
-        }
-        function I() {
-          return Object.create(null);
-        }
-        function M(a) {
-          return typeof a === "string";
-        }
-        function ba(a) {
-          return typeof a === "object";
-        }
-        function ca(a, c) {
-          if (M(c)) a = a[c];
-          else for (let b = 0; a && b < c.length; b++) a = a[c[b]];
-          return a;
-        }
-        const ea = /[^\p{L}\p{N}]+/u, fa = /(\d{3})/g, ha = /(\D)(\d{3})/g, ia = /(\d{3})(\D)/g, ja = /[\u0300-\u036f]/g;
-        function ka(a = {}) {
-          if (!this || this.constructor !== ka) return new ka(...arguments);
-          if (arguments.length) for (a = 0; a < arguments.length; a++) this.assign(arguments[a]);
-          else this.assign(a);
-        }
-        w = ka.prototype;
-        w.assign = function(a) {
-          this.normalize = H(a.normalize, true, this.normalize);
-          let c = a.include, b = c || a.exclude || a.split, e;
-          if (b || b === "") {
-            if (typeof b === "object" && b.constructor !== RegExp) {
-              let d = "";
-              e = !c;
-              c || (d += "\\p{Z}");
-              b.letter && (d += "\\p{L}");
-              b.number && (d += "\\p{N}", e = !!c);
-              b.symbol && (d += "\\p{S}");
-              b.punctuation && (d += "\\p{P}");
-              b.control && (d += "\\p{C}");
-              if (b = b.char) d += typeof b === "object" ? b.join("") : b;
-              try {
-                this.split = new RegExp("[" + (c ? "^" : "") + d + "]+", "u");
-              } catch (f) {
-                this.split = /\s+/;
-              }
-            } else this.split = b, e = b === false || "a1a".split(b).length < 2;
-            this.numeric = H(a.numeric, e);
-          } else {
-            try {
-              this.split = H(this.split, ea);
-            } catch (d) {
-              this.split = /\s+/;
-            }
-            this.numeric = H(a.numeric, H(this.numeric, true));
-          }
-          this.prepare = H(a.prepare, null, this.prepare);
-          this.finalize = H(a.finalize, null, this.finalize);
-          b = a.filter;
-          this.filter = typeof b === "function" ? b : H(b && new Set(b), null, this.filter);
-          this.dedupe = H(a.dedupe, true, this.dedupe);
-          this.matcher = H((b = a.matcher) && new Map(b), null, this.matcher);
-          this.mapper = H((b = a.mapper) && new Map(b), null, this.mapper);
-          this.stemmer = H(
-            (b = a.stemmer) && new Map(b),
-            null,
-            this.stemmer
-          );
-          this.replacer = H(a.replacer, null, this.replacer);
-          this.minlength = H(a.minlength, 1, this.minlength);
-          this.maxlength = H(a.maxlength, 1024, this.maxlength);
-          this.rtl = H(a.rtl, false, this.rtl);
-          if (this.cache = b = H(a.cache, true, this.cache)) this.F = null, this.L = typeof b === "number" ? b : 2e5, this.B = new Map(), this.D = new Map(), this.I = this.H = 128;
-          this.h = "";
-          this.J = null;
-          this.A = "";
-          this.K = null;
-          if (this.matcher) for (const d of this.matcher.keys()) this.h += (this.h ? "|" : "") + d;
-          if (this.stemmer) for (const d of this.stemmer.keys()) this.A += (this.A ? "|" : "") + d;
-          return this;
-        };
-        w.addStemmer = function(a, c) {
-          this.stemmer || (this.stemmer = new Map());
-          this.stemmer.set(a, c);
-          this.A += (this.A ? "|" : "") + a;
-          this.K = null;
-          this.cache && Q(this);
-          return this;
-        };
-        w.addFilter = function(a) {
-          typeof a === "function" ? this.filter = a : (this.filter || (this.filter = new Set()), this.filter.add(a));
-          this.cache && Q(this);
-          return this;
-        };
-        w.addMapper = function(a, c) {
-          if (typeof a === "object") return this.addReplacer(a, c);
-          if (a.length > 1) return this.addMatcher(a, c);
-          this.mapper || (this.mapper = new Map());
-          this.mapper.set(a, c);
-          this.cache && Q(this);
-          return this;
-        };
-        w.addMatcher = function(a, c) {
-          if (typeof a === "object") return this.addReplacer(a, c);
-          if (a.length < 2 && (this.dedupe || this.mapper)) return this.addMapper(a, c);
-          this.matcher || (this.matcher = new Map());
-          this.matcher.set(a, c);
-          this.h += (this.h ? "|" : "") + a;
-          this.J = null;
-          this.cache && Q(this);
-          return this;
-        };
-        w.addReplacer = function(a, c) {
-          if (typeof a === "string") return this.addMatcher(a, c);
-          this.replacer || (this.replacer = []);
-          this.replacer.push(a, c);
-          this.cache && Q(this);
-          return this;
-        };
-        w.encode = function(a, c) {
-          if (this.cache && a.length <= this.H) if (this.F) {
-            if (this.B.has(a)) return this.B.get(a);
-          } else this.F = setTimeout(Q, 50, this);
-          this.normalize && (typeof this.normalize === "function" ? a = this.normalize(a) : a = ja ? a.normalize("NFKD").replace(ja, "").toLowerCase() : a.toLowerCase());
-          this.prepare && (a = this.prepare(a));
-          this.numeric && a.length > 3 && (a = a.replace(ha, "$1 $2").replace(ia, "$1 $2").replace(fa, "$1 "));
-          const b = !(this.dedupe || this.mapper || this.filter || this.matcher || this.stemmer || this.replacer);
-          let e = [], d = I(), f, g, k = this.split || this.split === "" ? a.split(this.split) : [a];
-          for (let l = 0, m, p; l < k.length; l++) if ((m = p = k[l]) && !(m.length < this.minlength || m.length > this.maxlength)) {
-            if (c) {
-              if (d[m]) continue;
-              d[m] = 1;
-            } else {
-              if (f === m) continue;
-              f = m;
-            }
-            if (b) e.push(m);
-            else if (!this.filter || (typeof this.filter === "function" ? this.filter(m) : !this.filter.has(m))) {
-              if (this.cache && m.length <= this.I) if (this.F) {
-                var h = this.D.get(m);
-                if (h || h === "") {
-                  h && e.push(h);
-                  continue;
-                }
-              } else this.F = setTimeout(Q, 50, this);
-              if (this.stemmer) {
-                this.K || (this.K = new RegExp("(?!^)(" + this.A + ")$"));
-                let u;
-                for (; u !== m && m.length > 2; ) u = m, m = m.replace(this.K, (r) => this.stemmer.get(r));
-              }
-              if (m && (this.mapper || this.dedupe && m.length > 1)) {
-                h = "";
-                for (let u = 0, r = "", t, n; u < m.length; u++) t = m.charAt(u), t === r && this.dedupe || ((n = this.mapper && this.mapper.get(t)) || n === "" ? n === r && this.dedupe || !(r = n) || (h += n) : h += r = t);
-                m = h;
-              }
-              this.matcher && m.length > 1 && (this.J || (this.J = new RegExp("(" + this.h + ")", "g")), m = m.replace(this.J, (u) => this.matcher.get(u)));
-              if (m && this.replacer) for (h = 0; m && h < this.replacer.length; h += 2) m = m.replace(
-                this.replacer[h],
-                this.replacer[h + 1]
-              );
-              this.cache && p.length <= this.I && (this.D.set(p, m), this.D.size > this.L && (this.D.clear(), this.I = this.I / 1.1 | 0));
-              if (m) {
-                if (m !== p) if (c) {
-                  if (d[m]) continue;
-                  d[m] = 1;
-                } else {
-                  if (g === m) continue;
-                  g = m;
-                }
-                e.push(m);
-              }
-            }
-          }
-          this.finalize && (e = this.finalize(e) || e);
-          this.cache && a.length <= this.H && (this.B.set(a, e), this.B.size > this.L && (this.B.clear(), this.H = this.H / 1.1 | 0));
-          return e;
-        };
-        function Q(a) {
-          a.F = null;
-          a.B.clear();
-          a.D.clear();
-        }
-        function la(a, c, b) {
-          b || (c || typeof a !== "object" ? typeof c === "object" && (b = c, c = 0) : b = a);
-          b && (a = b.query || a, c = b.limit || c);
-          let e = "" + (c || 0);
-          b && (e += (b.offset || 0) + !!b.context + !!b.suggest + (b.resolve !== false) + (b.resolution || this.resolution) + (b.boost || 0));
-          a = ("" + a).toLowerCase();
-          this.cache || (this.cache = new ma());
-          let d = this.cache.get(a + e);
-          if (!d) {
-            const f = b && b.cache;
-            f && (b.cache = false);
-            d = this.search(a, c, b);
-            f && (b.cache = f);
-            this.cache.set(a + e, d);
-          }
-          return d;
-        }
-        function ma(a) {
-          this.limit = a && a !== true ? a : 1e3;
-          this.cache = new Map();
-          this.h = "";
-        }
-        ma.prototype.set = function(a, c) {
-          this.cache.set(this.h = a, c);
-          this.cache.size > this.limit && this.cache.delete(this.cache.keys().next().value);
-        };
-        ma.prototype.get = function(a) {
-          const c = this.cache.get(a);
-          c && this.h !== a && (this.cache.delete(a), this.cache.set(this.h = a, c));
-          return c;
-        };
-        ma.prototype.remove = function(a) {
-          for (const c of this.cache) {
-            const b = c[0];
-            c[1].includes(a) && this.cache.delete(b);
-          }
-        };
-        ma.prototype.clear = function() {
-          this.cache.clear();
-          this.h = "";
-        };
-        const na = { normalize: false, numeric: false, dedupe: false };
-        const oa = {};
-        const ra = new Map([["b", "p"], ["v", "f"], ["w", "f"], ["z", "s"], ["x", "s"], ["d", "t"], ["n", "m"], ["c", "k"], ["g", "k"], ["j", "k"], ["q", "k"], ["i", "e"], ["y", "e"], ["u", "o"]]);
-        const sa = new Map([["ae", "a"], ["oe", "o"], ["sh", "s"], ["kh", "k"], ["th", "t"], ["ph", "f"], ["pf", "f"]]), ta = [/([^aeo])h(.)/g, "$1$2", /([aeo])h([^aeo]|$)/g, "$1$2", /(.)\1+/g, "$1"];
-        const ua = { a: "", e: "", i: "", o: "", u: "", y: "", b: 1, f: 1, p: 1, v: 1, c: 2, g: 2, j: 2, k: 2, q: 2, s: 2, x: 2, z: 2, "ß": 2, d: 3, t: 3, l: 4, m: 5, n: 5, r: 6 };
-        var va = { Exact: na, Default: oa, Normalize: oa, LatinBalance: { mapper: ra }, LatinAdvanced: { mapper: ra, matcher: sa, replacer: ta }, LatinExtra: { mapper: ra, replacer: ta.concat([/(?!^)[aeo]/g, ""]), matcher: sa }, LatinSoundex: { dedupe: false, include: { letter: true }, finalize: function(a) {
-          for (let b = 0; b < a.length; b++) {
-            var c = a[b];
-            let e = c.charAt(0), d = ua[e];
-            for (let f = 1, g; f < c.length && (g = c.charAt(f), g === "h" || g === "w" || !(g = ua[g]) || g === d || (e += g, d = g, e.length !== 4)); f++) ;
-            a[b] = e;
-          }
-        } }, CJK: { split: "" }, LatinExact: na, LatinDefault: oa, LatinSimple: oa };
-        function wa(a, c, b, e) {
-          let d = [];
-          for (let f = 0, g; f < a.index.length; f++) if (g = a.index[f], c >= g.length) c -= g.length;
-          else {
-            c = g[e ? "splice" : "slice"](c, b);
-            const k = c.length;
-            if (k && (d = d.length ? d.concat(c) : c, b -= k, e && (a.length -= k), !b)) break;
-            c = 0;
-          }
-          return d;
-        }
-        function xa(a) {
-          if (!this || this.constructor !== xa) return new xa(a);
-          this.index = a ? [a] : [];
-          this.length = a ? a.length : 0;
-          const c = this;
-          return new Proxy([], { get(b, e) {
-            if (e === "length") return c.length;
-            if (e === "push") return function(d) {
-              c.index[c.index.length - 1].push(d);
-              c.length++;
-            };
-            if (e === "pop") return function() {
-              if (c.length) return c.length--, c.index[c.index.length - 1].pop();
-            };
-            if (e === "indexOf") return function(d) {
-              let f = 0;
-              for (let g = 0, k, h; g < c.index.length; g++) {
-                k = c.index[g];
-                h = k.indexOf(d);
-                if (h >= 0) return f + h;
-                f += k.length;
-              }
-              return -1;
-            };
-            if (e === "includes") return function(d) {
-              for (let f = 0; f < c.index.length; f++) if (c.index[f].includes(d)) return true;
-              return false;
-            };
-            if (e === "slice") return function(d, f) {
-              return wa(c, d || 0, f || c.length, false);
-            };
-            if (e === "splice") return function(d, f) {
-              return wa(c, d || 0, f || c.length, true);
-            };
-            if (e === "constructor") return Array;
-            if (typeof e !== "symbol") return (b = c.index[e / 2 ** 31 | 0]) && b[e];
-          }, set(b, e, d) {
-            b = e / 2 ** 31 | 0;
-            (c.index[b] || (c.index[b] = []))[e] = d;
-            c.length++;
-            return true;
-          } });
-        }
-        xa.prototype.clear = function() {
-          this.index.length = 0;
-        };
-        xa.prototype.push = function() {
-        };
-        function R(a = 8) {
-          if (!this || this.constructor !== R) return new R(a);
-          this.index = I();
-          this.h = [];
-          this.size = 0;
-          a > 32 ? (this.B = Aa, this.A = BigInt(a)) : (this.B = Ba, this.A = a);
-        }
-        R.prototype.get = function(a) {
-          const c = this.index[this.B(a)];
-          return c && c.get(a);
-        };
-        R.prototype.set = function(a, c) {
-          var b = this.B(a);
-          let e = this.index[b];
-          e ? (b = e.size, e.set(a, c), (b -= e.size) && this.size++) : (this.index[b] = e = new Map([[a, c]]), this.h.push(e), this.size++);
-        };
-        function S(a = 8) {
-          if (!this || this.constructor !== S) return new S(a);
-          this.index = I();
-          this.h = [];
-          this.size = 0;
-          a > 32 ? (this.B = Aa, this.A = BigInt(a)) : (this.B = Ba, this.A = a);
-        }
-        S.prototype.add = function(a) {
-          var c = this.B(a);
-          let b = this.index[c];
-          b ? (c = b.size, b.add(a), (c -= b.size) && this.size++) : (this.index[c] = b = new Set([a]), this.h.push(b), this.size++);
-        };
-        w = R.prototype;
-        w.has = S.prototype.has = function(a) {
-          const c = this.index[this.B(a)];
-          return c && c.has(a);
-        };
-        w.delete = S.prototype.delete = function(a) {
-          const c = this.index[this.B(a)];
-          c && c.delete(a) && this.size--;
-        };
-        w.clear = S.prototype.clear = function() {
-          this.index = I();
-          this.h = [];
-          this.size = 0;
-        };
-        w.values = S.prototype.values = function* () {
-          for (let a = 0; a < this.h.length; a++) for (let c of this.h[a].values()) yield c;
-        };
-        w.keys = S.prototype.keys = function* () {
-          for (let a = 0; a < this.h.length; a++) for (let c of this.h[a].keys()) yield c;
-        };
-        w.entries = S.prototype.entries = function* () {
-          for (let a = 0; a < this.h.length; a++) for (let c of this.h[a].entries()) yield c;
-        };
-        function Ba(a) {
-          let c = 2 ** this.A - 1;
-          if (typeof a == "number") return a & c;
-          let b = 0, e = this.A + 1;
-          for (let d = 0; d < a.length; d++) b = (b * e ^ a.charCodeAt(d)) & c;
-          return this.A === 32 ? b + 2 ** 31 : b;
-        }
-        function Aa(a) {
-          let c = BigInt(2) ** this.A - BigInt(1);
-          var b = typeof a;
-          if (b === "bigint") return a & c;
-          if (b === "number") return BigInt(a) & c;
-          b = BigInt(0);
-          let e = this.A + BigInt(1);
-          for (let d = 0; d < a.length; d++) b = (b * e ^ BigInt(a.charCodeAt(d))) & c;
-          return b;
-        }
-        let Ca, Da;
-        async function Ea(a) {
-          a = a.data;
-          var c = a.task;
-          const b = a.id;
-          let e = a.args;
-          switch (c) {
-            case "init":
-              Da = a.options || {};
-              (c = a.factory) ? (Function("return " + c)()(self2), Ca = new self2.FlexSearch.Index(Da), delete self2.FlexSearch) : Ca = new T(Da);
-              postMessage({ id: b });
-              break;
-            default:
-              let d;
-              c === "export" && (e[1] ? (e[0] = Da.export, e[2] = 0, e[3] = 1) : e = null);
-              c === "import" ? e[0] && (a = await Da.import.call(Ca, e[0]), Ca.import(e[0], a)) : ((d = e && Ca[c].apply(Ca, e)) && d.then && (d = await d), d && d.await && (d = await d.await), c === "search" && d.result && (d = d.result));
-              postMessage(c === "search" ? { id: b, msg: d } : { id: b });
-          }
-        }
-        function Fa(a) {
-          Ga.call(a, "add");
-          Ga.call(a, "append");
-          Ga.call(a, "search");
-          Ga.call(a, "update");
-          Ga.call(a, "remove");
-          Ga.call(a, "searchCache");
-        }
-        let Ha, Ia, Ja;
-        function Ka() {
-          Ha = Ja = 0;
-        }
-        function Ga(a) {
-          this[a + "Async"] = function() {
-            const c = arguments;
-            var b = c[c.length - 1];
-            let e;
-            typeof b === "function" && (e = b, delete c[c.length - 1]);
-            Ha ? Ja || (Ja = Date.now() - Ia >= this.priority * this.priority * 3) : (Ha = setTimeout(Ka, 0), Ia = Date.now());
-            if (Ja) {
-              const f = this;
-              return new Promise((g) => {
-                setTimeout(function() {
-                  g(f[a + "Async"].apply(f, c));
-                }, 0);
-              });
-            }
-            const d = this[a].apply(this, c);
-            b = d.then ? d : new Promise((f) => f(d));
-            e && b.then(e);
-            return b;
-          };
-        }
-        let V = 0;
-        function La(a = {}, c) {
-          function b(k) {
-            function h(l) {
-              l = l.data || l;
-              const m = l.id, p = m && f.h[m];
-              p && (p(l.msg), delete f.h[m]);
-            }
-            this.worker = k;
-            this.h = I();
-            if (this.worker) {
-              d ? this.worker.on("message", h) : this.worker.onmessage = h;
-              if (a.config) return new Promise(function(l) {
-                V > 1e9 && (V = 0);
-                f.h[++V] = function() {
-                  l(f);
-                };
-                f.worker.postMessage({ id: V, task: "init", factory: e, options: a });
-              });
-              this.priority = a.priority || 4;
-              this.encoder = c || null;
-              this.worker.postMessage({ task: "init", factory: e, options: a });
-              return this;
-            }
-          }
-          if (!this || this.constructor !== La) return new La(a);
-          let e = typeof self2 !== "undefined" ? self2._factory : typeof window !== "undefined" ? window._factory : null;
-          e && (e = e.toString());
-          const d = typeof window === "undefined", f = this, g = Ma(e, d, a.worker);
-          return g.then ? g.then(function(k) {
-            return b.call(f, k);
-          }) : b.call(this, g);
-        }
-        W("add");
-        W("append");
-        W("search");
-        W("update");
-        W("remove");
-        W("clear");
-        W("export");
-        W("import");
-        La.prototype.searchCache = la;
-        Fa(La.prototype);
-        function W(a) {
-          La.prototype[a] = function() {
-            const c = this, b = [].slice.call(arguments);
-            var e = b[b.length - 1];
-            let d;
-            typeof e === "function" && (d = e, b.pop());
-            e = new Promise(function(f) {
-              a === "export" && typeof b[0] === "function" && (b[0] = null);
-              V > 1e9 && (V = 0);
-              c.h[++V] = f;
-              c.worker.postMessage({ task: a, id: V, args: b });
-            });
-            return d ? (e.then(d), this) : e;
-          };
-        }
-        function Ma(a, c, b) {
-          return c ? new require$$0["Worker"](__dirname + "/node/node.js") : a ? new window.Worker(URL.createObjectURL(new Blob(["onmessage=" + Ea.toString()], { type: "text/javascript" }))) : new window.Worker(typeof b === "string" ? b : (0, eval)("import.meta.url").replace("/worker.js", "/worker/worker.js").replace(
-            "flexsearch.bundle.module.min.js",
-            "module/worker/worker.js"
-          ).replace("flexsearch.bundle.module.min.mjs", "module/worker/worker.js"), { type: "module" });
-        }
-        Na.prototype.add = function(a, c, b) {
-          ba(a) && (c = a, a = ca(c, this.key));
-          if (c && (a || a === 0)) {
-            if (!b && this.reg.has(a)) return this.update(a, c);
-            for (let k = 0, h; k < this.field.length; k++) {
-              h = this.B[k];
-              var e = this.index.get(this.field[k]);
-              if (typeof h === "function") {
-                var d = h(c);
-                d && e.add(a, d, b, true);
-              } else if (d = h.G, !d || d(c)) h.constructor === String ? h = ["" + h] : M(h) && (h = [h]), Oa(c, h, this.D, 0, e, a, h[0], b);
-            }
-            if (this.tag) for (e = 0; e < this.A.length; e++) {
-              var f = this.A[e];
-              d = this.tag.get(this.F[e]);
-              let k = I();
-              if (typeof f === "function") {
-                if (f = f(c), !f) continue;
-              } else {
-                var g = f.G;
-                if (g && !g(c)) continue;
-                f.constructor === String && (f = "" + f);
-                f = ca(c, f);
-              }
-              if (d && f) {
-                M(f) && (f = [f]);
-                for (let h = 0, l, m; h < f.length; h++) if (l = f[h], !k[l] && (k[l] = 1, (g = d.get(l)) ? m = g : d.set(l, m = []), !b || !m.includes(a))) {
-                  if (m.length === 2 ** 31 - 1) {
-                    g = new xa(m);
-                    if (this.fastupdate) for (let p of this.reg.values()) p.includes(m) && (p[p.indexOf(m)] = g);
-                    d.set(l, m = g);
-                  }
-                  m.push(a);
-                  this.fastupdate && ((g = this.reg.get(a)) ? g.push(m) : this.reg.set(a, [m]));
-                }
-              }
-            }
-            if (this.store && (!b || !this.store.has(a))) {
-              let k;
-              if (this.h) {
-                k = I();
-                for (let h = 0, l; h < this.h.length; h++) {
-                  l = this.h[h];
-                  if ((b = l.G) && !b(c)) continue;
-                  let m;
-                  if (typeof l === "function") {
-                    m = l(c);
-                    if (!m) continue;
-                    l = [l.O];
-                  } else if (M(l) || l.constructor === String) {
-                    k[l] = c[l];
-                    continue;
-                  }
-                  Ra(c, k, l, 0, l[0], m);
-                }
-              }
-              this.store.set(a, k || c);
-            }
-            this.worker && (this.fastupdate || this.reg.add(a));
-          }
-          return this;
-        };
-        function Ra(a, c, b, e, d, f) {
-          a = a[d];
-          if (e === b.length - 1) c[d] = f || a;
-          else if (a) if (a.constructor === Array) for (c = c[d] = Array(a.length), d = 0; d < a.length; d++) Ra(a, c, b, e, d);
-          else c = c[d] || (c[d] = I()), d = b[++e], Ra(a, c, b, e, d);
-        }
-        function Oa(a, c, b, e, d, f, g, k) {
-          if (a = a[g]) if (e === c.length - 1) {
-            if (a.constructor === Array) {
-              if (b[e]) {
-                for (c = 0; c < a.length; c++) d.add(f, a[c], true, true);
-                return;
-              }
-              a = a.join(" ");
-            }
-            d.add(f, a, k, true);
-          } else if (a.constructor === Array) for (g = 0; g < a.length; g++) Oa(a, c, b, e, d, f, g, k);
-          else g = c[++e], Oa(a, c, b, e, d, f, g, k);
-        }
-        function Sa(a, c, b, e) {
-          if (!a.length) return a;
-          if (a.length === 1) return a = a[0], a = b || a.length > c ? a.slice(b, b + c) : a, e ? Ta.call(this, a) : a;
-          let d = [];
-          for (let f = 0, g, k; f < a.length; f++) if ((g = a[f]) && (k = g.length)) {
-            if (b) {
-              if (b >= k) {
-                b -= k;
-                continue;
-              }
-              g = g.slice(b, b + c);
-              k = g.length;
-              b = 0;
-            }
-            k > c && (g = g.slice(0, c), k = c);
-            if (!d.length && k >= c) return e ? Ta.call(this, g) : g;
-            d.push(g);
-            c -= k;
-            if (!c) break;
-          }
-          d = d.length > 1 ? [].concat.apply([], d) : d[0];
-          return e ? Ta.call(this, d) : d;
-        }
-        function Ua(a, c, b, e) {
-          var d = e[0];
-          if (d[0] && d[0].query) return a[c].apply(a, d);
-          if (!(c !== "and" && c !== "not" || a.result.length || a.await || d.suggest)) return e.length > 1 && (d = e[e.length - 1]), (e = d.resolve) ? a.await || a.result : a;
-          let f = [], g = 0, k = 0, h, l, m, p, u;
-          for (c = 0; c < e.length; c++) if (d = e[c]) {
-            var r = void 0;
-            if (d.constructor === X) r = d.await || d.result;
-            else if (d.then || d.constructor === Array) r = d;
-            else {
-              g = d.limit || 0;
-              k = d.offset || 0;
-              m = d.suggest;
-              l = d.resolve;
-              h = ((p = d.highlight || a.highlight) || d.enrich) && l;
-              r = d.queue;
-              let t = d.async || r, n = d.index, q = d.query;
-              n ? a.index || (a.index = n) : n = a.index;
-              if (q || d.tag) {
-                const x = d.field || d.pluck;
-                x && (!q || a.query && !p || (a.query = q, a.field = x, a.highlight = p), n = n.index.get(x));
-                if (r && (u || a.await)) {
-                  u = 1;
-                  let v;
-                  const A = a.C.length, D = new Promise(function(F) {
-                    v = F;
-                  });
-                  (function(F, E) {
-                    D.h = function() {
-                      E.index = null;
-                      E.resolve = false;
-                      let B = t ? F.searchAsync(E) : F.search(E);
-                      if (B.then) return B.then(function(z) {
-                        a.C[A] = z = z.result || z;
-                        v(z);
-                        return z;
-                      });
-                      B = B.result || B;
-                      v(B);
-                      return B;
-                    };
-                  })(n, Object.assign({}, d));
-                  a.C.push(D);
-                  f[c] = D;
-                  continue;
-                } else d.resolve = false, d.index = null, r = t ? n.searchAsync(d) : n.search(d), d.resolve = l, d.index = n;
-              } else if (d.and) r = Va(d, "and", n);
-              else if (d.or) r = Va(d, "or", n);
-              else if (d.not) r = Va(d, "not", n);
-              else if (d.xor) r = Va(d, "xor", n);
-              else continue;
-            }
-            r.await ? (u = 1, r = r.await) : r.then ? (u = 1, r = r.then(function(t) {
-              return t.result || t;
-            })) : r = r.result || r;
-            f[c] = r;
-          }
-          u && !a.await && (a.await = new Promise(function(t) {
-            a.return = t;
-          }));
-          if (u) {
-            const t = Promise.all(f).then(function(n) {
-              for (let q = 0; q < a.C.length; q++) if (a.C[q] === t) {
-                a.C[q] = function() {
-                  return b.call(a, n, g, k, h, l, m, p);
-                };
-                break;
-              }
-              Wa(a);
-            });
-            a.C.push(t);
-          } else if (a.await) a.C.push(function() {
-            return b.call(a, f, g, k, h, l, m, p);
-          });
-          else return b.call(a, f, g, k, h, l, m, p);
-          return l ? a.await || a.result : a;
-        }
-        function Va(a, c, b) {
-          a = a[c];
-          const e = a[0] || a;
-          e.index || (e.index = b);
-          b = new X(e);
-          a.length > 1 && (b = b[c].apply(b, a.slice(1)));
-          return b;
-        }
-        X.prototype.or = function() {
-          return Ua(this, "or", Xa, arguments);
-        };
-        function Xa(a, c, b, e, d, f, g) {
-          a.length && (this.result.length && a.push(this.result), a.length < 2 ? this.result = a[0] : (this.result = Ya(a, c, b, false, this.h), b = 0));
-          d && (this.await = null);
-          return d ? this.resolve(c, b, e, g) : this;
-        }
-        X.prototype.and = function() {
-          return Ua(this, "and", Za, arguments);
-        };
-        function Za(a, c, b, e, d, f, g) {
-          if (!f && !this.result.length) return d ? this.result : this;
-          let k;
-          if (a.length) if (this.result.length && a.unshift(this.result), a.length < 2) this.result = a[0];
-          else {
-            let h = 0;
-            for (let l = 0, m, p; l < a.length; l++) if ((m = a[l]) && (p = m.length)) h < p && (h = p);
-            else if (!f) {
-              h = 0;
-              break;
-            }
-            h ? (this.result = $a(a, h, c, b, f, this.h, d), k = true) : this.result = [];
-          }
-          else f || (this.result = a);
-          d && (this.await = null);
-          return d ? this.resolve(c, b, e, g, k) : this;
-        }
-        X.prototype.xor = function() {
-          return Ua(this, "xor", ab, arguments);
-        };
-        function ab(a, c, b, e, d, f, g) {
-          if (a.length) if (this.result.length && a.unshift(this.result), a.length < 2) this.result = a[0];
-          else {
-            a: {
-              f = b;
-              var k = this.h;
-              const h = [], l = I();
-              let m = 0;
-              for (let p = 0, u; p < a.length; p++) if (u = a[p]) {
-                m < u.length && (m = u.length);
-                for (let r = 0, t; r < u.length; r++) if (t = u[r]) for (let n = 0, q; n < t.length; n++) q = t[n], l[q] = l[q] ? 2 : 1;
-              }
-              for (let p = 0, u, r = 0; p < m; p++) for (let t = 0, n; t < a.length; t++) if (n = a[t]) {
-                if (u = n[p]) {
-                  for (let q = 0, x; q < u.length; q++) if (x = u[q], l[x] === 1) if (f) f--;
-                  else if (d) {
-                    if (h.push(x), h.length === c) {
-                      a = h;
-                      break a;
-                    }
-                  } else {
-                    const v = p + (t ? k : 0);
-                    h[v] || (h[v] = []);
-                    h[v].push(x);
-                    if (++r === c) {
-                      a = h;
-                      break a;
-                    }
-                  }
-                }
-              }
-              a = h;
-            }
-            this.result = a;
-            k = true;
-          }
-          else f || (this.result = a);
-          d && (this.await = null);
-          return d ? this.resolve(c, b, e, g, k) : this;
-        }
-        X.prototype.not = function() {
-          return Ua(this, "not", bb, arguments);
-        };
-        function bb(a, c, b, e, d, f, g) {
-          if (!f && !this.result.length) return d ? this.result : this;
-          if (a.length && this.result.length) {
-            a: {
-              f = b;
-              var k = [];
-              a = new Set(a.flat().flat());
-              for (let h = 0, l, m = 0; h < this.result.length; h++) if (l = this.result[h]) {
-                for (let p = 0, u; p < l.length; p++) if (u = l[p], !a.has(u)) {
-                  if (f) f--;
-                  else if (d) {
-                    if (k.push(u), k.length === c) {
-                      a = k;
-                      break a;
-                    }
-                  } else if (k[h] || (k[h] = []), k[h].push(u), ++m === c) {
-                    a = k;
-                    break a;
-                  }
-                }
-              }
-              a = k;
-            }
-            this.result = a;
-            k = true;
-          }
-          d && (this.await = null);
-          return d ? this.resolve(c, b, e, g, k) : this;
-        }
-        function cb(a, c, b, e, d) {
-          let f, g, k;
-          typeof d === "string" ? (f = d, d = "") : f = d.template;
-          g = f.indexOf("$1");
-          k = f.substring(g + 2);
-          g = f.substring(0, g);
-          let h = d && d.boundary, l = !d || d.clip !== false, m = d && d.merge && k && g && new RegExp(k + " " + g, "g");
-          d = d && d.ellipsis;
-          var p = 0;
-          if (typeof d === "object") {
-            var u = d.template;
-            p = u.length - 2;
-            d = d.pattern;
-          }
-          typeof d !== "string" && (d = d === false ? "" : "...");
-          p && (d = u.replace("$1", d));
-          u = d.length - p;
-          let r, t;
-          typeof h === "object" && (r = h.before, r === 0 && (r = -1), t = h.after, t === 0 && (t = -1), h = h.total || 9e5);
-          p = new Map();
-          for (let Pa = 0, da, gb, pa; Pa < c.length; Pa++) {
-            let qa;
-            if (e) qa = c, pa = e;
-            else {
-              var n = c[Pa];
-              pa = n.field;
-              if (!pa) continue;
-              qa = n.result;
-            }
-            gb = b.get(pa);
-            da = gb.encoder;
-            n = p.get(da);
-            typeof n !== "string" && (n = da.encode(a), p.set(da, n));
-            for (let ya = 0; ya < qa.length; ya++) {
-              var q = qa[ya].doc;
-              if (!q) continue;
-              q = ca(q, pa);
-              if (!q) continue;
-              var x = q.trim().split(/\s+/);
-              if (!x.length) continue;
-              q = "";
-              var v = [];
-              let za = [];
-              var A = -1, D = -1, F = 0;
-              for (var E = 0; E < x.length; E++) {
-                var B = x[E], z = da.encode(B);
-                z = z.length > 1 ? z.join(" ") : z[0];
-                let y;
-                if (z && B) {
-                  var C = B.length, J = (da.split ? B.replace(da.split, "") : B).length - z.length, G = "", N = 0;
-                  for (var O = 0; O < n.length; O++) {
-                    var P = n[O];
-                    if (P) {
-                      var L = P.length;
-                      L += J < 0 ? 0 : J;
-                      N && L <= N || (P = z.indexOf(P), P > -1 && (G = (P ? B.substring(0, P) : "") + g + B.substring(P, P + L) + k + (P + L < C ? B.substring(P + L) : ""), N = L, y = true));
-                    }
-                  }
-                  G && (h && (A < 0 && (A = q.length + (q ? 1 : 0)), D = q.length + (q ? 1 : 0) + G.length, F += C, za.push(v.length), v.push({ match: G })), q += (q ? " " : "") + G);
-                }
-                if (!y) B = x[E], q += (q ? " " : "") + B, h && v.push({ text: B });
-                else if (h && F >= h) break;
-              }
-              F = za.length * (f.length - 2);
-              if (r || t || h && q.length - F > h) if (F = h + F - u * 2, E = D - A, r > 0 && (E += r), t > 0 && (E += t), E <= F) x = r ? A - (r > 0 ? r : 0) : A - ((F - E) / 2 | 0), v = t ? D + (t > 0 ? t : 0) : x + F, l || (x > 0 && q.charAt(x) !== " " && q.charAt(x - 1) !== " " && (x = q.indexOf(" ", x), x < 0 && (x = 0)), v < q.length && q.charAt(v - 1) !== " " && q.charAt(v) !== " " && (v = q.lastIndexOf(" ", v), v < D ? v = D : ++v)), q = (x ? d : "") + q.substring(x, v) + (v < q.length ? d : "");
-              else {
-                D = [];
-                A = {};
-                F = {};
-                E = {};
-                B = {};
-                z = {};
-                G = J = C = 0;
-                for (O = N = 1; ; ) {
-                  var U = void 0;
-                  for (let y = 0, K; y < za.length; y++) {
-                    K = za[y];
-                    if (G) if (J !== G) {
-                      if (E[y + 1]) continue;
-                      K += G;
-                      if (A[K]) {
-                        C -= u;
-                        F[y + 1] = 1;
-                        E[y + 1] = 1;
-                        continue;
-                      }
-                      if (K >= v.length - 1) {
-                        if (K >= v.length) {
-                          E[y + 1] = 1;
-                          K >= x.length && (F[y + 1] = 1);
-                          continue;
-                        }
-                        C -= u;
-                      }
-                      q = v[K].text;
-                      if (L = t && z[y]) if (L > 0) {
-                        if (q.length > L) if (E[y + 1] = 1, l) q = q.substring(0, L);
-                        else continue;
-                        (L -= q.length) || (L = -1);
-                        z[y] = L;
-                      } else {
-                        E[y + 1] = 1;
-                        continue;
-                      }
-                      if (C + q.length + 1 <= h) q = " " + q, D[y] += q;
-                      else if (l) U = h - C - 1, U > 0 && (q = " " + q.substring(0, U), D[y] += q), E[y + 1] = 1;
-                      else {
-                        E[y + 1] = 1;
-                        continue;
-                      }
-                    } else {
-                      if (E[y]) continue;
-                      K -= J;
-                      if (A[K]) {
-                        C -= u;
-                        E[y] = 1;
-                        F[y] = 1;
-                        continue;
-                      }
-                      if (K <= 0) {
-                        if (K < 0) {
-                          E[y] = 1;
-                          F[y] = 1;
-                          continue;
-                        }
-                        C -= u;
-                      }
-                      q = v[K].text;
-                      if (L = r && B[y]) if (L > 0) {
-                        if (q.length > L) if (E[y] = 1, l) q = q.substring(q.length - L);
-                        else continue;
-                        (L -= q.length) || (L = -1);
-                        B[y] = L;
-                      } else {
-                        E[y] = 1;
-                        continue;
-                      }
-                      if (C + q.length + 1 <= h) q += " ", D[y] = q + D[y];
-                      else if (l) U = q.length + 1 - (h - C), U >= 0 && U < q.length && (q = q.substring(U) + " ", D[y] = q + D[y]), E[y] = 1;
-                      else {
-                        E[y] = 1;
-                        continue;
-                      }
-                    }
-                    else {
-                      q = v[K].match;
-                      r && (B[y] = r);
-                      t && (z[y] = t);
-                      y && C++;
-                      let Qa;
-                      K ? !y && u && (C += u) : (F[y] = 1, E[y] = 1);
-                      K >= x.length - 1 ? Qa = 1 : K < v.length - 1 && v[K + 1].match ? Qa = 1 : u && (C += u);
-                      C -= f.length - 2;
-                      if (!y || C + q.length <= h) D[y] = q;
-                      else {
-                        U = N = O = F[y] = 0;
-                        break;
-                      }
-                      Qa && (F[y + 1] = 1, E[y + 1] = 1);
-                    }
-                    C += q.length;
-                    U = A[K] = 1;
-                  }
-                  if (U) J === G ? G++ : J++;
-                  else {
-                    J === G ? N = 0 : O = 0;
-                    if (!N && !O) break;
-                    N ? (J++, G = J) : G++;
-                  }
-                }
-                q = "";
-                for (let y = 0, K; y < D.length; y++) K = (F[y] ? y ? " " : "" : (y && !d ? " " : "") + d) + D[y], q += K;
-                d && !F[D.length] && (q += d);
-              }
-              m && (q = q.replace(m, " "));
-              qa[ya].highlight = q;
-            }
-            if (e) break;
-          }
-          return c;
-        }
-        function X(a, c) {
-          if (!this || this.constructor !== X) return new X(a, c);
-          let b = 0, e, d, f, g, k, h;
-          if (a && a.index) {
-            const l = a;
-            c = l.index;
-            b = l.boost || 0;
-            if (d = l.query) {
-              f = l.field || l.pluck;
-              g = l.highlight;
-              const m = l.resolve;
-              a = l.async || l.queue;
-              l.resolve = false;
-              l.index = null;
-              a = a ? c.searchAsync(l) : c.search(l);
-              l.resolve = m;
-              l.index = c;
-              a = a.result || a;
-            } else a = [];
-          }
-          if (a && a.then) {
-            const l = this;
-            a = a.then(function(m) {
-              l.C[0] = l.result = m.result || m;
-              Wa(l);
-            });
-            e = [a];
-            a = [];
-            k = new Promise(function(m) {
-              h = m;
-            });
-          }
-          this.index = c || null;
-          this.result = a || [];
-          this.h = b;
-          this.C = e || [];
-          this.await = k || null;
-          this.return = h || null;
-          this.highlight = g || null;
-          this.query = d || "";
-          this.field = f || "";
-        }
-        w = X.prototype;
-        w.limit = function(a) {
-          if (this.await) {
-            const c = this;
-            this.C.push(function() {
-              return c.limit(a).result;
-            });
-          } else if (this.result.length) {
-            const c = [];
-            for (let b = 0, e; b < this.result.length; b++) if (e = this.result[b]) if (e.length <= a) {
-              if (c[b] = e, a -= e.length, !a) break;
-            } else {
-              c[b] = e.slice(0, a);
-              break;
-            }
-            this.result = c;
-          }
-          return this;
-        };
-        w.offset = function(a) {
-          if (this.await) {
-            const c = this;
-            this.C.push(function() {
-              return c.offset(a).result;
-            });
-          } else if (this.result.length) {
-            const c = [];
-            for (let b = 0, e; b < this.result.length; b++) if (e = this.result[b]) e.length <= a ? a -= e.length : (c[b] = e.slice(a), a = 0);
-            this.result = c;
-          }
-          return this;
-        };
-        w.boost = function(a) {
-          if (this.await) {
-            const c = this;
-            this.C.push(function() {
-              return c.boost(a).result;
-            });
-          } else this.h += a;
-          return this;
-        };
-        function Wa(a, c) {
-          let b = a.result;
-          var e = a.await;
-          a.await = null;
-          for (let d = 0, f; d < a.C.length; d++) if (f = a.C[d]) {
-            if (typeof f === "function") b = f(), a.C[d] = b = b.result || b, d--;
-            else if (f.h) b = f.h(), a.C[d] = b = b.result || b, d--;
-            else if (f.then) return a.await = e;
-          }
-          e = a.return;
-          a.C = [];
-          a.return = null;
-          c || e(b);
-          return b;
-        }
-        w.resolve = function(a, c, b, e, d) {
-          let f = this.await ? Wa(this, true) : this.result;
-          if (f.then) {
-            const g = this;
-            return f.then(function() {
-              return g.resolve(a, c, b, e, d);
-            });
-          }
-          f.length && (typeof a === "object" ? (e = a.highlight || this.highlight, b = !!e || a.enrich, c = a.offset, a = a.limit) : (e = e || this.highlight, b = !!e || b), f = d ? b ? Ta.call(this.index, f) : f : Sa.call(this.index, f, a || 100, c, b));
-          return this.finalize(f, e);
-        };
-        w.finalize = function(a, c) {
-          if (a.then) {
-            const e = this;
-            return a.then(function(d) {
-              return e.finalize(d, c);
-            });
-          }
-          c && a.length && this.query && (a = cb(this.query, a, this.index.index, this.field, c));
-          const b = this.return;
-          this.highlight = this.index = this.result = this.C = this.await = this.return = null;
-          this.query = this.field = "";
-          b && b(a);
-          return a;
-        };
-        function $a(a, c, b, e, d, f, g) {
-          const k = a.length;
-          let h = [], l, m;
-          l = I();
-          for (let p = 0, u, r, t, n; p < c; p++) for (let q = 0; q < k; q++) if (t = a[q], p < t.length && (u = t[p])) for (let x = 0; x < u.length; x++) {
-            r = u[x];
-            (m = l[r]) ? l[r]++ : (m = 0, l[r] = 1);
-            n = h[m] || (h[m] = []);
-            if (!g) {
-              let v = p + (q || !d ? 0 : f || 0);
-              n = n[v] || (n[v] = []);
-            }
-            n.push(r);
-            if (g && b && m === k - 1 && n.length - e === b) return e ? n.slice(e) : n;
-          }
-          if (a = h.length) if (d) h = h.length > 1 ? Ya(h, b, e, g, f) : (h = h[0]) && b && h.length > b || e ? h.slice(e, b + e) : h;
-          else {
-            if (a < k) return [];
-            h = h[a - 1];
-            if (b || e) if (g) {
-              if (h.length > b || e) h = h.slice(e, b + e);
-            } else {
-              d = [];
-              for (let p = 0, u; p < h.length; p++) if (u = h[p]) if (e && u.length > e) e -= u.length;
-              else {
-                if (b && u.length > b || e) u = u.slice(e, b + e), b -= u.length, e && (e -= u.length);
-                d.push(u);
-                if (!b) break;
-              }
-              h = d;
-            }
-          }
-          return h;
-        }
-        function Ya(a, c, b, e, d) {
-          const f = [], g = I();
-          let k;
-          var h = a.length;
-          let l;
-          if (e) for (d = h - 1; d >= 0; d--) {
-            if (l = (e = a[d]) && e.length) {
-              for (h = 0; h < l; h++) if (k = e[h], !g[k]) {
-                if (g[k] = 1, b) b--;
-                else if (f.push(k), f.length === c) return f;
-              }
-            }
-          }
-          else for (let m = h - 1, p, u = 0; m >= 0; m--) {
-            p = a[m];
-            for (let r = 0; r < p.length; r++) if (l = (e = p[r]) && e.length) {
-              for (let t = 0; t < l; t++) if (k = e[t], !g[k]) if (g[k] = 1, b) b--;
-              else {
-                let n = (r + (m < h - 1 ? d || 0 : 0)) / (m + 1) | 0;
-                (f[n] || (f[n] = [])).push(k);
-                if (++u === c) return f;
-              }
-            }
-          }
-          return f;
-        }
-        function db(a, c, b, e, d) {
-          const f = I(), g = [];
-          for (let k = 0, h; k < c.length; k++) {
-            h = c[k];
-            for (let l = 0; l < h.length; l++) f[h[l]] = 1;
-          }
-          if (d) for (let k = 0, h; k < a.length; k++) {
-            if (h = a[k], f[h]) {
-              if (e) e--;
-              else if (g.push(h), f[h] = 0, b && --b === 0) break;
-            }
-          }
-          else for (let k = 0, h, l; k < a.result.length; k++) for (h = a.result[k], c = 0; c < h.length; c++) l = h[c], f[l] && ((g[k] || (g[k] = [])).push(l), f[l] = 0);
-          return g;
-        }
-        Na.prototype.search = function(a, c, b, e) {
-          b || (!c && ba(a) ? (b = a, a = "") : ba(c) && (b = c, c = 0));
-          let d = [];
-          var f = [];
-          let g;
-          let k, h, l, m, p;
-          let u = 0, r = true, t;
-          if (b) {
-            b.constructor === Array && (b = { index: b });
-            a = b.query || a;
-            g = b.pluck;
-            k = b.merge;
-            l = b.boost;
-            p = g || b.field || (p = b.index) && (p.index ? null : p);
-            var n = this.tag && b.tag;
-            h = b.suggest;
-            r = b.resolve !== false;
-            m = b.cache;
-            t = r && this.store && b.highlight;
-            var q = !!t || r && this.store && b.enrich;
-            c = b.limit || c;
-            var x = b.offset || 0;
-            c || (c = r ? 100 : 0);
-            if (n && (!this.db || !e)) {
-              n.constructor !== Array && (n = [n]);
-              var v = [];
-              for (let B = 0, z; B < n.length; B++) if (z = n[B], z.field && z.tag) {
-                var A = z.tag;
-                if (A.constructor === Array) for (var D = 0; D < A.length; D++) v.push(z.field, A[D]);
-                else v.push(z.field, A);
-              } else {
-                A = Object.keys(z);
-                for (let C = 0, J, G; C < A.length; C++) if (J = A[C], G = z[J], G.constructor === Array) for (D = 0; D < G.length; D++) v.push(J, G[D]);
-                else v.push(J, G);
-              }
-              n = v;
-              if (!a) {
-                f = [];
-                if (v.length) for (n = 0; n < v.length; n += 2) {
-                  if (this.db) {
-                    e = this.index.get(v[n]);
-                    if (!e) continue;
-                    f.push(e = e.db.tag(v[n + 1], c, x, q));
-                  } else e = eb.call(this, v[n], v[n + 1], c, x, q);
-                  d.push(r ? { field: v[n], tag: v[n + 1], result: e } : [e]);
-                }
-                if (f.length) {
-                  const B = this;
-                  return Promise.all(f).then(function(z) {
-                    for (let C = 0; C < z.length; C++) r ? d[C].result = z[C] : d[C] = z[C];
-                    return r ? d : new X(d.length > 1 ? $a(d, 1, 0, 0, h, l) : d[0], B);
-                  });
-                }
-                return r ? d : new X(d.length > 1 ? $a(d, 1, 0, 0, h, l) : d[0], this);
-              }
-            }
-            r || g || !(p = p || this.field) || (M(p) ? g = p : (p.constructor === Array && p.length === 1 && (p = p[0]), g = p.field || p.index));
-            p && p.constructor !== Array && (p = [p]);
-          }
-          p || (p = this.field);
-          let F;
-          v = (this.worker || this.db) && !e && [];
-          for (let B = 0, z, C, J; B < p.length; B++) {
-            C = p[B];
-            if (this.db && this.tag && !this.B[B]) continue;
-            let G;
-            M(C) || (G = C, C = G.field, a = G.query || a, c = aa(G.limit, c), x = aa(G.offset, x), h = aa(G.suggest, h), t = r && this.store && aa(G.highlight, t), q = !!t || r && this.store && aa(G.enrich, q), m = aa(G.cache, m));
-            if (e) z = e[B];
-            else {
-              A = G || b || {};
-              D = A.enrich;
-              var E = this.index.get(C);
-              n && (this.db && (A.tag = n, A.field = p, F = E.db.support_tag_search), !F && D && (A.enrich = false), F || (A.limit = 0, A.offset = 0));
-              z = m ? E.searchCache(a, n && !F ? 0 : c, A) : E.search(a, n && !F ? 0 : c, A);
-              n && !F && (A.limit = c, A.offset = x);
-              D && (A.enrich = D);
-              if (v) {
-                v[B] = z;
-                continue;
-              }
-            }
-            J = (z = z.result || z) && z.length;
-            if (n && J) {
-              A = [];
-              D = 0;
-              if (this.db && e) {
-                if (!F) for (E = p.length; E < e.length; E++) {
-                  let N = e[E];
-                  if (N && N.length) D++, A.push(N);
-                  else if (!h) return r ? d : new X(d, this);
-                }
-              } else for (let N = 0, O, P; N < n.length; N += 2) {
-                O = this.tag.get(n[N]);
-                if (!O) if (h) continue;
-                else return r ? d : new X(d, this);
-                if (P = (O = O && O.get(n[N + 1])) && O.length) D++, A.push(O);
-                else if (!h) return r ? d : new X(d, this);
-              }
-              if (D) {
-                z = db(z, A, c, x, r);
-                J = z.length;
-                if (!J && !h) return r ? z : new X(z, this);
-                D--;
-              }
-            }
-            if (J) f[u] = C, d.push(z), u++;
-            else if (p.length === 1) return r ? d : new X(
-              d,
-              this
-            );
-          }
-          if (v) {
-            if (this.db && n && n.length && !F) for (q = 0; q < n.length; q += 2) {
-              f = this.index.get(n[q]);
-              if (!f) if (h) continue;
-              else return r ? d : new X(d, this);
-              v.push(f.db.tag(n[q + 1], c, x, false));
-            }
-            const B = this;
-            return Promise.all(v).then(function(z) {
-              b && (b.resolve = r);
-              z.length && (z = B.search(a, c, b, z));
-              return z;
-            });
-          }
-          if (!u) return r ? d : new X(d, this);
-          if (g && (!q || !this.store)) return d = d[0], r ? d : new X(d, this);
-          v = [];
-          for (x = 0; x < f.length; x++) {
-            n = d[x];
-            q && n.length && typeof n[0].doc === "undefined" && (this.db ? v.push(n = this.index.get(this.field[0]).db.enrich(n)) : n = Ta.call(this, n));
-            if (g) return r ? t ? cb(a, n, this.index, g, t) : n : new X(n, this);
-            d[x] = { field: f[x], result: n };
-          }
-          if (q && this.db && v.length) {
-            const B = this;
-            return Promise.all(v).then(function(z) {
-              for (let C = 0; C < z.length; C++) d[C].result = z[C];
-              t && (d = cb(a, d, B.index, g, t));
-              return k ? fb(d) : d;
-            });
-          }
-          t && (d = cb(a, d, this.index, g, t));
-          return k ? fb(d) : d;
-        };
-        function fb(a) {
-          const c = [], b = I(), e = I();
-          for (let d = 0, f, g, k, h, l, m, p; d < a.length; d++) {
-            f = a[d];
-            g = f.field;
-            k = f.result;
-            for (let u = 0; u < k.length; u++) if (l = k[u], typeof l !== "object" ? l = { id: h = l } : h = l.id, (m = b[h]) ? m.push(g) : (l.field = b[h] = [g], c.push(l)), p = l.highlight) m = e[h], m || (e[h] = m = {}, l.highlight = m), m[g] = p;
-          }
-          return c;
-        }
-        function eb(a, c, b, e, d) {
-          a = this.tag.get(a);
-          if (!a) return [];
-          a = a.get(c);
-          if (!a) return [];
-          c = a.length - e;
-          if (c > 0) {
-            if (b && c > b || e) a = a.slice(e, e + b);
-            d && (a = Ta.call(this, a));
-          }
-          return a;
-        }
-        function Ta(a) {
-          if (!this || !this.store) return a;
-          if (this.db) return this.index.get(this.field[0]).db.enrich(a);
-          const c = Array(a.length);
-          for (let b = 0, e; b < a.length; b++) e = a[b], c[b] = { id: e, doc: this.store.get(e) };
-          return c;
-        }
-        function Na(a) {
-          if (!this || this.constructor !== Na) return new Na(a);
-          const c = a.document || a.doc || a;
-          let b, e;
-          this.B = [];
-          this.field = [];
-          this.D = [];
-          this.key = (b = c.key || c.id) && hb(b, this.D) || "id";
-          (e = a.keystore || 0) && (this.keystore = e);
-          this.fastupdate = !!a.fastupdate;
-          this.reg = !this.fastupdate || a.worker || a.db ? e ? new S(e) : new Set() : e ? new R(e) : new Map();
-          this.h = (b = c.store || null) && b && b !== true && [];
-          this.store = b ? e ? new R(e) : new Map() : null;
-          this.cache = (b = a.cache || null) && new ma(b);
-          a.cache = false;
-          this.worker = a.worker || false;
-          this.priority = a.priority || 4;
-          this.index = ib.call(this, a, c);
-          this.tag = null;
-          if (b = c.tag) {
-            if (typeof b === "string" && (b = [b]), b.length) {
-              this.tag = new Map();
-              this.A = [];
-              this.F = [];
-              for (let d = 0, f, g; d < b.length; d++) {
-                f = b[d];
-                g = f.field || f;
-                if (!g) throw Error("The tag field from the document descriptor is undefined.");
-                f.custom ? this.A[d] = f.custom : (this.A[d] = hb(g, this.D), f.filter && (typeof this.A[d] === "string" && (this.A[d] = new String(this.A[d])), this.A[d].G = f.filter));
-                this.F[d] = g;
-                this.tag.set(g, new Map());
-              }
-            }
-          }
-          if (this.worker) {
-            this.fastupdate = false;
-            a = [];
-            for (const d of this.index.values()) d.then && a.push(d);
-            if (a.length) {
-              const d = this;
-              return Promise.all(a).then(function(f) {
-                let g = 0;
-                for (const k of d.index.entries()) {
-                  const h = k[0];
-                  let l = k[1];
-                  l.then && (l = f[g], d.index.set(h, l), g++);
-                }
-                return d;
-              });
-            }
-          } else a.db && (this.fastupdate = false, this.mount(a.db));
-        }
-        w = Na.prototype;
-        w.mount = function(a) {
-          let c = this.field;
-          if (this.tag) for (let f = 0, g; f < this.F.length; f++) {
-            g = this.F[f];
-            var b = void 0;
-            this.index.set(g, b = new T({}, this.reg));
-            c === this.field && (c = c.slice(0));
-            c.push(g);
-            b.tag = this.tag.get(g);
-          }
-          b = [];
-          const e = { db: a.db, type: a.type, fastupdate: a.fastupdate };
-          for (let f = 0, g, k; f < c.length; f++) {
-            e.field = k = c[f];
-            g = this.index.get(k);
-            const h = new a.constructor(a.id, e);
-            h.id = a.id;
-            b[f] = h.mount(g);
-            g.document = true;
-            f ? g.bypass = true : g.store = this.store;
-          }
-          const d = this;
-          return this.db = Promise.all(b).then(function() {
-            d.db = true;
-          });
-        };
-        w.commit = async function() {
-          const a = [];
-          for (const c of this.index.values()) a.push(c.commit());
-          await Promise.all(a);
-          this.reg.clear();
-        };
-        w.destroy = function() {
-          const a = [];
-          for (const c of this.index.values()) a.push(c.destroy());
-          return Promise.all(a);
-        };
-        function ib(a, c) {
-          const b = new Map();
-          let e = c.index || c.field || c;
-          M(e) && (e = [e]);
-          for (let f = 0, g, k; f < e.length; f++) {
-            g = e[f];
-            M(g) || (k = g, g = g.field);
-            k = ba(k) ? Object.assign({}, a, k) : a;
-            if (this.worker) {
-              var d = void 0;
-              d = (d = k.encoder) && d.encode ? d : new ka(typeof d === "string" ? va[d] : d || {});
-              d = new La(k, d);
-              b.set(g, d);
-            }
-            this.worker || b.set(g, new T(k, this.reg));
-            k.custom ? this.B[f] = k.custom : (this.B[f] = hb(g, this.D), k.filter && (typeof this.B[f] === "string" && (this.B[f] = new String(this.B[f])), this.B[f].G = k.filter));
-            this.field[f] = g;
-          }
-          if (this.h) {
-            a = c.store;
-            M(a) && (a = [a]);
-            for (let f = 0, g, k; f < a.length; f++) g = a[f], k = g.field || g, g.custom ? (this.h[f] = g.custom, g.custom.O = k) : (this.h[f] = hb(k, this.D), g.filter && (typeof this.h[f] === "string" && (this.h[f] = new String(this.h[f])), this.h[f].G = g.filter));
-          }
-          return b;
-        }
-        function hb(a, c) {
-          const b = a.split(":");
-          let e = 0;
-          for (let d = 0; d < b.length; d++) a = b[d], a[a.length - 1] === "]" && (a = a.substring(0, a.length - 2)) && (c[e] = true), a && (b[e++] = a);
-          e < b.length && (b.length = e);
-          return e > 1 ? b : b[0];
-        }
-        w.append = function(a, c) {
-          return this.add(a, c, true);
-        };
-        w.update = function(a, c) {
-          return this.remove(a).add(a, c);
-        };
-        w.remove = function(a) {
-          ba(a) && (a = ca(a, this.key));
-          for (var c of this.index.values()) c.remove(a, true);
-          if (this.reg.has(a)) {
-            if (this.tag && !this.fastupdate) for (let b of this.tag.values()) for (let e of b) {
-              c = e[0];
-              const d = e[1], f = d.indexOf(a);
-              f > -1 && (d.length > 1 ? d.splice(f, 1) : b.delete(c));
-            }
-            this.store && this.store.delete(a);
-            this.reg.delete(a);
-          }
-          this.cache && this.cache.remove(a);
-          return this;
-        };
-        w.clear = function() {
-          const a = [];
-          for (const c of this.index.values()) {
-            const b = c.clear();
-            b.then && a.push(b);
-          }
-          if (this.tag) for (const c of this.tag.values()) c.clear();
-          this.store && this.store.clear();
-          this.cache && this.cache.clear();
-          return a.length ? Promise.all(a) : this;
-        };
-        w.contain = function(a) {
-          return this.db ? this.index.get(this.field[0]).db.has(a) : this.reg.has(a);
-        };
-        w.cleanup = function() {
-          for (const a of this.index.values()) a.cleanup();
-          return this;
-        };
-        w.get = function(a) {
-          return this.db ? this.index.get(this.field[0]).db.enrich(a).then(function(c) {
-            return c[0] && c[0].doc || null;
-          }) : this.store.get(a) || null;
-        };
-        w.set = function(a, c) {
-          typeof a === "object" && (c = a, a = ca(c, this.key));
-          this.store.set(a, c);
-          return this;
-        };
-        w.searchCache = la;
-        w.export = jb;
-        w.import = kb;
-        Fa(Na.prototype);
-        function lb(a, c = 0) {
-          let b = [], e = [];
-          c && (c = 25e4 / c * 5e3 | 0);
-          for (const d of a.entries()) e.push(d), e.length === c && (b.push(e), e = []);
-          e.length && b.push(e);
-          return b;
-        }
-        function mb(a, c) {
-          c || (c = new Map());
-          for (let b = 0, e; b < a.length; b++) e = a[b], c.set(e[0], e[1]);
-          return c;
-        }
-        function nb(a, c = 0) {
-          let b = [], e = [];
-          c && (c = 25e4 / c * 1e3 | 0);
-          for (const d of a.entries()) e.push([d[0], lb(d[1])[0] || []]), e.length === c && (b.push(e), e = []);
-          e.length && b.push(e);
-          return b;
-        }
-        function ob(a, c) {
-          c || (c = new Map());
-          for (let b = 0, e, d; b < a.length; b++) e = a[b], d = c.get(e[0]), c.set(e[0], mb(e[1], d));
-          return c;
-        }
-        function pb(a) {
-          let c = [], b = [];
-          for (const e of a.keys()) b.push(e), b.length === 25e4 && (c.push(b), b = []);
-          b.length && c.push(b);
-          return c;
-        }
-        function qb(a, c) {
-          c || (c = new Set());
-          for (let b = 0; b < a.length; b++) c.add(a[b]);
-          return c;
-        }
-        function rb(a, c, b, e, d, f, g = 0) {
-          const k = e && e.constructor === Array;
-          var h = k ? e.shift() : e;
-          if (!h) return this.export(a, c, d, f + 1);
-          if ((h = a((c ? c + "." : "") + (g + 1) + "." + b, JSON.stringify(h))) && h.then) {
-            const l = this;
-            return h.then(function() {
-              return rb.call(l, a, c, b, k ? e : null, d, f, g + 1);
-            });
-          }
-          return rb.call(this, a, c, b, k ? e : null, d, f, g + 1);
-        }
-        function jb(a, c, b = 0, e = 0) {
-          if (b < this.field.length) {
-            const g = this.field[b];
-            if ((c = this.index.get(g).export(a, g, b, e = 1)) && c.then) {
-              const k = this;
-              return c.then(function() {
-                return k.export(a, g, b + 1);
-              });
-            }
-            return this.export(a, g, b + 1);
-          }
-          let d, f;
-          switch (e) {
-            case 0:
-              d = "reg";
-              f = pb(this.reg);
-              c = null;
-              break;
-            case 1:
-              d = "tag";
-              f = this.tag && nb(this.tag, this.reg.size);
-              c = null;
-              break;
-            case 2:
-              d = "doc";
-              f = this.store && lb(this.store);
-              c = null;
-              break;
-            default:
-              return;
-          }
-          return rb.call(this, a, c, d, f || null, b, e);
-        }
-        function kb(a, c) {
-          var b = a.split(".");
-          b[b.length - 1] === "json" && b.pop();
-          const e = b.length > 2 ? b[0] : "";
-          b = b.length > 2 ? b[2] : b[1];
-          if (this.worker && e) return this.index.get(e).import(a);
-          if (c) {
-            typeof c === "string" && (c = JSON.parse(c));
-            if (e) return this.index.get(e).import(b, c);
-            switch (b) {
-              case "reg":
-                this.fastupdate = false;
-                this.reg = qb(c, this.reg);
-                for (let d = 0, f; d < this.field.length; d++) f = this.index.get(this.field[d]), f.fastupdate = false, f.reg = this.reg;
-                if (this.worker) {
-                  c = [];
-                  for (const d of this.index.values()) c.push(d.import(a));
-                  return Promise.all(c);
-                }
-                break;
-              case "tag":
-                this.tag = ob(c, this.tag);
-                break;
-              case "doc":
-                this.store = mb(c, this.store);
-            }
-          }
-        }
-        function sb(a, c) {
-          let b = "";
-          for (const e of a.entries()) {
-            a = e[0];
-            const d = e[1];
-            let f = "";
-            for (let g = 0, k; g < d.length; g++) {
-              k = d[g] || [""];
-              let h = "";
-              for (let l = 0; l < k.length; l++) h += (h ? "," : "") + (c === "string" ? '"' + k[l] + '"' : k[l]);
-              h = "[" + h + "]";
-              f += (f ? "," : "") + h;
-            }
-            f = '["' + a + '",[' + f + "]]";
-            b += (b ? "," : "") + f;
-          }
-          return b;
-        }
-        T.prototype.remove = function(a, c) {
-          const b = this.reg.size && (this.fastupdate ? this.reg.get(a) : this.reg.has(a));
-          if (b) {
-            if (this.fastupdate) for (let e = 0, d, f; e < b.length; e++) {
-              if ((d = b[e]) && (f = d.length)) if (d[f - 1] === a) d.pop();
-              else {
-                const g = d.indexOf(a);
-                g >= 0 && d.splice(g, 1);
-              }
-            }
-            else tb(this.map, a), this.depth && tb(this.ctx, a);
-            c || this.reg.delete(a);
-          }
-          this.db && (this.commit_task.push({ del: a }), this.M && ub(this));
-          this.cache && this.cache.remove(a);
-          return this;
-        };
-        function tb(a, c) {
-          let b = 0;
-          var e = typeof c === "undefined";
-          if (a.constructor === Array) for (let d = 0, f, g, k; d < a.length; d++) {
-            if ((f = a[d]) && f.length) {
-              if (e) return 1;
-              g = f.indexOf(c);
-              if (g >= 0) {
-                if (f.length > 1) return f.splice(g, 1), 1;
-                delete a[d];
-                if (b) return 1;
-                k = 1;
-              } else {
-                if (k) return 1;
-                b++;
-              }
-            }
-          }
-          else for (let d of a.entries()) e = d[0], tb(d[1], c) ? b++ : a.delete(e);
-          return b;
-        }
-        const vb = { memory: { resolution: 1 }, performance: { resolution: 3, fastupdate: true, context: { depth: 1, resolution: 1 } }, match: { tokenize: "forward" }, score: { resolution: 9, context: { depth: 2, resolution: 3 } } };
-        T.prototype.add = function(a, c, b, e) {
-          if (c && (a || a === 0)) {
-            if (!e && !b && this.reg.has(a)) return this.update(a, c);
-            e = this.depth;
-            c = this.encoder.encode(c, !e);
-            const l = c.length;
-            if (l) {
-              const m = I(), p = I(), u = this.resolution;
-              for (let r = 0; r < l; r++) {
-                let t = c[this.rtl ? l - 1 - r : r];
-                var d = t.length;
-                if (d && (e || !p[t])) {
-                  var f = this.score ? this.score(c, t, r, null, 0) : wb(u, l, r), g = "";
-                  switch (this.tokenize) {
-                    case "tolerant":
-                      Y(this, p, t, f, a, b);
-                      if (d > 2) {
-                        for (let n = 1, q, x, v, A; n < d - 1; n++) q = t.charAt(n), x = t.charAt(n + 1), v = t.substring(0, n) + x, A = t.substring(n + 2), g = v + q + A, Y(this, p, g, f, a, b), g = v + A, Y(this, p, g, f, a, b);
-                        Y(this, p, t.substring(0, t.length - 1), f, a, b);
-                      }
-                      break;
-                    case "full":
-                      if (d > 2) {
-                        for (let n = 0, q; n < d; n++) for (f = d; f > n; f--) {
-                          g = t.substring(n, f);
-                          q = this.rtl ? d - 1 - n : n;
-                          var k = this.score ? this.score(c, t, r, g, q) : wb(u, l, r, d, q);
-                          Y(this, p, g, k, a, b);
-                        }
-                        break;
-                      }
-                    case "bidirectional":
-                    case "reverse":
-                      if (d > 1) {
-                        for (k = d - 1; k > 0; k--) {
-                          g = t[this.rtl ? d - 1 - k : k] + g;
-                          var h = this.score ? this.score(c, t, r, g, k) : wb(u, l, r, d, k);
-                          Y(this, p, g, h, a, b);
-                        }
-                        g = "";
-                      }
-                    case "forward":
-                      if (d > 1) {
-                        for (k = 0; k < d; k++) g += t[this.rtl ? d - 1 - k : k], Y(
-                          this,
-                          p,
-                          g,
-                          f,
-                          a,
-                          b
-                        );
-                        break;
-                      }
-                    default:
-                      if (Y(this, p, t, f, a, b), e && l > 1 && r < l - 1) for (d = this.N, g = t, f = Math.min(e + 1, this.rtl ? r + 1 : l - r), k = 1; k < f; k++) {
-                        t = c[this.rtl ? l - 1 - r - k : r + k];
-                        h = this.bidirectional && t > g;
-                        const n = this.score ? this.score(c, g, r, t, k - 1) : wb(d + (l / 2 > d ? 0 : 1), l, r, f - 1, k - 1);
-                        Y(this, m, h ? g : t, n, a, b, h ? t : g);
-                      }
-                  }
-                }
-              }
-              this.fastupdate || this.reg.add(a);
-            }
-          }
-          this.db && (this.commit_task.push(b ? { ins: a } : { del: a }), this.M && ub(this));
-          return this;
-        };
-        function Y(a, c, b, e, d, f, g) {
-          let k, h;
-          if (!(k = c[b]) || g && !k[g]) {
-            g ? (c = k || (c[b] = I()), c[g] = 1, h = a.ctx, (k = h.get(g)) ? h = k : h.set(g, h = a.keystore ? new R(a.keystore) : new Map())) : (h = a.map, c[b] = 1);
-            (k = h.get(b)) ? h = k : h.set(b, h = k = []);
-            if (f) {
-              for (let l = 0, m; l < k.length; l++) if ((m = k[l]) && m.includes(d)) {
-                if (l <= e) return;
-                m.splice(m.indexOf(d), 1);
-                a.fastupdate && (c = a.reg.get(d)) && c.splice(c.indexOf(m), 1);
-                break;
-              }
-            }
-            h = h[e] || (h[e] = []);
-            h.push(d);
-            if (h.length === 2 ** 31 - 1) {
-              c = new xa(h);
-              if (a.fastupdate) for (let l of a.reg.values()) l.includes(h) && (l[l.indexOf(h)] = c);
-              k[e] = h = c;
-            }
-            a.fastupdate && ((e = a.reg.get(d)) ? e.push(h) : a.reg.set(d, [h]));
-          }
-        }
-        function wb(a, c, b, e, d) {
-          return b && a > 1 ? c + (e || 0) <= a ? b + (d || 0) : (a - 1) / (c + (e || 0)) * (b + (d || 0)) + 1 | 0 : 0;
-        }
-        T.prototype.search = function(a, c, b) {
-          b || (c || typeof a !== "object" ? typeof c === "object" && (b = c, c = 0) : (b = a, a = ""));
-          if (b && b.cache) return b.cache = false, a = this.searchCache(a, c, b), b.cache = true, a;
-          let e = [], d, f, g, k = 0, h, l, m, p, u;
-          b && (a = b.query || a, c = b.limit || c, k = b.offset || 0, f = b.context, g = b.suggest, u = (h = b.resolve) && b.enrich, m = b.boost, p = b.resolution, l = this.db && b.tag);
-          typeof h === "undefined" && (h = this.resolve);
-          f = this.depth && f !== false;
-          let r = this.encoder.encode(a, !f);
-          d = r.length;
-          c = c || (h ? 100 : 0);
-          if (d === 1) return xb.call(
-            this,
-            r[0],
-            "",
-            c,
-            k,
-            h,
-            u,
-            l
-          );
-          if (d === 2 && f && !g) return xb.call(this, r[1], r[0], c, k, h, u, l);
-          let t = I(), n = 0, q;
-          f && (q = r[0], n = 1);
-          p || p === 0 || (p = q ? this.N : this.resolution);
-          if (this.db) {
-            if (this.db.search && (b = this.db.search(this, r, c, k, g, h, u, l), b !== false)) return b;
-            const x = this;
-            return (async function() {
-              for (let v, A; n < d; n++) {
-                if ((A = r[n]) && !t[A]) {
-                  t[A] = 1;
-                  v = await yb(x, A, q, 0, 0, false, false);
-                  if (v = zb(v, e, g, p)) {
-                    e = v;
-                    break;
-                  }
-                  q && (g && v && e.length || (q = A));
-                }
-                g && q && n === d - 1 && !e.length && (p = x.resolution, q = "", n = -1, t = I());
-              }
-              return Ab(e, p, c, k, g, m, h);
-            })();
-          }
-          for (let x, v; n < d; n++) {
-            if ((v = r[n]) && !t[v]) {
-              t[v] = 1;
-              x = yb(this, v, q, 0, 0, false, false);
-              if (x = zb(x, e, g, p)) {
-                e = x;
-                break;
-              }
-              q && (g && x && e.length || (q = v));
-            }
-            g && q && n === d - 1 && !e.length && (p = this.resolution, q = "", n = -1, t = I());
-          }
-          return Ab(e, p, c, k, g, m, h);
-        };
-        function Ab(a, c, b, e, d, f, g) {
-          let k = a.length, h = a;
-          if (k > 1) h = $a(a, c, b, e, d, f, g);
-          else if (k === 1) return g ? Sa.call(null, a[0], b, e) : new X(a[0], this);
-          return g ? h : new X(h, this);
-        }
-        function xb(a, c, b, e, d, f, g) {
-          a = yb(this, a, c, b, e, d, f, g);
-          return this.db ? a.then(function(k) {
-            return d ? k || [] : new X(k, this);
-          }) : a && a.length ? d ? Sa.call(this, a, b, e) : new X(a, this) : d ? [] : new X([], this);
-        }
-        function zb(a, c, b, e) {
-          let d = [];
-          if (a && a.length) {
-            if (a.length <= e) {
-              c.push(a);
-              return;
-            }
-            for (let f = 0, g; f < e; f++) if (g = a[f]) d[f] = g;
-            if (d.length) {
-              c.push(d);
-              return;
-            }
-          }
-          if (!b) return d;
-        }
-        function yb(a, c, b, e, d, f, g, k) {
-          let h;
-          b && (h = a.bidirectional && c > b) && (h = b, b = c, c = h);
-          if (a.db) return a.db.get(c, b, e, d, f, g, k);
-          a = b ? (a = a.ctx.get(b)) && a.get(c) : a.map.get(c);
-          return a;
-        }
-        function T(a, c) {
-          if (!this || this.constructor !== T) return new T(a);
-          if (a) {
-            var b = M(a) ? a : a.preset;
-            b && (a = Object.assign({}, vb[b], a));
-          } else a = {};
-          b = a.context;
-          const e = b === true ? { depth: 1 } : b || {}, d = M(a.encoder) ? va[a.encoder] : a.encode || a.encoder || {};
-          this.encoder = d.encode ? d : typeof d === "object" ? new ka(d) : { encode: d };
-          this.resolution = a.resolution || 9;
-          this.tokenize = b = (b = a.tokenize) && b !== "default" && b !== "exact" && b || "strict";
-          this.depth = b === "strict" && e.depth || 0;
-          this.bidirectional = e.bidirectional !== false;
-          this.fastupdate = !!a.fastupdate;
-          this.score = a.score || null;
-          (b = a.keystore || 0) && (this.keystore = b);
-          this.map = b ? new R(b) : new Map();
-          this.ctx = b ? new R(b) : new Map();
-          this.reg = c || (this.fastupdate ? b ? new R(b) : new Map() : b ? new S(b) : new Set());
-          this.N = e.resolution || 3;
-          this.rtl = d.rtl || a.rtl || false;
-          this.cache = (b = a.cache || null) && new ma(b);
-          this.resolve = a.resolve !== false;
-          if (b = a.db) this.db = this.mount(b);
-          this.M = a.commit !== false;
-          this.commit_task = [];
-          this.commit_timer = null;
-          this.priority = a.priority || 4;
-        }
-        w = T.prototype;
-        w.mount = function(a) {
-          this.commit_timer && (clearTimeout(this.commit_timer), this.commit_timer = null);
-          return a.mount(this);
-        };
-        w.commit = function() {
-          this.commit_timer && (clearTimeout(this.commit_timer), this.commit_timer = null);
-          return this.db.commit(this);
-        };
-        w.destroy = function() {
-          this.commit_timer && (clearTimeout(this.commit_timer), this.commit_timer = null);
-          return this.db.destroy();
-        };
-        function ub(a) {
-          a.commit_timer || (a.commit_timer = setTimeout(function() {
-            a.commit_timer = null;
-            a.db.commit(a);
-          }, 1));
-        }
-        w.clear = function() {
-          this.map.clear();
-          this.ctx.clear();
-          this.reg.clear();
-          this.cache && this.cache.clear();
-          return this.db ? (this.commit_timer && clearTimeout(this.commit_timer), this.commit_timer = null, this.commit_task = [], this.db.clear()) : this;
-        };
-        w.append = function(a, c) {
-          return this.add(a, c, true);
-        };
-        w.contain = function(a) {
-          return this.db ? this.db.has(a) : this.reg.has(a);
-        };
-        w.update = function(a, c) {
-          const b = this, e = this.remove(a);
-          return e && e.then ? e.then(() => b.add(a, c)) : this.add(a, c);
-        };
-        w.cleanup = function() {
-          if (!this.fastupdate) return this;
-          tb(this.map);
-          this.depth && tb(this.ctx);
-          return this;
-        };
-        w.searchCache = la;
-        w.export = function(a, c, b = 0, e = 0) {
-          let d, f;
-          switch (e) {
-            case 0:
-              d = "reg";
-              f = pb(this.reg);
-              break;
-            case 1:
-              d = "cfg";
-              f = null;
-              break;
-            case 2:
-              d = "map";
-              f = lb(this.map, this.reg.size);
-              break;
-            case 3:
-              d = "ctx";
-              f = nb(this.ctx, this.reg.size);
-              break;
-            default:
-              return;
-          }
-          return rb.call(this, a, c, d, f, b, e);
-        };
-        w.import = function(a, c) {
-          if (c) switch (typeof c === "string" && (c = JSON.parse(c)), a = a.split("."), a[a.length - 1] === "json" && a.pop(), a.length === 3 && a.shift(), a = a.length > 1 ? a[1] : a[0], a) {
-            case "reg":
-              this.fastupdate = false;
-              this.reg = qb(c, this.reg);
-              break;
-            case "map":
-              this.map = mb(c, this.map);
-              break;
-            case "ctx":
-              this.ctx = ob(c, this.ctx);
-          }
-        };
-        w.serialize = function(a = true) {
-          let c = "", b = "", e = "";
-          if (this.reg.size) {
-            let f;
-            for (var d of this.reg.keys()) f || (f = typeof d), c += (c ? "," : "") + (f === "string" ? '"' + d + '"' : d);
-            c = "index.reg=new Set([" + c + "]);";
-            b = sb(this.map, f);
-            b = "index.map=new Map([" + b + "]);";
-            for (const g of this.ctx.entries()) {
-              d = g[0];
-              let k = sb(g[1], f);
-              k = "new Map([" + k + "])";
-              k = '["' + d + '",' + k + "]";
-              e += (e ? "," : "") + k;
-            }
-            e = "index.ctx=new Map([" + e + "]);";
-          }
-          return a ? "function inject(index){" + c + b + e + "}" : c + b + e;
-        };
-        Fa(T.prototype);
-        const Bb = typeof window !== "undefined" && (window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB), Cb = ["map", "ctx", "tag", "reg", "cfg"], Db = I();
-        function Eb(a, c = {}) {
-          if (!this || this.constructor !== Eb) return new Eb(a, c);
-          typeof a === "object" && (c = a, a = a.name);
-          a || console.info("Default storage space was used, because a name was not passed.");
-          this.id = "flexsearch" + (a ? ":" + a.toLowerCase().replace(/[^a-z0-9_\-]/g, "") : "");
-          this.field = c.field ? c.field.toLowerCase().replace(/[^a-z0-9_\-]/g, "") : "";
-          this.type = c.type;
-          this.fastupdate = this.support_tag_search = false;
-          this.db = null;
-          this.h = {};
-        }
-        w = Eb.prototype;
-        w.mount = function(a) {
-          if (a.index) return a.mount(this);
-          a.db = this;
-          return this.open();
-        };
-        w.open = function() {
-          if (this.db) return this.db;
-          let a = this;
-          navigator.storage && navigator.storage.persist && navigator.storage.persist();
-          Db[a.id] || (Db[a.id] = []);
-          Db[a.id].push(a.field);
-          const c = Bb.open(a.id, 1);
-          c.onupgradeneeded = function() {
-            const b = a.db = this.result;
-            for (let e = 0, d; e < Cb.length; e++) {
-              d = Cb[e];
-              for (let f = 0, g; f < Db[a.id].length; f++) g = Db[a.id][f], b.objectStoreNames.contains(d + (d !== "reg" ? g ? ":" + g : "" : "")) || b.createObjectStore(d + (d !== "reg" ? g ? ":" + g : "" : ""));
-            }
-          };
-          return a.db = Z(c, function(b) {
-            a.db = b;
-            a.db.onversionchange = function() {
-              a.close();
-            };
-          });
-        };
-        w.close = function() {
-          this.db && this.db.close();
-          this.db = null;
-        };
-        w.destroy = function() {
-          const a = Bb.deleteDatabase(this.id);
-          return Z(a);
-        };
-        w.clear = function() {
-          const a = [];
-          for (let b = 0, e; b < Cb.length; b++) {
-            e = Cb[b];
-            for (let d = 0, f; d < Db[this.id].length; d++) f = Db[this.id][d], a.push(e + (e !== "reg" ? f ? ":" + f : "" : ""));
-          }
-          const c = this.db.transaction(a, "readwrite");
-          for (let b = 0; b < a.length; b++) c.objectStore(a[b]).clear();
-          return Z(c);
-        };
-        w.get = function(a, c, b = 0, e = 0, d = true, f = false) {
-          a = this.db.transaction((c ? "ctx" : "map") + (this.field ? ":" + this.field : ""), "readonly").objectStore((c ? "ctx" : "map") + (this.field ? ":" + this.field : "")).get(c ? c + ":" + a : a);
-          const g = this;
-          return Z(a).then(function(k) {
-            let h = [];
-            if (!k || !k.length) return h;
-            if (d) {
-              if (!b && !e && k.length === 1) return k[0];
-              for (let l = 0, m; l < k.length; l++) if ((m = k[l]) && m.length) {
-                if (e >= m.length) {
-                  e -= m.length;
-                  continue;
-                }
-                const p = b ? e + Math.min(m.length - e, b) : m.length;
-                for (let u = e; u < p; u++) h.push(m[u]);
-                e = 0;
-                if (h.length === b) break;
-              }
-              return f ? g.enrich(h) : h;
-            }
-            return k;
-          });
-        };
-        w.tag = function(a, c = 0, b = 0, e = false) {
-          a = this.db.transaction("tag" + (this.field ? ":" + this.field : ""), "readonly").objectStore("tag" + (this.field ? ":" + this.field : "")).get(a);
-          const d = this;
-          return Z(a).then(function(f) {
-            if (!f || !f.length || b >= f.length) return [];
-            if (!c && !b) return f;
-            f = f.slice(b, b + c);
-            return e ? d.enrich(f) : f;
-          });
-        };
-        w.enrich = function(a) {
-          typeof a !== "object" && (a = [a]);
-          const c = this.db.transaction("reg", "readonly").objectStore("reg"), b = [];
-          for (let e = 0; e < a.length; e++) b[e] = Z(c.get(a[e]));
-          return Promise.all(b).then(function(e) {
-            for (let d = 0; d < e.length; d++) e[d] = { id: a[d], doc: e[d] ? JSON.parse(e[d]) : null };
-            return e;
-          });
-        };
-        w.has = function(a) {
-          a = this.db.transaction("reg", "readonly").objectStore("reg").getKey(a);
-          return Z(a).then(function(c) {
-            return !!c;
-          });
-        };
-        w.search = null;
-        w.info = function() {
-        };
-        w.transaction = function(a, c, b) {
-          a += a !== "reg" ? this.field ? ":" + this.field : "" : "";
-          let e = this.h[a + ":" + c];
-          if (e) return b.call(this, e);
-          let d = this.db.transaction(a, c);
-          this.h[a + ":" + c] = e = d.objectStore(a);
-          const f = b.call(this, e);
-          this.h[a + ":" + c] = null;
-          return Z(d).finally(function() {
-            return f;
-          });
-        };
-        w.commit = async function(a) {
-          let c = a.commit_task, b = [];
-          a.commit_task = [];
-          for (let e = 0, d; e < c.length; e++) d = c[e], d.del && b.push(d.del);
-          b.length && await this.remove(b);
-          a.reg.size && (await this.transaction("map", "readwrite", function(e) {
-            for (const d of a.map) {
-              const f = d[0], g = d[1];
-              g.length && (e.get(f).onsuccess = function() {
-                let k = this.result;
-                var h;
-                if (k && k.length) {
-                  const l = Math.max(k.length, g.length);
-                  for (let m = 0, p, u; m < l; m++) if ((u = g[m]) && u.length) {
-                    if ((p = k[m]) && p.length) for (h = 0; h < u.length; h++) p.push(u[h]);
-                    else k[m] = u;
-                    h = 1;
-                  }
-                } else k = g, h = 1;
-                h && e.put(k, f);
-              });
-            }
-          }), await this.transaction("ctx", "readwrite", function(e) {
-            for (const d of a.ctx) {
-              const f = d[0], g = d[1];
-              for (const k of g) {
-                const h = k[0], l = k[1];
-                l.length && (e.get(f + ":" + h).onsuccess = function() {
-                  let m = this.result;
-                  var p;
-                  if (m && m.length) {
-                    const u = Math.max(m.length, l.length);
-                    for (let r = 0, t, n; r < u; r++) if ((n = l[r]) && n.length) {
-                      if ((t = m[r]) && t.length) for (p = 0; p < n.length; p++) t.push(n[p]);
-                      else m[r] = n;
-                      p = 1;
-                    }
-                  } else m = l, p = 1;
-                  p && e.put(m, f + ":" + h);
-                });
-              }
-            }
-          }), a.store ? await this.transaction(
-            "reg",
-            "readwrite",
-            function(e) {
-              for (const d of a.store) {
-                const f = d[0], g = d[1];
-                e.put(typeof g === "object" ? JSON.stringify(g) : 1, f);
-              }
-            }
-          ) : a.bypass || await this.transaction("reg", "readwrite", function(e) {
-            for (const d of a.reg.keys()) e.put(1, d);
-          }), a.tag && await this.transaction("tag", "readwrite", function(e) {
-            for (const d of a.tag) {
-              const f = d[0], g = d[1];
-              g.length && (e.get(f).onsuccess = function() {
-                let k = this.result;
-                k = k && k.length ? k.concat(g) : g;
-                e.put(k, f);
-              });
-            }
-          }), a.map.clear(), a.ctx.clear(), a.tag && a.tag.clear(), a.store && a.store.clear(), a.document || a.reg.clear());
-        };
-        function Fb(a, c, b) {
-          const e = a.value;
-          let d, f = 0;
-          for (let g = 0, k; g < e.length; g++) {
-            if (k = b ? e : e[g]) {
-              for (let h = 0, l, m; h < c.length; h++) if (m = c[h], l = k.indexOf(m), l >= 0) if (d = 1, k.length > 1) k.splice(l, 1);
-              else {
-                e[g] = [];
-                break;
-              }
-              f += k.length;
-            }
-            if (b) break;
-          }
-          f ? d && a.update(e) : a.delete();
-          a.continue();
-        }
-        w.remove = function(a) {
-          typeof a !== "object" && (a = [a]);
-          return Promise.all([this.transaction("map", "readwrite", function(c) {
-            c.openCursor().onsuccess = function() {
-              const b = this.result;
-              b && Fb(b, a);
-            };
-          }), this.transaction("ctx", "readwrite", function(c) {
-            c.openCursor().onsuccess = function() {
-              const b = this.result;
-              b && Fb(b, a);
-            };
-          }), this.transaction("tag", "readwrite", function(c) {
-            c.openCursor().onsuccess = function() {
-              const b = this.result;
-              b && Fb(b, a, true);
-            };
-          }), this.transaction("reg", "readwrite", function(c) {
-            for (let b = 0; b < a.length; b++) c.delete(a[b]);
-          })]);
-        };
-        function Z(a, c) {
-          return new Promise((b, e) => {
-            a.onsuccess = a.oncomplete = function() {
-              c && c(this.result);
-              c = null;
-              b(this.result);
-            };
-            a.onerror = a.onblocked = e;
-            a = null;
-          });
-        }
-        const Gb = { Index: T, Charset: va, Encoder: ka, Document: Na, Worker: La, Resolver: X, IndexedDB: Eb, Language: {} }, Hb = typeof self2 !== "undefined" ? self2 : typeof commonjsGlobal !== "undefined" ? commonjsGlobal : self2;
-        let Ib;
-        (Ib = Hb.define) && Ib.amd ? Ib([], function() {
-          return Gb;
-        }) : typeof Hb.exports === "object" ? Hb.exports = Gb : Hb.FlexSearch = Gb;
-      })(flexsearch_bundle_min || self);
-    })(flexsearch_bundle_min$1);
-    return flexsearch_bundle_min$1.exports;
-  }
-  var flexsearch_bundle_minExports = requireFlexsearch_bundle_min();
-  const DanmukuDB = {
-db: null,
-initialized: false,
-memoryCache: new Map(),
-searchIndex: null,
-indexBuilt: false,
-async init() {
-      if (this.initialized) {
-        return true;
-      }
-      try {
-        this.db = await this._openDatabase();
-        this.initialized = true;
-        await this._buildMemoryIndex();
-        Utils.log("弹幕数据库初始化成功");
-        return true;
-      } catch (error) {
-        Utils.log(`弹幕数据库初始化失败: ${error.message}`, "error");
-        return false;
-      }
-    },
-_openDatabase() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(SETTINGS.DB_NAME, SETTINGS.DB_VERSION);
-        request.onerror = () => {
-          reject(new Error("数据库打开失败"));
-        };
-        request.onsuccess = (event) => {
-          resolve(event.target.result);
-        };
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains(SETTINGS.DB_STORE_NAME)) {
-            const store = db.createObjectStore(SETTINGS.DB_STORE_NAME, {
-              keyPath: "id",
-              autoIncrement: true
-            });
-            store.createIndex("text", "text", { unique: false });
-            store.createIndex("tags", "tags", { unique: false, multiEntry: true });
-            store.createIndex("syncState", "syncState", { unique: false });
-            store.createIndex("lastUsed", "lastUsed", { unique: false });
-            store.createIndex("useCount", "useCount", { unique: false });
-            store.createIndex("popularity", "popularity", { unique: false });
-            store.createIndex("originalId", "originalId", { unique: false });
-            store.createIndex("category", "category", { unique: false });
-          }
-          if (!db.objectStoreNames.contains("tag_dictionary")) {
-            const tagStore = db.createObjectStore("tag_dictionary", {
-              keyPath: "dictValue"
-            });
-            tagStore.createIndex("dictLabel", "dictLabel", { unique: false });
-            tagStore.createIndex("dictType", "dictType", { unique: false });
-          }
-          if (!db.objectStoreNames.contains("import_logs")) {
-            const logStore = db.createObjectStore("import_logs", {
-              keyPath: "id",
-              autoIncrement: true
-            });
-            logStore.createIndex("timestamp", "timestamp", { unique: false });
-            logStore.createIndex("status", "status", { unique: false });
-          }
-        };
-      });
-    },
-async add(text, tags = []) {
-      if (!this.initialized) {
-        Utils.log("数据库未初始化", "error");
-        return null;
-      }
-      try {
-        const danmukuData = {
-          text: text.trim(),
-          tags: tags.filter((tag) => tag.trim()),
-          syncState: "pending",
-createdAt: Date.now(),
-          lastUsed: Date.now(),
-          useCount: 1
-        };
-        const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readwrite");
-        const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-        const request = store.add(danmukuData);
-        return new Promise((resolve, reject) => {
-          request.onsuccess = (event) => {
-            const id = event.target.result;
-            const newData = { ...danmukuData, id };
-            this.memoryCache.set(id, newData);
-            if (this.searchIndex) {
-              const searchContent = [newData.text, ...newData.tags].join(" ");
-              this.searchIndex.add(newData.id, searchContent);
-            }
-            Utils.log(`弹幕模板添加成功: ${text}`);
-            resolve(id);
-          };
-          request.onerror = () => {
-            reject(new Error("添加弹幕模板失败"));
-          };
-        });
-      } catch (error) {
-        Utils.log(`添加弹幕模板异常: ${error.message}`, "error");
-        return null;
-      }
-    },
-async search(query, limit = SETTINGS.maxSuggestions, sortBy = "relevance") {
-      if (!this.initialized || !query) {
-        Utils.log("搜索条件无效: 数据库未初始化或查询为空");
-        return [];
-      }
-      try {
-        if (!this.indexBuilt) {
-          await this._buildMemoryIndex();
-        }
-        const searchIds = this.searchIndex.search(query, limit * 2);
-        let matchedDanmuku = searchIds.map((id) => this.memoryCache.get(id)).filter((item) => item);
-        switch (sortBy) {
-          case "popularity":
-            matchedDanmuku.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-            break;
-          case "recent":
-            matchedDanmuku.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            break;
-          case "usage":
-            matchedDanmuku.sort((a, b) => {
-              if (b.useCount !== a.useCount) {
-                return (b.useCount || 0) - (a.useCount || 0);
-              }
-              return (b.lastUsed || 0) - (a.lastUsed || 0);
-            });
-            break;
-          default:
-            matchedDanmuku.sort((a, b) => {
-              const scoreA = (a.useCount || 0) * 0.4 + (a.popularity || 0) * 0.3 + (a.lastUsed || 0) / 1e6 * 0.3;
-              const scoreB = (b.useCount || 0) * 0.4 + (b.popularity || 0) * 0.3 + (b.lastUsed || 0) / 1e6 * 0.3;
-              return scoreB - scoreA;
-            });
-            break;
-        }
-        const finalResults = matchedDanmuku.slice(0, limit);
-        Utils.log(`搜索 "${query}" (${sortBy}) 返回 ${finalResults.length} 条结果`);
-        return finalResults;
-      } catch (error) {
-        Utils.log(`搜索弹幕模板异常: ${error.message}`, "error");
-        return [];
-      }
-    },
-async updateUsage(id) {
-      if (!this.initialized) {
-        return false;
-      }
-      try {
-        const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readwrite");
-        const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-        const getRequest = store.get(id);
-        return new Promise((resolve) => {
-          getRequest.onsuccess = (event) => {
-            const data = event.target.result;
-            if (data) {
-              data.useCount = (data.useCount || 0) + 1;
-              data.lastUsed = Date.now();
-              const putRequest = store.put(data);
-              putRequest.onsuccess = () => {
-                this.memoryCache.set(id, data);
-                if (this.searchIndex) {
-                  const searchContent = [data.text, ...data.tags].join(" ");
-                  this.searchIndex.update(data.id, searchContent);
-                }
-                resolve(true);
-              };
-              putRequest.onerror = () => resolve(false);
-            } else {
-              resolve(false);
-            }
-          };
-          getRequest.onerror = () => resolve(false);
-        });
-      } catch (error) {
-        Utils.log(`更新使用统计异常: ${error.message}`, "error");
-        return false;
-      }
-    },
-async delete(id) {
-      if (!this.initialized) {
-        return false;
-      }
-      try {
-        const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readwrite");
-        const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-        const request = store.delete(id);
-        return new Promise((resolve) => {
-          request.onsuccess = () => {
-            this.memoryCache.delete(id);
-            if (this.searchIndex) {
-              this.searchIndex.remove(id);
-            }
-            Utils.log(`弹幕模板删除成功: ID ${id}`);
-            resolve(true);
-          };
-          request.onerror = () => {
-            Utils.log(`弹幕模板删除失败: ID ${id}`, "error");
-            resolve(false);
-          };
-        });
-      } catch (error) {
-        Utils.log(`删除弹幕模板异常: ${error.message}`, "error");
-        return false;
-      }
-    },
-async getAll() {
-      if (!this.initialized) {
-        return [];
-      }
-      try {
-        const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readonly");
-        const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-        const request = store.getAll();
-        return new Promise((resolve) => {
-          request.onsuccess = (event) => {
-            resolve(event.target.result || []);
-          };
-          request.onerror = () => {
-            Utils.log("获取所有弹幕模板失败", "error");
-            resolve([]);
-          };
-        });
-      } catch (error) {
-        Utils.log(`获取所有弹幕模板异常: ${error.message}`, "error");
-        return [];
-      }
-    },
-async clear() {
-      if (!this.initialized) {
-        return false;
-      }
-      try {
-        const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readwrite");
-        const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-        const request = store.clear();
-        return new Promise((resolve) => {
-          request.onsuccess = () => {
-            this.memoryCache.clear();
-            if (this.searchIndex) {
-              this.searchIndex = null;
-              this.indexBuilt = false;
-            }
-            Utils.log("弹幕数据库已清空");
-            resolve(true);
-          };
-          request.onerror = () => {
-            Utils.log("清空弹幕数据库失败", "error");
-            resolve(false);
-          };
-        });
-      } catch (error) {
-        Utils.log(`清空数据库异常: ${error.message}`, "error");
-        return false;
-      }
-    },
-async initTagDictionary() {
-      try {
-        const response = await fetch("https://hguofichp.cn:10086/machine/dictList");
-        const result = await response.json();
-        if (result.code === 200 && result.data) {
-          const transaction = this.db.transaction(["tag_dictionary"], "readwrite");
-          const store = transaction.objectStore("tag_dictionary");
-          await new Promise((resolve, reject) => {
-            const clearRequest = store.clear();
-            clearRequest.onsuccess = () => resolve();
-            clearRequest.onerror = () => reject(new Error("清空标签字典失败"));
-          });
-          for (const tag of result.data) {
-            await new Promise((resolve, reject) => {
-              const addRequest = store.add(tag);
-              addRequest.onsuccess = () => resolve();
-              addRequest.onerror = () => reject(new Error("添加标签失败"));
-            });
-          }
-          Utils.log(`标签字典初始化完成，共 ${result.data.length} 个标签`);
-          return true;
-        }
-        return false;
-      } catch (error) {
-        Utils.log(`标签字典初始化失败: ${error.message}`, "error");
-        return false;
-      }
-    },
-async getTagDictionary() {
-      try {
-        const transaction = this.db.transaction(["tag_dictionary"], "readonly");
-        const store = transaction.objectStore("tag_dictionary");
-        const request = store.getAll();
-        return new Promise((resolve) => {
-          request.onsuccess = (event) => {
-            resolve(event.target.result || []);
-          };
-          request.onerror = () => resolve([]);
-        });
-      } catch (error) {
-        Utils.log(`获取标签字典失败: ${error.message}`, "error");
-        return [];
-      }
-    },
-async importFromUrl(url) {
-      Utils.log(`开始从 URL 下载弹幕数据: ${url}`);
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers: {
-            "Accept": "application/json"
-          }
-        });
-        if (!response.ok) {
-          throw new Error(`网络响应错误: ${response.status} ${response.statusText}`);
-        }
-        const jsonData = await response.json();
-        Utils.log(`数据下载成功，共 ${jsonData.length} 条。开始导入数据库...`);
-        return await this.importFromJson(jsonData);
-      } catch (error) {
-        Utils.log(`从 URL 导入数据失败: ${error.message}`, "error");
-        return null;
-      }
-    },
-async importFromJson(jsonData) {
-      const startTime = Date.now();
-      const importLog = {
-        timestamp: startTime,
-        source: "json_data",
-        status: "running",
-        totalProcessed: 0,
-        successCount: 0,
-        failCount: 0,
-        duplicateCount: 0,
-        errors: []
-      };
-      try {
-        const tagDict = await this.getTagDictionary();
-        const tagMap = new Map(tagDict.map((tag) => [tag.dictValue, tag.dictLabel]));
-        const existingData = await this.getAll();
-        const existingTexts = new Set(existingData.map((item) => item.text));
-        importLog.totalProcessed = jsonData.length;
-        for (const item of jsonData) {
-          try {
-            if (existingTexts.has(item.barrage)) {
-              importLog.duplicateCount++;
-              continue;
-            }
-            const tagValues = item.tags ? String(item.tags).split(",").map((t) => t.trim()) : [];
-            const tagLabels = tagValues.map((value) => tagMap.get(value) || value).filter(Boolean);
-            const danmakuData = {
-              text: item.barrage.trim(),
-              tags: tagLabels,
-              originalId: item.id,
-              popularity: parseInt(item.cnt) || 0,
-              category: "imported",
-              syncState: "synced",
-              createdAt: new Date(item.submitTime).getTime(),
-              lastUsed: 0,
-              useCount: 0,
-              source: "json_import",
-              importBatch: startTime
-            };
-            const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readwrite");
-            const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-            await new Promise((resolve, reject) => {
-              const addRequest = store.add(danmakuData);
-              addRequest.onsuccess = () => resolve();
-              addRequest.onerror = (e) => reject(new Error(`数据库添加失败: ${e.target.error}`));
-            });
-            existingTexts.add(item.barrage);
-            importLog.successCount++;
-          } catch (error) {
-            importLog.failCount++;
-            importLog.errors.push(`处理弹幕 (ID: ${item.id}) 失败: ${error.message}`);
-          }
-        }
-        importLog.status = "completed";
-        importLog.duration = Date.now() - startTime;
-        await this._saveImportLog(importLog);
-        await this._buildMemoryIndex();
-        Utils.log(`JSON数据导入完成！成功 ${importLog.successCount}, 失败 ${importLog.failCount}, 重复 ${importLog.duplicateCount}`);
-        return importLog;
-      } catch (error) {
-        importLog.status = "failed";
-        importLog.duration = Date.now() - startTime;
-        importLog.errors.push(`导入过程异常: ${error.message}`);
-        await this._saveImportLog(importLog);
-        Utils.log(`从JSON导入数据失败: ${error.message}`, "error");
-        return importLog;
-      }
-    },
-async autoImportData() {
-      const startTime = Date.now();
-      const importLog = {
-        timestamp: startTime,
-        source: "url_import",
-        status: "running",
-        errors: []
-      };
-      try {
-        await this.initTagDictionary();
-        const dataUrl = "https://data.ienone.top/danmuku/danmuku_v0.json";
-        const result = await this.importFromUrl(dataUrl);
-        if (result) {
-          Utils.log(`弹幕数据导入完成！`);
-          return result;
-        } else {
-          throw new Error("从URL导入返回了null");
-        }
-      } catch (error) {
-        importLog.status = "failed";
-        importLog.duration = Date.now() - startTime;
-        importLog.errors.push(`导入过程异常: ${error.message}`);
-        await this._saveImportLog(importLog);
-        Utils.log(`弹幕数据导入失败: ${error.message}`, "error");
-        return importLog;
-      }
-    },
-async _saveImportLog(logData) {
-      try {
-        const transaction = this.db.transaction(["import_logs"], "readwrite");
-        const store = transaction.objectStore("import_logs");
-        await new Promise((resolve, reject) => {
-          const addRequest = store.add(logData);
-          addRequest.onsuccess = () => resolve();
-          addRequest.onerror = () => reject(new Error("保存日志失败"));
-        });
-      } catch (error) {
-        Utils.log(`保存导入日志失败: ${error.message}`, "error");
-      }
-    },
-async getImportLogs(limit = 10) {
-      try {
-        const transaction = this.db.transaction(["import_logs"], "readonly");
-        const store = transaction.objectStore("import_logs");
-        const index = store.index("timestamp");
-        const request = index.openCursor(null, "prev");
-        return new Promise((resolve) => {
-          const logs = [];
-          let count = 0;
-          request.onsuccess = (event) => {
-            const cursor = event.target.result;
-            if (cursor && count < limit) {
-              logs.push(cursor.value);
-              count++;
-              cursor.continue();
-            } else {
-              resolve(logs);
-            }
-          };
-          request.onerror = () => resolve([]);
-        });
-      } catch (error) {
-        Utils.log(`获取导入日志失败: ${error.message}`, "error");
-        return [];
-      }
-    },
-async _buildMemoryIndex() {
-      if (this.indexBuilt || !this.initialized) {
-        return;
-      }
-      try {
-        const allData = await this.getAll();
-        this.memoryCache.clear();
-        allData.forEach((item) => {
-          this.memoryCache.set(item.id, item);
-        });
-        this.searchIndex = new flexsearch_bundle_minExports.Index({
-          tokenize: "forward",
-          resolution: 9,
-depth: 3,
-encode: false,
-cache: true
-});
-        allData.forEach((item) => {
-          const searchContent = [item.text, ...item.tags].join(" ");
-          this.searchIndex.add(item.id, searchContent);
-        });
-        this.indexBuilt = true;
-        Utils.log(`内存索引构建完成，缓存 ${allData.length} 条弹幕模板`);
-      } catch (error) {
-        Utils.log(`构建内存索引异常: ${error.message}`, "error");
-      }
-    },
-async testAutoImport() {
-      Utils.log(`=== 开始测试自动导入功能 ===`);
-      const result = await this.autoImportData();
-      Utils.log("=== 导入测试完成，结果统计 ===");
-      Utils.log(`导入状态: ${result.status}`);
-      Utils.log(`总处理数量: ${result.totalProcessed}`);
-      Utils.log(`成功导入: ${result.successCount}`);
-      Utils.log(`失败数量: ${result.failCount}`);
-      Utils.log(`重复跳过: ${result.duplicateCount}`);
-      Utils.log(`耗时: ${(result.duration / 1e3).toFixed(2)} 秒`);
-      if (result.errors.length > 0) {
-        Utils.log("错误详情:", "warn");
-        result.errors.forEach((error, index) => {
-          Utils.log(`${index + 1}. ${error}`, "warn");
-        });
-      }
-      const totalCount = await this.getDataCount();
-      Utils.log(`当前数据库总数据量: ${totalCount}`);
-      return result;
-    },
-async getDataCount() {
-      try {
-        const transaction = this.db.transaction([SETTINGS.DB_STORE_NAME], "readonly");
-        const store = transaction.objectStore(SETTINGS.DB_STORE_NAME);
-        const request = store.count();
-        return new Promise((resolve) => {
-          request.onsuccess = (event) => {
-            resolve(event.target.result || 0);
-          };
-          request.onerror = () => resolve(0);
-        });
-      } catch (error) {
-        Utils.log(`获取数据总量失败: ${error.message}`, "error");
-        return 0;
-      }
-    },
-async getStatistics() {
-      try {
-        const allData = await this.getAll();
-        const imported = allData.filter((item) => item.category === "imported");
-        const userCreated = allData.filter((item) => item.category !== "imported");
-        const stats = {
-          total: allData.length,
-          imported: imported.length,
-          userCreated: userCreated.length,
-          avgPopularity: imported.length > 0 ? (imported.reduce((sum, item) => sum + (item.popularity || 0), 0) / imported.length).toFixed(1) : 0,
-          topUsed: allData.sort((a, b) => (b.useCount || 0) - (a.useCount || 0)).slice(0, 5).map((item) => ({ text: item.text, useCount: item.useCount || 0 }))
-        };
-        Utils.log("=== 数据库统计信息 ===");
-        Utils.log(`总数据量: ${stats.total}`);
-        Utils.log(`导入数据: ${stats.imported}`);
-        Utils.log(`用户创建: ${stats.userCreated}`);
-        Utils.log(`平均人气: ${stats.avgPopularity}`);
-        Utils.log("最常用弹幕:");
-        stats.topUsed.forEach((item, index) => {
-          Utils.log(`${index + 1}. "${item.text}" (使用${item.useCount}次)`);
-        });
-        return stats;
-      } catch (error) {
-        Utils.log(`获取统计信息失败: ${error.message}`, "error");
-        return {};
-      }
+  const closeTabHandle = (tab) => {
+    try {
+      tab?.close?.();
+    } catch (error) {
+      Utils.log(`[PageLoader] 关闭短时工作页失败: ${String(error?.message || error)}`);
     }
   };
-  const CandidateItem = {
-createCandidateItem(candidate, index, isActive = false) {
-      const item = document.createElement("div");
-      item.className = SETTINGS.CSS_CLASSES.POPUP_ITEM;
-      item.dataset.index = index;
-      if (isActive) {
-        item.classList.add(SETTINGS.CSS_CLASSES.POPUP_ITEM_ACTIVE);
-      }
-      const textElement = document.createElement("div");
-      textElement.className = SETTINGS.CSS_CLASSES.POPUP_ITEM_TEXT;
-      textElement.textContent = candidate.getDisplayText ? candidate.getDisplayText() : candidate.text;
-      if (candidate.useCount > 0) {
-        textElement.title = `使用次数: ${candidate.useCount}`;
-      }
-      item.appendChild(textElement);
-      this.bindItemEvents(item, candidate, index);
-      return item;
-    },
-bindItemEvents(itemEl, candidate, index) {
-      this.bindItemClick(itemEl, candidate, index);
-      this.bindItemHover(itemEl, index);
-    },
-bindItemClick(itemEl, candidate, index) {
-      itemEl.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        this._emitSelectEvent(candidate, index, "click");
-      });
-    },
-bindItemHover(itemEl, index) {
-      let previewTimer = null;
-      itemEl.addEventListener("mouseenter", () => {
-        this._emitHoverEvent(index);
-        previewTimer = setTimeout(() => {
-          this._showPreview(itemEl);
-        }, SETTINGS.capsule?.preview?.showDelay || 500);
-      });
-      itemEl.addEventListener("mouseleave", () => {
-        if (previewTimer) {
-          clearTimeout(previewTimer);
-          previewTimer = null;
-        }
-        this._hidePreview();
-      });
-    },
-updateActiveState(itemEl, isActive) {
-      if (isActive) {
-        itemEl.classList.add(SETTINGS.CSS_CLASSES.POPUP_ITEM_ACTIVE);
-      } else {
-        itemEl.classList.remove(SETTINGS.CSS_CLASSES.POPUP_ITEM_ACTIVE);
-      }
-    },
-updateActiveStates(container, activeIndex) {
-      const items = container.querySelectorAll(`.${SETTINGS.CSS_CLASSES.POPUP_ITEM}`);
-      items.forEach((item, index) => {
-        this.updateActiveState(item, index === activeIndex);
-      });
-    },
-_emitSelectEvent(candidate, index, trigger) {
-      const event = new CustomEvent("candidateSelected", {
-        detail: { candidate, index, trigger }
-      });
-      document.dispatchEvent(event);
-    },
-_emitHoverEvent(index) {
-      const event = new CustomEvent("candidateHovered", {
-        detail: { index }
-      });
-      document.dispatchEvent(event);
-    },
-_showPreview(itemEl) {
-      const previewElement = document.createElement("div");
-      previewElement.className = SETTINGS.CSS_CLASSES.PREVIEW_POPUP;
-      previewElement.textContent = itemEl.textContent;
-      document.body.appendChild(previewElement);
-      const itemRect = itemEl.getBoundingClientRect();
-      const previewWidth = 200;
-      const previewHeight = 100;
-      const verticalOffset = SETTINGS.capsule?.preview?.verticalOffset || 8;
-      let left = itemRect.left + window.scrollX;
-      let top = itemRect.top + window.scrollY - previewHeight - verticalOffset;
-      const rightEdge = left + previewWidth;
-      if (rightEdge > window.innerWidth) {
-        left = window.innerWidth - previewWidth - 10;
-      }
-      if (top < window.scrollY) {
-        top = itemRect.bottom + window.scrollY + verticalOffset;
-      }
-      previewElement.style.left = `${left}px`;
-      previewElement.style.top = `${top}px`;
-      previewElement.classList.add("fade-in");
-    },
-_hidePreview() {
-      const previewElement = document.querySelector(`.${SETTINGS.CSS_CLASSES.PREVIEW_POPUP}`);
-      if (previewElement) {
-        previewElement.classList.add("fade-out");
-        previewElement.addEventListener("animationend", () => {
-          previewElement.remove();
-        }, { once: true });
-      }
-    },
-getItemHeight() {
-      return SETTINGS.ITEM_HEIGHT;
-    }
-  };
-  const CandidatePanel = {
-panelElement: null,
-contentElement: null,
-currentCandidates: [],
-currentActiveIndex: -1,
-showTimer: null,
-    hideTimer: null,
-init() {
-      this.createPanelDOM();
-      this.bindPanelEvents();
-      console.log("CandidatePanel initialized");
-    },
-createPanelDOM() {
-      this.panelElement = document.createElement("div");
-      this.panelElement.className = SETTINGS.CSS_CLASSES.POPUP;
-      this.panelElement.style.display = "none";
-      console.log("创建弹窗元素:", this.panelElement);
-      console.log("弹窗CSS类名:", SETTINGS.CSS_CLASSES.POPUP);
-      this.contentElement = document.createElement("div");
-      this.contentElement.className = SETTINGS.CSS_CLASSES.POPUP_CONTENT;
-      this.panelElement.appendChild(this.contentElement);
-      document.body.appendChild(this.panelElement);
-      const addedElement = document.querySelector(`.${SETTINGS.CSS_CLASSES.POPUP}`);
-      console.log("弹窗是否成功添加到DOM:", !!addedElement);
-      console.log("添加的弹窗元素:", addedElement);
-    },
-renderCandidatePanel(candidates, activeIndex = 0) {
-      this.currentCandidates = candidates || [];
-      this.currentActiveIndex = activeIndex;
-      this.contentElement.innerHTML = "";
-      if (this.currentCandidates.length === 0) {
-        this._renderEmptyState();
-        return;
-      }
-      this.currentCandidates.forEach((candidate, index) => {
-        const isActive = index === activeIndex;
-        const itemElement = CandidateItem.createCandidateItem(candidate, index, isActive);
-        this.contentElement.appendChild(itemElement);
-      });
-      this._updatePanelHeight();
-    },
-showPanel(targetInput) {
-      if (this.hideTimer) {
-        clearTimeout(this.hideTimer);
-        this.hideTimer = null;
-      }
-      this.showTimer = setTimeout(() => {
-        this._positionPanel(targetInput);
-        this.panelElement.style.display = "block";
-        requestAnimationFrame(() => {
-          this.panelElement.classList.add(SETTINGS.CSS_CLASSES.POPUP_SHOW);
-        });
-        this._emitPanelEvent("panelShown");
-      }, SETTINGS.POPUP_SHOW_DELAY);
-    },
-hidePanel() {
-      if (this.showTimer) {
-        clearTimeout(this.showTimer);
-        this.showTimer = null;
-      }
-      this.hideTimer = setTimeout(() => {
-        this.panelElement.classList.remove(SETTINGS.CSS_CLASSES.POPUP_SHOW);
-        setTimeout(() => {
-          this.panelElement.style.display = "none";
-        }, SETTINGS.ANIMATION_DURATION);
-        this._emitPanelEvent("panelHidden");
-      }, SETTINGS.POPUP_HIDE_DELAY);
-    },
-setActiveIndex(newActiveIndex) {
-      if (newActiveIndex === this.currentActiveIndex) return;
-      this.currentActiveIndex = newActiveIndex;
-      CandidateItem.updateActiveStates(this.contentElement, newActiveIndex);
-      this._emitPanelEvent("activeIndexChanged", {
-        activeIndex: newActiveIndex,
-        candidate: this.currentCandidates[newActiveIndex] || null
-      });
-    },
-getActiveCandidate() {
-      if (this.currentActiveIndex >= 0 && this.currentActiveIndex < this.currentCandidates.length) {
-        return this.currentCandidates[this.currentActiveIndex];
-      }
-      return null;
-    },
-isVisible() {
-      return this.panelElement.style.display !== "none" && this.panelElement.classList.contains(SETTINGS.CSS_CLASSES.POPUP_SHOW);
-    },
-bindPanelEvents() {
-      document.addEventListener("candidateSelected", (event) => {
-        const { candidate, index } = event.detail;
-        this._handleCandidateSelected(candidate, index);
-      });
-      document.addEventListener("candidateHovered", (event) => {
-        const { index } = event.detail;
-        this.setActiveIndex(index);
-      });
-      this.panelElement.addEventListener("click", (event) => {
-        event.stopPropagation();
-      });
-    },
-_renderEmptyState() {
-      this.contentElement.innerHTML = "";
-      this.panelElement.classList.add(SETTINGS.CSS_CLASSES.POPUP_EMPTY);
-      const emptyElement = document.createElement("div");
-      emptyElement.className = SETTINGS.CSS_CLASSES.EMPTY_MESSAGE;
-      emptyElement.textContent = "暂无匹配的弹幕模板";
-      this.contentElement.appendChild(emptyElement);
-      this.contentElement.style.maxHeight = "60px";
-    },
-_positionPanel(targetInput) {
-      if (!targetInput) return;
-      const inputRect = targetInput.getBoundingClientRect();
-      const panelRect = this.panelElement.getBoundingClientRect();
-      let left = inputRect.left;
-      let top = inputRect.bottom + 5;
-      const windowWidth = window.innerWidth;
-      const windowHeight = window.innerHeight;
-      if (left + panelRect.width > windowWidth - 20) {
-        left = windowWidth - panelRect.width - 20;
-      }
-      if (left < 20) {
-        left = 20;
-      }
-      if (top + panelRect.height > windowHeight - 20) {
-        top = inputRect.top - panelRect.height - 5;
-      }
-      this.panelElement.style.left = `${left}px`;
-      this.panelElement.style.top = `${top}px`;
-    },
-_updatePanelHeight() {
-      const itemCount = this.currentCandidates.length;
-      const itemHeight = CandidateItem.getItemHeight();
-      const maxHeight = SETTINGS.MAX_POPUP_HEIGHT;
-      let height = Math.min(itemCount * itemHeight, maxHeight);
-      this.contentElement.style.maxHeight = `${height}px`;
-      this.panelElement.classList.remove(SETTINGS.CSS_CLASSES.POPUP_EMPTY);
-    },
-_handleCandidateSelected(candidate, index) {
-      this._emitPanelEvent("candidateSelected", { candidate, index });
-    },
-_emitPanelEvent(eventName, detail = {}) {
-      const event = new CustomEvent(eventName, { detail });
-      document.dispatchEvent(event);
-    },
-destroy() {
-      if (this.showTimer) {
-        clearTimeout(this.showTimer);
-      }
-      if (this.hideTimer) {
-        clearTimeout(this.hideTimer);
-      }
-      if (this.panelElement && this.panelElement.parentNode) {
-        this.panelElement.parentNode.removeChild(this.panelElement);
-      }
-      this.panelElement = null;
-      this.contentElement = null;
-      this.currentCandidates = [];
-      this.currentActiveIndex = -1;
-    }
-  };
-  const NativeSetter = {
-inputValueDescriptor: null,
-    textareaValueDescriptor: null,
-init() {
-      this.inputValueDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLInputElement.prototype,
-        "value"
-      );
-      this.textareaValueDescriptor = Object.getOwnPropertyDescriptor(
-        HTMLTextAreaElement.prototype,
-        "value"
-      );
-      console.log("NativeSetter initialized");
-    },
-setValue(element, value) {
-      if (!element) return false;
-      try {
-        let descriptor = null;
-        if (element.tagName === "INPUT") {
-          descriptor = this.inputValueDescriptor;
-        } else if (element.tagName === "TEXTAREA") {
-          descriptor = this.textareaValueDescriptor;
-        }
-        if (!descriptor || !descriptor.set) {
-          element.value = value;
-          return true;
-        }
-        descriptor.set.call(element, value);
-        this.dispatchInputEvent(element);
-        return true;
-      } catch (error) {
-        console.warn("NativeSetter failed, falling back to direct assignment:", error);
-        element.value = value;
-        this.dispatchInputEvent(element);
-        return false;
-      }
-    },
-dispatchInputEvent(element) {
-      try {
-        const inputEvent = new Event("input", {
-          bubbles: true,
-          cancelable: true
-        });
-        element.dispatchEvent(inputEvent);
-        const changeEvent = new Event("change", {
-          bubbles: true,
-          cancelable: true
-        });
-        element.dispatchEvent(changeEvent);
-      } catch (error) {
-        console.warn("Failed to dispatch input event:", error);
-      }
-    },
-isFrameworkManaged(element) {
-      return element && (element.dataset.frameworkManaged === "true" || element.hasAttribute("v-model") ||
-element.hasAttribute("ng-model") ||
-element._valueTracker ||
-element.__reactInternalFiber ||
-element.__reactInternalInstance);
-    },
-smartSetValue(element, value, options = {}) {
-      const {
-        forceNative = false,
-skipEvents = false
-} = options;
-      if (!element) return false;
-      try {
-        if (forceNative || this.isFrameworkManaged(element)) {
-          const result = this.setValue(element, value);
-          if (!skipEvents && result) {
-            this.dispatchAdditionalEvents(element);
-          }
-          return result;
-        } else {
-          element.value = value;
-          if (!skipEvents) {
-            this.dispatchInputEvent(element);
-          }
-          return true;
-        }
-      } catch (error) {
-        console.error("SmartSetValue failed:", error);
-        return false;
-      }
-    },
-dispatchAdditionalEvents(element) {
-      try {
-        ["keydown", "keyup"].forEach((eventType) => {
-          const keyEvent = new KeyboardEvent(eventType, {
-            bubbles: true,
-            cancelable: true,
-            key: "Unidentified"
-          });
-          element.dispatchEvent(keyEvent);
-        });
-        if (document.activeElement !== element) {
-          const focusEvent = new FocusEvent("focus", {
-            bubbles: true,
-            cancelable: true
-          });
-          element.dispatchEvent(focusEvent);
-        }
-      } catch (error) {
-        console.warn("Failed to dispatch additional events:", error);
-      }
-    },
-getValue(element) {
-      if (!element) return "";
-      try {
-        let descriptor = null;
-        if (element.tagName === "INPUT") {
-          descriptor = this.inputValueDescriptor;
-        } else if (element.tagName === "TEXTAREA") {
-          descriptor = this.textareaValueDescriptor;
-        }
-        if (descriptor && descriptor.get) {
-          return descriptor.get.call(element) || "";
-        }
-        return element.value || "";
-      } catch (error) {
-        console.warn("Failed to get value using native getter:", error);
-        return element.value || "";
-      }
-    }
-  };
-  const InputInteraction = {
-activeInput: null,
-inputListeners: new Map(),
-init() {
-      this.bindGlobalEvents();
-      console.log("InputInteraction initialized");
-    },
-bindInputEvents(inputEl) {
-      if (!inputEl || this.inputListeners.has(inputEl)) {
-        return;
-      }
-      const listeners = {
-        focus: (event) => this._handleInputFocus(event, inputEl),
-        blur: (event) => this._handleInputBlur(event, inputEl),
-        input: (event) => this._handleInputChange(event, inputEl),
-        keydown: (event) => this._handleInputKeyDown(event, inputEl)
-      };
-      Object.entries(listeners).forEach(([eventName, listener]) => {
-        inputEl.addEventListener(eventName, listener);
-      });
-      this.inputListeners.set(inputEl, listeners);
-    },
-unbindInputEvents(inputEl) {
-      if (!this.inputListeners.has(inputEl)) return;
-      const listeners = this.inputListeners.get(inputEl);
-      Object.entries(listeners).forEach(([eventName, listener]) => {
-        inputEl.removeEventListener(eventName, listener);
-      });
-      this.inputListeners.delete(inputEl);
-    },
-replaceInputWithText(inputEl, text) {
-      if (!inputEl) return;
-      NativeSetter.setValue(inputEl, text);
-      this._setCursorToEnd(inputEl);
-      this._triggerInputEvent(inputEl);
-    },
-getActiveInput() {
-      return this.activeInput;
-    },
-bindGlobalEvents() {
-      document.addEventListener("candidateSelected", (event) => {
-        const { candidate } = event.detail;
-        this._handleCandidateSelected(candidate);
-      });
-    },
-_handleInputFocus(event, inputEl) {
-      this.activeInput = inputEl;
-      this._emitInputEvent("inputFocused", { inputEl, event });
-    },
-_handleInputBlur(event, inputEl) {
-      setTimeout(() => {
-        if (this.activeInput === inputEl) {
-          this.activeInput = null;
-          this._emitInputEvent("inputBlurred", { inputEl, event });
-        }
-      }, 200);
-    },
-_handleInputChange(event, inputEl) {
-      this._emitInputEvent("inputChanged", {
-        inputEl,
-        value: inputEl.value,
-        event
-      });
-    },
-_handleInputKeyDown(event, inputEl) {
-      this._emitInputEvent("inputKeyDown", {
-        inputEl,
-        key: event.key,
-        event
-      });
-    },
-_handleCandidateSelected(candidate) {
-      if (this.activeInput && candidate) {
-        const text = candidate.getDisplayText ? candidate.getDisplayText() : candidate.text;
-        this.replaceInputWithText(this.activeInput, text);
-      }
-    },
-_emitInputEvent(eventName, detail) {
-      const event = new CustomEvent(eventName, { detail });
-      document.dispatchEvent(event);
-    },
-_triggerInputEvent(inputEl) {
-      const inputEvent = new Event("input", { bubbles: true });
-      inputEl.dispatchEvent(inputEvent);
-    },
-_setCursorToEnd(inputEl) {
-      if (inputEl.setSelectionRange) {
-        const len = inputEl.value.length;
-        inputEl.setSelectionRange(len, len);
-      }
-    },
-cleanup() {
-      for (const inputEl of this.inputListeners.keys()) {
-        this.unbindInputEvents(inputEl);
-      }
-      this.activeInput = null;
-    }
-  };
-  const PanelState = {
-    HIDDEN: "hidden",
-VISIBLE: "visible"
-  };
-  const SelectionMode = {
-    KEYBOARD: "keyboard",
-MOUSE: "mouse"
-};
-  const CandidatePanelState = {
-currentState: PanelState.HIDDEN,
-candidates: [],
-activeIndex: 0,
-selectionMode: SelectionMode.KEYBOARD,
-panelElement: null,
-targetInput: null,
-listeners: new Map(),
-getPanelState() {
-      return {
-        state: this.currentState,
-        activeIndex: this.activeIndex,
-        candidateCount: this.candidates.length,
-        isVisible: this.currentState === PanelState.VISIBLE,
-        hasSelection: this.activeIndex >= 0 && this.activeIndex < this.candidates.length
-      };
-    },
-setCandidates(candidates) {
-      this.candidates = candidates || [];
-      this.activeIndex = this.candidates.length > 0 ? 0 : -1;
-    },
-navigateLeft() {
-      if (this.candidates.length === 0) return;
-      this.activeIndex = this.activeIndex > 0 ? this.activeIndex - 1 : this.candidates.length - 1;
-      this.selectionMode = SelectionMode.KEYBOARD;
-      this._updateActiveItem();
-      this._emitNavigationEvent("left");
-    },
-navigateRight() {
-      if (this.candidates.length === 0) return;
-      this.activeIndex = this.activeIndex < this.candidates.length - 1 ? this.activeIndex + 1 : 0;
-      this.selectionMode = SelectionMode.KEYBOARD;
-      this._updateActiveItem();
-      this._emitNavigationEvent("right");
-    },
-navigateUp() {
-      this.navigateLeft();
-      this._emitNavigationEvent("up");
-    },
-navigateDown() {
-      this.navigateRight();
-      this._emitNavigationEvent("down");
-    },
-selectActiveCandidate() {
-      if (this.activeIndex >= 0 && this.activeIndex < this.candidates.length) {
-        const selected = this.candidates[this.activeIndex];
-        if (selected && typeof selected.updateUsage === "function") {
-          selected.updateUsage();
-        }
-        return selected;
-      }
-      return null;
-    },
-setActiveByMouse(index) {
-      if (index >= 0 && index < this.candidates.length) {
-        this.activeIndex = index;
-        this.selectionMode = SelectionMode.MOUSE;
-        this._updateActiveItem();
-      }
-    },
-resetSelection() {
-      this.activeIndex = this.candidates.length > 0 ? 0 : -1;
-      this.selectionMode = SelectionMode.KEYBOARD;
-      this._updateActiveItem();
-    },
-setState(newState) {
-      const oldState = this.currentState;
-      this.currentState = newState;
-      this._onStateChange(oldState, newState);
-    },
-setPanelElement(element) {
-      this.panelElement = element;
-    },
-setTargetInput(input) {
-      this.targetInput = input;
-    },
-addEventListener(event, callback) {
-      if (!this.listeners.has(event)) {
-        this.listeners.set(event, []);
-      }
-      this.listeners.get(event).push(callback);
-    },
-removeEventListener(event, callback) {
-      if (this.listeners.has(event)) {
-        const callbacks = this.listeners.get(event);
-        const index = callbacks.indexOf(callback);
-        if (index > -1) {
-          callbacks.splice(index, 1);
-        }
-      }
-    },
-_emit(event, data) {
-      if (this.listeners.has(event)) {
-        this.listeners.get(event).forEach((callback) => {
-          try {
-            callback(data);
-          } catch (error) {
-            console.error(`Error in event listener for ${event}:`, error);
-          }
-        });
-      }
-    },
-_updateActiveItem() {
-      this._emit("activeIndexChanged", {
-        activeIndex: this.activeIndex,
-        selectionMode: this.selectionMode,
-        candidate: this.candidates[this.activeIndex] || null
-      });
-    },
-_onStateChange(oldState, newState) {
-      this._emit("stateChanged", {
-        oldState,
-        newState,
-        panelState: this.getPanelState()
-      });
-    },
-_emitNavigationEvent(direction) {
-      this._emit("navigation", {
-        direction,
-        activeIndex: this.activeIndex,
-        candidate: this.candidates[this.activeIndex] || null
-      });
-    }
-  };
-  const CapsulePreview = {
-previewElement: null,
-currentCapsule: null,
-showTimer: null,
-    hideTimer: null,
-currentTriggerSource: null,
-isInSelectionMode: false,
-initialized: false,
-enterSelectionMode() {
-      this.isInSelectionMode = true;
-      Utils.log("预览框进入选择模式，将持续显示");
-    },
-exitSelectionMode() {
-      this.isInSelectionMode = false;
-      this.hidePreview(0, "keyboard");
-      Utils.log("预览框退出选择模式");
-    },
-updateSelectionModePreview(capsule, text) {
-      if (!this.isInSelectionMode || !capsule || !text) return;
-      if (this.showTimer) {
-        clearTimeout(this.showTimer);
-        this.showTimer = null;
-      }
-      if (this.hideTimer) {
-        clearTimeout(this.hideTimer);
-        this.hideTimer = null;
-      }
-      this.currentCapsule = capsule;
-      this.currentTriggerSource = "keyboard";
-      this.previewElement.textContent = text;
-      this.previewElement.classList.add("active");
-      this.positionPreview(capsule);
-      if (this.previewElement.style.display !== "block") {
-        this.previewElement.style.display = "block";
-        requestAnimationFrame(() => {
-          this.previewElement.classList.add("show");
-        });
-      }
-      Utils.log(`选择模式预览已更新: ${text.substring(0, 20)}...`);
-    },
-init() {
-      if (this.initialized) return;
-      this.createPreviewElement();
-      this.bindGlobalEvents();
-      this.initialized = true;
-      Utils.log("胶囊悬浮框预览组件已初始化");
-    },
-createPreviewElement() {
-      this.previewElement = document.createElement("div");
-      this.previewElement.className = "ddp-capsule-preview";
-      this.previewElement.style.display = "none";
-      document.body.appendChild(this.previewElement);
-      Utils.log("预览框 DOM 元素已创建");
-    },
-showPreview(capsule, text, isActive = false, triggerSource = "mouse") {
-      Utils.log(`调用 showPreview: 触发源=${triggerSource}, 文本=${text}`);
-      if (!this.initialized || !text || text.length <= 15) {
-        return;
-      }
-      if (this.currentTriggerSource === "keyboard" && triggerSource === "mouse") {
-        Utils.log("键盘预览活跃中，忽略鼠标悬停事件");
-        return;
-      }
-      if (this.hideTimer) {
-        clearTimeout(this.hideTimer);
-        this.hideTimer = null;
-      }
-      const config = SETTINGS.capsule.preview;
-      const delay = triggerSource === "keyboard" ? 0 : config.showDelay;
-      Utils.log(`显示预览框: 触发源=${triggerSource}, 文本=${text.substring(0, 20)}...`);
-      this.showTimer = setTimeout(() => {
-        this.currentCapsule = capsule;
-        this.currentTriggerSource = triggerSource;
-        this.previewElement.textContent = text;
-        if (isActive || triggerSource === "keyboard") {
-          this.previewElement.classList.add("active");
-        } else {
-          this.previewElement.classList.remove("active");
-        }
-        this.positionPreview(capsule);
-        this.previewElement.style.display = "block";
-        requestAnimationFrame(() => {
-          this.previewElement.classList.add("show");
-        });
-        Utils.log(`悬浮框预览已显示 (${triggerSource}): ${text.substring(0, 20)}...`);
-      }, delay);
-    },
-hidePreview(delay = null, triggerSource = "mouse") {
-      if (!this.initialized) return;
-      if (this.currentTriggerSource === "keyboard" && triggerSource === "mouse") {
-        Utils.log("键盘预览活跃中，忽略鼠标离开事件");
-        return;
-      }
-      if (this.showTimer) {
-        clearTimeout(this.showTimer);
-        this.showTimer = null;
-      }
-      const config = SETTINGS.capsule.preview;
-      const hideDelay = delay !== null ? delay : config.hideDelay;
-      this.hideTimer = setTimeout(() => {
-        this.previewElement.classList.remove("show");
-        setTimeout(() => {
-          this.previewElement.style.display = "none";
-          this.previewElement.classList.remove("active");
-          this.previewElement.classList.remove("show-below");
-          this.currentCapsule = null;
-          this.currentTriggerSource = null;
-        }, config.animationDuration);
-      }, hideDelay);
-    },
-positionPreview(capsule) {
-      const capsuleRect = capsule.getBoundingClientRect();
-      Utils.log(`=== 预览框定位(强制上方) ===`);
-      Utils.log(`胶囊位置: top=${capsuleRect.top}px, left=${capsuleRect.left}px, width=${capsuleRect.width}px`);
-      this.previewElement.style.visibility = "hidden";
-      this.previewElement.style.display = "block";
-      const previewRect = this.previewElement.getBoundingClientRect();
-      const previewWidth = previewRect.width || 300;
-      const previewHeight = previewRect.height || 40;
-      this.previewElement.style.visibility = "";
-      Utils.log(`预览框尺寸: width=${previewWidth}px, height=${previewHeight}px`);
-      let left = capsuleRect.left + capsuleRect.width / 2 - previewWidth / 2;
-      const verticalGap = 8;
-      let top = capsuleRect.top - previewHeight - verticalGap;
-      Utils.log(`强制上方显示: top=${top}px (胶囊顶部${capsuleRect.top} - 预览框高度${previewHeight} - 间距${verticalGap})`);
-      const windowWidth = window.innerWidth;
-      const horizontalPadding = 10;
-      if (left < horizontalPadding) {
-        left = horizontalPadding;
-      } else if (left + previewWidth > windowWidth - horizontalPadding) {
-        left = windowWidth - previewWidth - horizontalPadding;
-      }
-      this.previewElement.classList.remove("show-below");
-      this.previewElement.style.left = `${left}px`;
-      this.previewElement.style.top = `${top}px`;
-      Utils.log(`最终位置: left=${left}px, top=${top}px, 显示位置: 上方`);
-      Utils.log(`=== 预览框定位完成 ===`);
-    },
-updateActiveState(isActive) {
-      if (!this.initialized || !this.currentCapsule) return;
-      if (isActive) {
-        this.previewElement.classList.add("active");
-      } else {
-        this.previewElement.classList.remove("active");
-      }
-    },
-bindGlobalEvents() {
-      document.addEventListener("scroll", () => {
-        this.hidePreview(0);
-      }, true);
-      window.addEventListener("resize", () => {
-        if (this.currentCapsule) {
-          this.positionPreview(this.currentCapsule);
-        }
-      });
-    },
-bindCapsuleEvents(capsule, text) {
-      if (!capsule || !text) return;
-      Utils.log(`绑定预览事件: ${text}`);
-      capsule.addEventListener("mouseenter", () => {
-        this.showPreview(capsule, text, false, "mouse");
-      });
-      capsule.addEventListener("mouseleave", () => {
-        this.hidePreview(null, "mouse");
-      });
-    },
-destroy() {
-      if (!this.initialized) return;
-      if (this.showTimer) {
-        clearTimeout(this.showTimer);
-      }
-      if (this.hideTimer) {
-        clearTimeout(this.hideTimer);
-      }
-      if (this.previewElement && this.previewElement.parentNode) {
-        this.previewElement.parentNode.removeChild(this.previewElement);
-      }
-      this.previewElement = null;
-      this.currentCapsule = null;
-      this.currentTriggerSource = null;
-      this.isInSelectionMode = false;
-      this.initialized = false;
-      Utils.log("胶囊悬浮框预览组件已销毁");
-    }
-  };
-  const UIManager = {
-initialized: false,
-currentState: "idle",
-currentTargetInput: null,
-currentSuggestions: [],
-activeIndex: 0,
-isSelectionModeActive: false,
-async init() {
-      if (this.initialized) {
-        return true;
-      }
-      try {
-        CandidatePanel.init();
-        InputInteraction.init();
-        CapsulePreview.init();
-        this.bindComponentEvents();
-        this.initialized = true;
-        Utils.log("UI管理器初始化成功");
-        return true;
-      } catch (error) {
-        Utils.log(`UI管理器初始化失败: ${error.message}`, "error");
-        return false;
-      }
-    },
-showPopup(suggestions, targetInput) {
-      if (!this.initialized) {
-        Utils.log("UIManager未初始化", "warn");
-        return;
-      }
-      this.currentSuggestions = suggestions || [];
-      this.currentTargetInput = targetInput;
-      this.activeIndex = -1;
-      if (this.currentSuggestions.length === 0) {
-        this.hidePopup();
-        return;
-      }
-      this.currentState = "showing";
-      CandidatePanelState.setCandidates(this.currentSuggestions);
-      CandidatePanelState.setTargetInput(targetInput);
-      CandidatePanelState.resetSelection();
-      const isChatInput = targetInput && targetInput.closest(".ChatSend");
-      if (isChatInput) {
-        this.showChatCandidateList(this.currentSuggestions, targetInput);
-      } else {
-        CandidatePanel.renderCandidatePanel(this.currentSuggestions, this.activeIndex);
-        CandidatePanel.showPanel(targetInput);
-      }
-      if (targetInput) {
-        InputInteraction.bindInputEvents(targetInput);
-      }
-      setTimeout(() => {
-        if (this.currentState === "showing") {
-          this.currentState = "selecting";
-        }
-      }, 100);
-      Utils.log(`弹窗已显示，包含 ${this.currentSuggestions.length} 个候选项`);
-    },
-showChatCandidateList(suggestions, targetInput, multiRow = false) {
-      const capsuleConfig = SETTINGS.capsule;
-      document.documentElement.style.setProperty("--ddp-capsule-item-height", `${capsuleConfig.height}px`);
-      document.documentElement.style.setProperty("--ddp-capsule-padding", "8px");
-      document.documentElement.style.setProperty("--ddp-capsule-margin", "8px");
-      document.documentElement.style.setProperty("--ddp-capsule-item-padding", "3px");
-      Utils.log(`CSS变量已设置 (margin会计入高度):`);
-      Utils.log(`--ddp-capsule-item-height: 24px (胶囊高度)`);
-      Utils.log(`--ddp-capsule-padding: 8px (容器padding，计入高度)`);
-      Utils.log(`--ddp-capsule-margin: 8px (容器margin，计入高度)`);
-      Utils.log(`--ddp-capsule-item-padding: 3px (胶囊内padding)`);
-      Utils.log(`预期测量高度: 24px + 3*2 + 8*2 + 8*2 = 62px (margin计入高度)`);
-      const chat = document.querySelector(".layout-Player-chat .Chat");
-      if (!chat) {
-        Utils.log("未找到 Chat 容器，回退到普通弹窗模式");
-        CandidatePanel.renderCandidatePanel(suggestions, this.activeIndex);
-        CandidatePanel.showPanel(targetInput);
-        return;
-      }
-      chat.style.paddingBottom = "";
-      this.applyChatLayoutFix();
-      const existingList = document.querySelector(".ddp-candidate-capsules");
-      if (existingList) {
-        if (existingList._dynamicStyle) {
-          existingList._dynamicStyle.remove();
-        }
-        existingList.remove();
-      }
-      const candidateList = document.createElement("div");
-      candidateList.className = `ddp-candidate-capsules ${multiRow ? "multi-row" : ""}`;
-      const maxItems = multiRow ? suggestions.length : (
-Math.min(suggestions.length, SETTINGS?.capsule?.singleRowMaxItems || 8)
-      );
-      const displaySuggestions = suggestions.slice(0, maxItems);
-      displaySuggestions.forEach((suggestion, index) => {
-        const capsule = document.createElement("div");
-        capsule.className = `ddp-candidate-capsule ${index === this.activeIndex ? "active" : ""}`;
-        capsule.dataset.index = index;
-        const text = suggestion.getDisplayText ? suggestion.getDisplayText() : suggestion.text;
-        capsule.textContent = text;
-        this.bindCapsulePreviewEvents(capsule, suggestion, text);
-        capsule.addEventListener("click", () => {
-          this.selectCandidate(suggestion);
-        });
-        candidateList.appendChild(capsule);
-      });
-      const chatSpeak = chat.querySelector(".ChatSpeak");
-      if (chatSpeak) {
-        chatSpeak.parentNode.insertBefore(candidateList, chatSpeak);
-      } else {
-        chat.appendChild(candidateList);
-      }
-      this.updateChatLayoutForCandidates(candidateList);
-      this.currentCandidateMode = multiRow ? "multi-row" : "single-row";
-      Utils.log(`胶囊候选列表已显示 (${this.currentCandidateMode})，包含 ${displaySuggestions.length}/${suggestions.length} 个候选项，布局已调整`);
-      Utils.log(`DOM结构: Chat > [ChatToolBar, ddp-candidate-capsules, ChatSpeak]`);
-    },
-hidePopup() {
-      if (!this.initialized) return;
-      console.log("=== HIDEOPOPUP 被调用 ===");
-      console.log(`当前状态: ${this.currentState}`);
-      console.log("完整调用栈:");
-      console.trace("hidePopup调用追踪");
-      Utils.log(`隐藏弹窗，当前状态: ${this.currentState}`);
-      CapsulePreview.hidePreview(0, "keyboard");
-      CapsulePreview.hidePreview(0, "mouse");
-      CandidatePanel.hidePanel();
-      const existingList = document.querySelector(".ddp-candidate-capsules");
-      if (existingList) {
-        if (existingList._dynamicStyle) {
-          existingList._dynamicStyle.remove();
-        }
-        existingList.remove();
-      }
-      this.removeChatLayoutFix();
-      this.currentSuggestions = [];
-      this.currentTargetInput = null;
-      this.activeIndex = -1;
-      this.currentState = "idle";
-      this.currentCandidateMode = null;
-      Utils.log("弹窗已隐藏，布局已恢复");
-    },
-applyChatLayoutFix() {
-      Utils.log("=== 应用CSS布局修复 ===");
-      const chatArea = document.querySelector(".layout-Player-chat");
-      if (!chatArea) {
-        Utils.log("未找到聊天区域，跳过布局修复");
-        return;
-      }
-      chatArea.classList.add("ddp-candidates-visible");
-      Utils.log("已添加 ddp-candidates-visible 类，CSS样式将控制布局");
-      Utils.log("=== CSS布局修复完成 ===");
-    },
-updateChatLayoutForCandidates(candidateList) {
-      const chat = document.querySelector(".layout-Player-chat .Chat");
-      if (!chat || !candidateList) {
-        Utils.log("缺少必要元素，跳过padding更新");
-        return;
-      }
-      chat.style.paddingBottom = "";
-      const beforeHeight = chat.getBoundingClientRect().height;
-      const currentPadding = getComputedStyle(chat).paddingBottom;
-      const initialPaddingValue = parseFloat(currentPadding) || 0;
-      Utils.log(`=== 更新候选框布局开始 ===`);
-      Utils.log(`Chat当前高度: ${beforeHeight}px`);
-      Utils.log(`Chat初始paddingBottom: ${initialPaddingValue}px (必须保留)`);
-      const configuredHeight = SETTINGS.capsule.totalHeight;
-      const marginTop = parseFloat(getComputedStyle(candidateList).marginTop) || 0;
-      const marginBottom = parseFloat(getComputedStyle(candidateList).marginBottom) || 0;
-      const totalMargin = marginTop + marginBottom;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const actualHeight = Math.round(candidateList.getBoundingClientRect().height);
-          const candidateHeightWithMargin = actualHeight + totalMargin;
-          const heightDifference = Math.abs(candidateHeightWithMargin - configuredHeight);
-          const candidateHeight = heightDifference <= 2 ? configuredHeight : candidateHeightWithMargin;
-          const finalPadding = initialPaddingValue + candidateHeight;
-          document.documentElement.style.setProperty("--ddp-candidate-height", `${candidateHeight}px`);
-          chat.style.paddingBottom = `${finalPadding}px`;
-          const afterHeight = chat.getBoundingClientRect().height;
-          const actualPaddingBottom = getComputedStyle(chat).paddingBottom;
-          const heightIncrease = afterHeight - beforeHeight;
-          Utils.log(`候选项所需高度(含margin): ${candidateHeight}px`);
-          Utils.log(`最终设置padding: ${finalPadding}px (初始${initialPaddingValue}px + 候选项${candidateHeight}px)`);
-          Utils.log(`transform向上移动距离: ${candidateHeight}px`);
-          Utils.log(`实际应用padding: ${actualPaddingBottom}`);
-          Utils.log(`Chat更新后高度: ${afterHeight}px`);
-          Utils.log(`实际高度增加: ${heightIncrease}px (应约等于${candidateHeight}px)`);
-          Utils.log(`=== 候选框布局更新完成 ===`);
-        });
-      });
-    },
-removeChatLayoutFix() {
-      Utils.log("=== 移除CSS布局修复 ===");
-      const chatArea = document.querySelector(".layout-Player-chat");
-      const chat = chatArea ? chatArea.querySelector(".Chat") : null;
-      if (!chatArea) {
-        Utils.log("未找到聊天区域，跳过布局恢复");
-        return;
-      }
-      chatArea.classList.remove("ddp-candidates-visible");
-      document.documentElement.style.removeProperty("--ddp-candidate-height");
-      document.documentElement.style.removeProperty("--ddp-capsule-item-height");
-      document.documentElement.style.removeProperty("--ddp-capsule-padding");
-      document.documentElement.style.removeProperty("--ddp-capsule-margin");
-      document.documentElement.style.removeProperty("--ddp-capsule-total-height");
-      document.documentElement.style.removeProperty("--ddp-capsule-item-padding");
-      if (chat) {
-        chat.style.paddingBottom = "";
-      }
-      Utils.log("已移除 ddp-candidates-visible 类，清理所有CSS变量和padding，布局已恢复");
-      Utils.log("=== CSS布局恢复完成 ===");
-    },
-setActiveIndex(index) {
-      if (!this.initialized || index < 0 || index >= this.currentSuggestions.length) {
-        return;
-      }
-      const oldIndex = this.activeIndex;
-      this.activeIndex = index;
-      const isChatInput = this.currentTargetInput && this.currentTargetInput.closest(".ChatSend");
-      if (isChatInput) {
-        this.updateChatCandidateStyles(oldIndex, index);
-      } else {
-        CandidatePanel.setActiveIndex(index);
-        CandidatePanelState.setActiveByMouse(index);
-      }
-    },
-updateChatCandidateStyles(oldIndex, newIndex) {
-      const candidateList = document.querySelector(".ddp-candidate-capsules");
-      if (!candidateList) return;
-      Utils.log(`=== 更新胶囊样式 ===`);
-      Utils.log(`从索引 ${oldIndex} 切换到索引 ${newIndex}`);
-      if (oldIndex >= 0) {
-        const oldCapsule = candidateList.querySelector(`[data-index="${oldIndex}"]`);
-        if (oldCapsule) {
-          oldCapsule.classList.remove("active");
-          Utils.log(`已移除旧胶囊 ${oldIndex} 的活跃状态`);
-        }
-      }
-      const newCapsule = candidateList.querySelector(`[data-index="${newIndex}"]`);
-      if (newCapsule) {
-        newCapsule.classList.add("active");
-        Utils.log(`已设置新胶囊 ${newIndex} 为活跃状态`);
-        if (!candidateList.classList.contains("multi-row")) {
-          this.scrollCapsuleIntoView(candidateList, newCapsule);
-          setTimeout(() => {
-            this.showPreviewForCapsule(newCapsule, newIndex);
-          }, 400);
-        } else {
-          newCapsule.scrollIntoView({
-            behavior: "smooth",
-            block: "nearest",
-            inline: "center"
-          });
-          setTimeout(() => {
-            this.showPreviewForCapsule(newCapsule, newIndex);
-          }, 150);
-        }
-      } else {
-        Utils.log(`未找到索引为 ${newIndex} 的胶囊元素，隐藏预览框`);
-        CapsulePreview.hidePreview(0, "keyboard");
-      }
-      Utils.log(`=== 胶囊样式更新完成 ===`);
-    },
-scrollCapsuleIntoView(candidateList, capsule) {
-      if (!candidateList || !capsule) {
-        Utils.log("scrollCapsuleIntoView: 缺少必要元素");
-        return;
-      }
-      try {
-        const scrollLeft = candidateList.scrollLeft;
-        const capsuleRelativeLeft = capsule.offsetLeft;
-        const capsuleWidth = capsule.offsetWidth;
-        const listWidth = candidateList.offsetWidth;
-        const capsuleIndex = parseInt(capsule.dataset.index) || 0;
-        Utils.log(`滚动检查: 胶囊索引=${capsuleIndex}, 位置=${capsuleRelativeLeft}px, 宽度=${capsuleWidth}px, 容器宽度=${listWidth}px, 当前滚动=${scrollLeft}px`);
-        const isCircularNavigation = capsuleIndex === 0 && scrollLeft > listWidth || capsuleIndex === this.currentSuggestions.length - 1 && scrollLeft === 0;
-        const scrollBehavior = isCircularNavigation ? "instant" : "smooth";
-        Utils.log(`循环导航检测: ${isCircularNavigation}, 滚动行为: ${scrollBehavior}`);
-        if (capsuleRelativeLeft + capsuleWidth > scrollLeft + listWidth) {
-          const newScrollLeft = capsuleRelativeLeft + capsuleWidth - listWidth + 20;
-          Utils.log(`向右滚动到: ${newScrollLeft}px`);
-          candidateList.scrollTo({
-            left: newScrollLeft,
-            behavior: scrollBehavior
-          });
-        } else if (capsuleRelativeLeft < scrollLeft) {
-          const newScrollLeft = Math.max(0, capsuleRelativeLeft - 20);
-          Utils.log(`向左滚动到: ${newScrollLeft}px`);
-          candidateList.scrollTo({
-            left: newScrollLeft,
-            behavior: scrollBehavior
-          });
-        } else {
-          Utils.log("胶囊已在可见区域，无需滚动");
-        }
-      } catch (error) {
-        Utils.log(`滚动出错: ${error.message}`, "error");
-        console.error("scrollCapsuleIntoView error:", error);
-      }
-    },
-bindCapsulePreviewEvents(capsule, suggestion, text) {
-      capsule.removeAttribute("title");
-      Object.defineProperty(capsule, "title", {
-        set: function() {
-          Utils.log("阻止设置title属性，避免双重预览");
-        },
-        get: function() {
-          return "";
-        },
-        configurable: true
-      });
-      CapsulePreview.bindCapsuleEvents(capsule, text);
-    },
-showPreviewForCapsule(capsule, index) {
-      if (!capsule || index < 0 || index >= this.currentSuggestions.length) {
-        Utils.log(`无法为胶囊显示预览: 胶囊=${!!capsule}, 索引=${index}, 总数=${this.currentSuggestions.length}`);
-        return;
-      }
-      const candidate = this.currentSuggestions[index];
-      const text = candidate ? candidate.getDisplayText ? candidate.getDisplayText() : candidate.text : capsule.textContent;
-      Utils.log(`胶囊文本: "${text}", 长度: ${text ? text.length : 0}`);
-      const capsuleRect = capsule.getBoundingClientRect();
-      Utils.log(`滚动后胶囊位置: left=${capsuleRect.left}px, top=${capsuleRect.top}px, 可见=${capsuleRect.left >= 0 && capsuleRect.left < window.innerWidth}`);
-      if (text && text.length > 8) {
-        Utils.log(`键盘选中胶囊，显示预览: ${text.substring(0, 20)}...`);
-        CapsulePreview.showPreview(capsule, text, true, "keyboard");
-      } else {
-        Utils.log(`文本过短或不存在，隐藏预览框`);
-        CapsulePreview.hidePreview(0, "keyboard");
-      }
-    },
-navigateUp() {
-      if (!this.initialized || this.currentSuggestions.length === 0) return;
-      const isChatInput = this.currentTargetInput && this.currentTargetInput.closest(".ChatSend");
-      if (isChatInput) {
-        this.navigateLeft();
-      } else {
-        if (!this.isSelectionModeActive) {
-          this.setSelectionModeActive(true);
-        }
-        CandidatePanelState.navigateUp();
-        const newIndex = CandidatePanelState.activeIndex;
-        this.setActiveIndex(newIndex);
-      }
-    },
-navigateDown() {
-      if (!this.initialized || this.currentSuggestions.length === 0) return;
-      const isChatInput = this.currentTargetInput && this.currentTargetInput.closest(".ChatSend");
-      if (isChatInput) {
-        this.navigateRight();
-      } else {
-        if (!this.isSelectionModeActive) {
-          this.setSelectionModeActive(true);
-        }
-        CandidatePanelState.navigateDown();
-        const newIndex = CandidatePanelState.activeIndex;
-        this.setActiveIndex(newIndex);
-      }
-    },
-navigateLeft() {
-      if (!this.initialized || this.currentSuggestions.length === 0) return;
-      if (!this.isSelectionModeActive) {
-        this.setSelectionModeActive(true);
-      }
-      let newIndex = this.activeIndex - 1;
-      if (newIndex < 0) {
-        newIndex = this.currentSuggestions.length - 1;
-      }
-      this.setActiveIndex(newIndex);
-    },
-navigateRight() {
-      if (!this.initialized || this.currentSuggestions.length === 0) return;
-      if (!this.isSelectionModeActive) {
-        this.setSelectionModeActive(true);
-      }
-      let newIndex = this.activeIndex + 1;
-      if (newIndex >= this.currentSuggestions.length) {
-        newIndex = 0;
-      }
-      this.setActiveIndex(newIndex);
-    },
-selectActiveCandidate() {
-      if (!this.initialized || this.activeIndex < 0 || this.activeIndex >= this.currentSuggestions.length) {
-        return;
-      }
-      const selectedCandidate = this.currentSuggestions[this.activeIndex];
-      this.selectCandidate(selectedCandidate);
-    },
-selectCandidate(candidate) {
-      if (!candidate || !this.currentTargetInput) return;
-      const text = candidate.getDisplayText ? candidate.getDisplayText() : candidate.text;
-      if (typeof candidate.updateUsage === "function") {
-        candidate.updateUsage();
-      }
-      InputInteraction.replaceInputWithText(this.currentTargetInput, text);
-      this.hidePopup();
-      this.currentState = "idle";
-      Utils.log(`候选项已选择并填入输入框: ${text}`);
-    },
-isPopupVisible() {
-      const chatCandidateList = document.querySelector(".ddp-candidate-capsules");
-      if (chatCandidateList && chatCandidateList.style.display !== "none") {
-        return true;
-      }
-      return this.initialized && CandidatePanel.isVisible();
-    },
-clearActiveIndex() {
-      this.activeIndex = -1;
-      if (this.isSelectionModeActive) {
-        this.setSelectionModeActive(false);
-      }
-      const chatCandidateList = document.querySelector(".ddp-candidate-capsules");
-      if (chatCandidateList) {
-        const capsules = chatCandidateList.querySelectorAll(".ddp-candidate-capsule");
-        capsules.forEach((capsule) => {
-          capsule.classList.remove("active");
-        });
-      }
-      if (CandidatePanel.panelElement) {
-        const items = CandidatePanel.panelElement.querySelectorAll(".dda-popup-item");
-        items.forEach((item) => {
-          item.classList.remove("dda-popup-item-active");
-        });
-      }
-    },
-setSelectionModeActive(active) {
-      this.isSelectionModeActive = active;
-      if (active) {
-        CapsulePreview.enterSelectionMode();
-        if (this.activeIndex === -1 && this.currentSuggestions.length > 0) {
-          this.setActiveIndex(0);
-        }
-      } else {
-        CapsulePreview.exitSelectionMode();
-        this.clearActiveIndex();
-      }
-      const chatCandidateList = document.querySelector(".ddp-candidate-capsules");
-      if (chatCandidateList) {
-        if (active) {
-          chatCandidateList.classList.add("selection-mode-active");
-        } else {
-          chatCandidateList.classList.remove("selection-mode-active");
-        }
-      }
-      if (CandidatePanel.panelElement) {
-        if (active) {
-          CandidatePanel.panelElement.classList.add("selection-mode-active");
-        } else {
-          CandidatePanel.panelElement.classList.remove("selection-mode-active");
-        }
-      }
-      Utils.log(`选择模式: ${active ? "激活" : "关闭"}`);
-    },
-updateCandidates(suggestions) {
-      this.currentSuggestions = suggestions;
-      if (this.currentTargetInput) {
-        const isChatInput = this.currentTargetInput.closest(".ChatSend");
-        if (isChatInput) {
-          this.showChatCandidateList(suggestions, this.currentTargetInput);
-        } else {
-          CandidatePanel.renderCandidatePanel(suggestions, this.activeIndex);
-        }
-      }
-    },
-getCurrentState() {
-      return this.currentState;
-    },
-bindComponentEvents() {
-      document.addEventListener("blur", (event) => {
-        if (event.target && event.target.matches && event.target.matches("input, textarea")) {
-          console.log("🔍 全局检测到输入框失焦:", event.target.className, "value:", event.target.value);
-        }
-      }, true);
-      const originalDispatchEvent = document.dispatchEvent;
-      document.dispatchEvent = function(event) {
-        if (event.type.includes("input") || event.type.includes("blur") || event.type.includes("focus")) {
-          console.log("🎯 自定义事件被触发:", event.type, event.detail);
-        }
-        return originalDispatchEvent.call(this, event);
-      };
-      document.addEventListener("candidateSelected", (event) => {
-        const { candidate } = event.detail;
-        this.selectCandidate(candidate);
-      });
-      document.addEventListener("candidateHovered", (event) => {
-        const { index } = event.detail;
-        this.setActiveIndex(index);
-      });
-      document.addEventListener("inputFocused", (event) => {
-        const { inputEl } = event.detail;
-        this.currentTargetInput = inputEl;
-      });
-      document.addEventListener("inputBlurred", () => {
-        Utils.log("=== 输入框失焦事件触发（已完全禁用隐藏逻辑） ===");
-        return;
-      });
-      document.addEventListener("panelShown", () => {
-        this.currentState = "selecting";
-      });
-      document.addEventListener("panelHidden", () => {
-        this.currentState = "idle";
-      });
-    },
-destroy() {
-      if (!this.initialized) return;
-      CandidatePanel.destroy();
-      InputInteraction.cleanup();
-      CapsulePreview.destroy();
-      this.initialized = false;
-      this.currentState = "idle";
-      this.currentTargetInput = null;
-      this.currentSuggestions = [];
-      this.activeIndex = 0;
-      Utils.log("UI管理器已销毁");
-    },
-calculateCandidateListHeight(suggestions) {
-      const baseHeight = 12;
-      const capsuleHeight = 32;
-      const maxCapsulesPerRow = Math.floor(window.innerWidth * 0.6 / 120);
-      const rows = Math.ceil(suggestions.length / maxCapsulesPerRow);
-      const calculatedHeight = baseHeight + rows * capsuleHeight;
-      Utils.log(`计算候选列表高度:`);
-      Utils.log(`- 建议数量: ${suggestions.length}`);
-      Utils.log(`- 窗口宽度: ${window.innerWidth}px`);
-      Utils.log(`- 每行最大胶囊数: ${maxCapsulesPerRow}`);
-      Utils.log(`- 计算行数: ${rows}`);
-      Utils.log(`- 基础高度: ${baseHeight}px`);
-      Utils.log(`- 胶囊高度: ${capsuleHeight}px`);
-      Utils.log(`- 计算总高度: ${calculatedHeight}px`);
-      return calculatedHeight;
-    }
-  };
-  const INPUT_TYPES = {
-    MAIN_CHAT: "main_chat",
-FULLSCREEN_FLOAT: "fullscreen",
-UNKNOWN: "unknown"
-};
-  const InputDetector = {
-mutationObserver: null,
-detectedInputs: new WeakSet(),
-onInputDetected: null,
-    onInputRemoved: null,
-init(callbacks = {}) {
-      this.onInputDetected = callbacks.onInputDetected || (() => {
-      });
-      this.onInputRemoved = callbacks.onInputRemoved || (() => {
-      });
-      this.detectExistingInputs();
-      this.startMutationObserver();
-      console.log("InputDetector initialized");
-    },
-detectExistingInputs() {
-      this.detectMainChatInput();
-      this.detectFullscreenInput();
-    },
-detectMainChatInput() {
-      const checkMainInput = () => {
-        const mainInput = document.querySelector(".ChatSend-txt");
-        if (mainInput && !this.detectedInputs.has(mainInput)) {
-          this.handleInputDetected(mainInput, INPUT_TYPES.MAIN_CHAT);
-          return true;
-        }
-        return false;
-      };
-      if (!checkMainInput()) {
-        let attempts = 0;
-        const maxAttempts = 50;
-        const pollInterval = setInterval(() => {
-          attempts++;
-          if (checkMainInput() || attempts >= maxAttempts) {
-            clearInterval(pollInterval);
-          }
-        }, 200);
-      }
-    },
-detectFullscreenInput() {
-      const fullscreenInput = document.querySelector(".inputView-2a65aa");
-      if (fullscreenInput && !this.detectedInputs.has(fullscreenInput)) {
-        this.handleInputDetected(fullscreenInput, INPUT_TYPES.FULLSCREEN_FLOAT);
-      }
-    },
-startMutationObserver() {
-      if (this.mutationObserver) {
-        this.mutationObserver.disconnect();
-      }
-      this.mutationObserver = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              this.checkNodeForInputs(node, true);
-            }
-          });
-          mutation.removedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              this.checkNodeForInputs(node, false);
-            }
-          });
-        });
-      });
-      const playerContainer = document.querySelector("#js-player-video-case") || document.body;
-      this.mutationObserver.observe(playerContainer, {
-        childList: true,
-        subtree: true
-      });
-    },
-checkNodeForInputs(node, isAdded) {
-      const inputType = this.getInputType(node);
-      if (inputType !== INPUT_TYPES.UNKNOWN) {
-        if (isAdded) {
-          this.handleInputDetected(node, inputType);
-        } else {
-          this.handleInputRemoved(node, inputType);
-        }
-        return;
-      }
-      const selectors = [
-        ".ChatSend-txt",
-".inputView-2a65aa"
-];
-      selectors.forEach((selector) => {
-        const inputs = node.querySelectorAll(selector);
-        inputs.forEach((input) => {
-          const type = this.getInputType(input);
-          if (type !== INPUT_TYPES.UNKNOWN) {
-            if (isAdded) {
-              this.handleInputDetected(input, type);
-            } else {
-              this.handleInputRemoved(input, type);
-            }
-          }
-        });
-      });
-    },
-handleInputDetected(input, type) {
-      if (this.detectedInputs.has(input)) return;
-      this.detectedInputs.add(input);
-      console.log(`Detected ${type} input:`, input);
-      this.setupInputSpecialHandling(input, type);
-      this.onInputDetected(input, type);
-    },
-handleInputRemoved(input, type) {
-      if (!this.detectedInputs.has(input)) return;
-      this.detectedInputs.delete(input);
-      console.log(`Removed ${type} input:`, input);
-      this.onInputRemoved(input, type);
-    },
-setupInputSpecialHandling(input, type) {
-      switch (type) {
-        case INPUT_TYPES.MAIN_CHAT:
-          this.setupMainChatInput(input);
-          break;
-        case INPUT_TYPES.FULLSCREEN_FLOAT:
-          this.setupFullscreenInput(input);
-          break;
-      }
-    },
-setupMainChatInput(input) {
-      let hasSetupFocusHandler = false;
-      const setupFocusHandler = () => {
-        if (hasSetupFocusHandler) return;
-        hasSetupFocusHandler = true;
-        input.addEventListener("focus", () => {
-          console.log("Main chat input focused");
-          input.dataset.frameworkManaged = "true";
-        }, { once: true });
-      };
-      if (document.readyState === "complete") {
-        setupFocusHandler();
-      } else {
-        document.addEventListener("DOMContentLoaded", setupFocusHandler);
-      }
-    },
-setupFullscreenInput(input) {
-      console.log("Fullscreen input detected and ready");
-      input.dataset.frameworkManaged = "true";
-      input.dataset.dynamicCreated = "true";
-    },
-getInputType(element) {
-      if (!element || element.tagName !== "INPUT" && element.tagName !== "TEXTAREA") {
-        return INPUT_TYPES.UNKNOWN;
-      }
-      if (element.classList.contains("ChatSend-txt")) {
-        return INPUT_TYPES.MAIN_CHAT;
-      }
-      return INPUT_TYPES.UNKNOWN;
-    },
-isChatInput(element) {
-      return this.getInputType(element) !== INPUT_TYPES.UNKNOWN;
-    },
-getSendButton(input) {
-      const type = this.getInputType(input);
-      switch (type) {
-        case INPUT_TYPES.MAIN_CHAT: {
-          const chatSend = input.closest(".ChatSend");
-          return chatSend ? chatSend.querySelector(".ChatSend-button") : null;
-        }
-        case INPUT_TYPES.FULLSCREEN_FLOAT: {
-          const fullscreenSendor = input.closest('[class*="fullScreenSendor-"]');
-          return fullscreenSendor ? fullscreenSendor.querySelector('.sendDanmu-592760, [class*="sendDanmu-"]') : null;
-        }
-        default:
-          return null;
-      }
-    },
-destroy() {
-      if (this.mutationObserver) {
-        this.mutationObserver.disconnect();
-        this.mutationObserver = null;
-      }
-      this.detectedInputs = new WeakSet();
-      this.onInputDetected = null;
-      this.onInputRemoved = null;
-      console.log("InputDetector destroyed");
-    }
-  };
-  const APP_STATES = {
-    IDLE: "idle",
-TYPING: "typing",
-SELECTING: "selecting"
-};
-  const InputManager = {
-currentState: APP_STATES.IDLE,
-currentInput: null,
-currentSuggestions: [],
-activeIndex: -1,
-isInSelectionMode: false,
-debounceTimer: null,
-processedInputs: new WeakSet(),
-boundHandlers: {},
-valueWatcher: null,
-async init() {
-      NativeSetter.init();
-      await UIManager.init();
-      InputDetector.init({
-        onInputDetected: this.handleInputDetected.bind(this),
-        onInputRemoved: this.handleInputRemoved.bind(this)
-      });
-      this.bindInputEvents();
-      console.log("InputManager initialized");
-    },
-bindInputEvents() {
-      this.boundHandlers = {
-        focusin: this.handleFocusIn.bind(this),
-        focusout: this.handleFocusOut.bind(this),
-        keydown: this.handleKeyDown.bind(this),
-        input: this.handleInput.bind(this)
-      };
-      document.addEventListener("focusin", this.boundHandlers.focusin);
-      document.addEventListener("focusout", this.boundHandlers.focusout);
-      document.addEventListener("keydown", this.boundHandlers.keydown, true);
-      document.addEventListener("input", this.boundHandlers.input);
-      this.startInputValueWatcher();
-    },
-startInputValueWatcher() {
-      if (this.valueWatcher) clearInterval(this.valueWatcher);
-      this.valueWatcher = setInterval(() => {
-        if (this.currentInput && this.currentSuggestions.length > 0) {
-          const currentValue = this.currentInput.value;
-          if (currentValue.length === 0) {
-            this.hidePopup();
-            this.setState(APP_STATES.IDLE);
-            this.isInSelectionMode = false;
-            this.activeIndex = -1;
-          }
-        }
-      }, 100);
-    },
-destroy() {
-      if (this.boundHandlers.focusin) {
-        document.removeEventListener("focusin", this.boundHandlers.focusin);
-        document.removeEventListener("focusout", this.boundHandlers.focusout);
-        document.removeEventListener("keydown", this.boundHandlers.keydown, true);
-        document.removeEventListener("input", this.boundHandlers.input);
-        this.boundHandlers = {};
-      }
-      if (this.valueWatcher) {
-        clearInterval(this.valueWatcher);
-        this.valueWatcher = null;
-      }
-      UIManager.destroy();
-      InputDetector.destroy();
-      this.currentInput = null;
-      this.currentSuggestions = [];
-      this.activeIndex = -1;
-      this.isInSelectionMode = false;
-      this.processedInputs = new WeakSet();
-      console.log("InputManager destroyed");
-    },
-handleInputDetected(input, type) {
-      if (this.processedInputs.has(input)) return;
-      this.processedInputs.add(input);
-      console.log(`Processing detected input of type: ${type}`);
-      this.setupInputByType(input, type);
-    },
-handleInputRemoved(input, type) {
-      if (!this.processedInputs.has(input)) return;
-      this.processedInputs.delete(input);
-      if (this.currentInput === input) {
-        this.currentInput = null;
-        this.setState(APP_STATES.IDLE);
-        UIManager.hidePopup();
-      }
-      console.log(`Removed input of type: ${type}`);
-    },
-setupInputByType(input, type) {
-      switch (type) {
-        case INPUT_TYPES.MAIN_CHAT:
-          this.setupMainChatInput(input);
-          break;
-        case INPUT_TYPES.FULLSCREEN_FLOAT:
-          this.setupFullscreenInput(input);
-          break;
-      }
-    },
-setupMainChatInput(input) {
-      const focusHandler = () => {
-        this.currentInput = input;
-        this.setState(APP_STATES.IDLE);
-        console.log("Main chat input focused and activated");
-      };
-      input.addEventListener("focus", focusHandler, { once: true });
-      input.addEventListener("blur", () => {
-        setTimeout(() => {
-          input.addEventListener("focus", focusHandler, { once: true });
-        }, 100);
-      });
-    },
-setupFullscreenInput(input) {
-      console.log("Fullscreen input setup completed");
-      const focusHandler = () => {
-        this.currentInput = input;
-        this.setState(APP_STATES.IDLE);
-        console.log("Fullscreen input focused and activated");
-      };
-      input.addEventListener("focus", focusHandler);
-    },
-handleFocusIn(event) {
-      const target = event.target;
-      if (InputDetector.isChatInput(target)) {
-        this.currentInput = target;
-        this.setState(APP_STATES.IDLE);
-      }
-    },
-handleFocusOut(event) {
-      console.log("=== InputManager.handleFocusOut 被调用 ===");
-      console.log("失焦的元素:", event.target.className, "value:", event.target.value);
-      if (event.target === this.currentInput) {
-        console.log("当前输入框失焦，检查焦点转移目标...");
-        const related = event.relatedTarget;
-        const isPluginUI = related && (related.closest(".dda-popup") || related.closest(".ddp-candidate-capsules"));
-        if (!isPluginUI) {
-          setTimeout(() => {
-            const hasContent = this.currentInput && this.currentInput.value && this.currentInput.value.trim().length > 0;
-            console.log("焦点转移到非插件UI，输入框有内容:", hasContent);
-            this.setState(APP_STATES.IDLE);
-            this.currentInput = null;
-            if (!hasContent) {
-              console.log("输入框为空，隐藏候选项");
-              this.hidePopup();
-            } else {
-              console.log("输入框有内容，保持候选项显示");
-            }
-          }, 150);
-        } else {
-          console.log("焦点转移到插件UI内，保持候选项显示");
-        }
-      }
-    },
-handleInput(event) {
-      if (event.target !== this.currentInput) return;
-      const inputValue = event.target.value;
-      Utils.log("输入事件，当前值:", inputValue);
-      if (inputValue.length === 0) {
-        this.hidePopup();
-        this.setState(APP_STATES.IDLE);
-        this.isInSelectionMode = false;
-        this.activeIndex = -1;
-        if (this.debounceTimer) clearTimeout(this.debounceTimer);
-        return;
-      }
-      this.debounceProcessInput(inputValue);
-    },
-debounceProcessInput(inputValue) {
-      if (this.debounceTimer) {
-        clearTimeout(this.debounceTimer);
-      }
-      this.debounceTimer = setTimeout(() => {
-        this.processInput(inputValue);
-      }, SETTINGS.debounceDelay);
-    },
-handleKeyDown(event) {
-      if (event.target !== this.currentInput) return;
-      const key = event.key;
-      const hasVisibleCandidates = UIManager.isPopupVisible();
-      if (hasVisibleCandidates) {
-        if (this.isInSelectionMode) {
-          if (key === SETTINGS.KEYBOARD.ARROW_UP) {
-            event.preventDefault();
-            this.navigateUp();
-          } else if (key === SETTINGS.KEYBOARD.ARROW_DOWN) {
-            event.preventDefault();
-            this.exitSelectionMode();
-          } else if (key === SETTINGS.KEYBOARD.ARROW_LEFT) {
-            event.preventDefault();
-            this.navigateLeft();
-          } else if (key === SETTINGS.KEYBOARD.ARROW_RIGHT) {
-            event.preventDefault();
-            this.navigateRight();
-          } else if (key === SETTINGS.KEYBOARD.ENTER && !event.shiftKey) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.selectActiveCandidate();
-            this.exitSelectionMode();
-          } else if (key === SETTINGS.KEYBOARD.ESCAPE) {
-            event.preventDefault();
-            this.exitSelectionMode();
-            this.hidePopup();
-          }
-        } else {
-          if (key === SETTINGS.KEYBOARD.ARROW_UP) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.enterSelectionMode();
-          }
-        }
-      }
-    },
-enterSelectionMode() {
-      this.isInSelectionMode = true;
-      this.setState(APP_STATES.SELECTING);
-      UIManager.setSelectionModeActive(true);
-      if (this.currentSuggestions.length > 0) {
-        this.setActiveIndex(0);
-      }
-      Utils.log("进入候选项选择模式");
-    },
-exitSelectionMode() {
-      this.isInSelectionMode = false;
-      this.setState(APP_STATES.TYPING);
-      UIManager.setSelectionModeActive(false);
-      this.setActiveIndex(-1);
-      Utils.log("退出候选项选择模式");
-    },
-navigateUp() {
-      if (this.currentSuggestions.length === 0) return;
-      let newIndex = this.activeIndex - 1;
-      if (newIndex < 0) {
-        newIndex = this.currentSuggestions.length - 1;
-      }
-      this.setActiveIndex(newIndex);
-    },
-navigateDown() {
-      if (this.currentSuggestions.length === 0) return;
-      let newIndex = this.activeIndex + 1;
-      if (newIndex >= this.currentSuggestions.length) {
-        newIndex = 0;
-      }
-      this.setActiveIndex(newIndex);
-    },
-navigateLeft() {
-      this.navigateUp();
-    },
-navigateRight() {
-      this.navigateDown();
-    },
-setActiveIndex(index) {
-      if (index < -1 || index >= this.currentSuggestions.length && index !== -1) {
-        return;
-      }
-      this.activeIndex = index;
-      UIManager.setActiveIndex(index);
-    },
-selectActiveCandidate() {
-      if (this.activeIndex >= 0 && this.activeIndex < this.currentSuggestions.length) {
-        const selectedCandidate = this.currentSuggestions[this.activeIndex];
-        this.selectCandidate(selectedCandidate);
-      }
-    },
-selectCandidate(candidate) {
-      if (!candidate || !this.currentInput) return;
-      const text = candidate.getDisplayText ? candidate.getDisplayText() : candidate.text;
-      if (typeof candidate.updateUsage === "function") {
-        candidate.updateUsage();
-      } else if (candidate.id) {
-        DanmukuDB.updateUsage(candidate.id);
-      }
-      NativeSetter.setValue(this.currentInput, text);
-      this.hidePopup();
-      this.setState(APP_STATES.IDLE);
-      this.isInSelectionMode = false;
-      this.activeIndex = -1;
-      Utils.log(`候选项已选择并填入输入框: ${text}`);
-    },
-hidePopup() {
-      UIManager.hidePopup();
-      this.currentSuggestions = [];
-      this.activeIndex = -1;
-    },
-async processInput(inputValue) {
-      if (inputValue.length < SETTINGS.minSearchLength) {
-        this.setState(APP_STATES.IDLE);
-        this.isInSelectionMode = false;
-        this.activeIndex = -1;
-        this.hidePopup();
-        return;
-      }
-      let suggestions = await DanmukuDB.search(inputValue, SETTINGS.maxSuggestions, SETTINGS.sortBy);
-      this.currentSuggestions = suggestions;
-      if (suggestions.length > 0) {
-        this.setState(APP_STATES.TYPING);
-        this.isInSelectionMode = false;
-        UIManager.showPopup(suggestions, this.currentInput);
-      } else {
-        this.setState(APP_STATES.IDLE);
-        this.isInSelectionMode = false;
-        this.hidePopup();
-      }
-    },
-setState(newState) {
-      const oldState = this.currentState;
-      this.currentState = newState;
-      console.log(`State changed: ${oldState} -> ${newState}`);
-      this.onStateChange(oldState, newState);
-    },
-onStateChange(oldState, newState) {
-      console.log(`=== onStateChange: ${oldState} -> ${newState} ===`);
-      switch (newState) {
-        case APP_STATES.IDLE:
-          console.log("状态变为IDLE，但不自动隐藏弹窗");
-          break;
-        case APP_STATES.TYPING:
-          console.log("状态变为TYPING");
-          break;
-        case APP_STATES.SELECTING:
-          console.log("状态变为SELECTING，设置活跃索引");
-          if (this.activeIndex === -1 && this.currentSuggestions.length > 0) {
-            this.setActiveIndex(0);
-          }
-          break;
-      }
-    },
-isChatInput(element) {
-      return InputDetector.isChatInput(element);
-    }
-  };
-  const KeyboardController = {
-activeIndex: 0,
-enabled: true,
-init() {
-      console.log("KeyboardController initialized");
-    },
-handleKeyDown(event, currentState) {
-      if (!this.enabled) return;
-      const key = event.code || event.key;
-      switch (currentState) {
-        case APP_STATES.IDLE:
-          this.handleIdleState(event, key);
-          break;
-        case APP_STATES.TYPING:
-          this.handleTypingState(event, key);
-          break;
-        case APP_STATES.SELECTING:
-          this.handleSelectingState(event, key);
-          break;
-      }
-    },
-handleIdleState(event, key) {
-      if (this.isTriggerKey(key)) {
-        event.preventDefault();
-      }
-    },
-handleTypingState(event, key) {
-      if (this.isTriggerKey(key)) {
-        event.preventDefault();
-      } else if (this.isCancelKey(key)) {
-        event.preventDefault();
-      }
-    },
-handleSelectingState(event, key) {
-      if (this.isNavigationKey(key)) {
-        this.handleNavigation(event, key);
-      } else if (this.isSelectKey(key)) {
-        this.handleSelection(event);
-      } else if (this.isCancelKey(key)) {
-        this.handleCancel(event);
-      }
-    },
-handleNavigation(event, key) {
-      event.preventDefault();
-      const direction = this.getNavigationDirection(key);
-      if (direction === "up") {
-        this.moveSelection(-1);
-      } else if (direction === "down") {
-        this.moveSelection(1);
-      }
-    },
-handleSelection(event) {
-      event.preventDefault();
-      if (UIManager) {
-        UIManager.selectActiveCandidate();
-      }
-    },
-handleCancel(event) {
-      event.preventDefault();
-      if (UIManager) {
-        UIManager.hidePopup();
-      }
-    },
-moveSelection(delta) {
-      if (UIManager) {
-        if (delta < 0) {
-          UIManager.navigateUp();
-        } else {
-          UIManager.navigateDown();
-        }
-      }
-    },
-resetSelection() {
-      this.activeIndex = 0;
-    },
-isTriggerKey(key) {
-      return SETTINGS.TRIGGER_KEYS.includes(key) || key === "Tab" && SETTINGS.TRIGGER_KEYS.includes("Tab");
-    },
-isNavigationKey(key) {
-      return SETTINGS.NAVIGATION_KEYS.includes(key) || ["ArrowUp", "ArrowDown", "KeyW", "KeyS"].includes(key);
-    },
-isSelectKey(key) {
-      return SETTINGS.SELECT_KEYS.includes(key) || ["Enter", "Tab"].includes(key);
-    },
-isCancelKey(key) {
-      return SETTINGS.CANCEL_KEYS.includes(key) || key === "Escape";
-    },
-getNavigationDirection(key) {
-      switch (key) {
-        case "ArrowUp":
-        case "KeyW":
-          return "up";
-        case "ArrowDown":
-        case "KeyS":
-          return "down";
-        default:
-          return null;
-      }
-    },
-enable() {
-      this.enabled = true;
-    },
-disable() {
-      this.enabled = false;
-    }
-  };
-  const _danmukuPopupCss = ".dda-popup{position:fixed;z-index:9999;background:var(--md-sys-color-surface-container);border:1.5px solid var(--capsule-border-color, rgba(103, 80, 164, .3));transition:all .3s var(--motion-easing),box-shadow .3s var(--motion-easing);border-radius:12px;box-shadow:0 4px 8px 3px #00000026,0 1px 3px #0000004d;max-width:400px;max-height:300px;overflow:hidden;opacity:0;transform:translateY(-10px)}.dda-popup.show{opacity:1;transform:translateY(0)}.dda-popup.selection-mode-active{border-color:var(--md-sys-color-primary);box-shadow:0 6px 16px 4px #0003,0 2px 6px #0006,0 0 0 1px var(--md-sys-color-primary);background:var(--md-sys-color-surface-bright)}.dda-popup-content{max-height:300px;overflow-y:auto;padding:4px 0}.dda-popup-item{padding:8px 16px;cursor:pointer;border-bottom:1px solid var(--capsule-border-color, rgba(103, 80, 164, .2));transition:all .25s cubic-bezier(.4,0,.2,1);min-height:40px;display:flex;flex-direction:column;justify-content:center;position:relative;border-left:6px solid transparent;will-change:transform}.dda-popup-item-active{background-color:var(--md-sys-color-tertiary-container);border-left-color:var(--md-sys-color-tertiary);transform:translate(2px);box-shadow:0 4px 12px #0003,inset 0 0 0 2px rgba(var(--md-sys-color-tertiary-rgb),.3);z-index:10}.dda-popup-item:last-child{border-bottom:none}.dda-popup-item:hover{background-color:var(--md-sys-color-surface-bright);transform:translate(4px)}.dda-preview-tooltip{position:fixed;z-index:10000;background:var(--md-sys-color-surface-bright);border:1px solid var(--md-sys-color-outline);border-radius:8px;padding:12px 16px;box-shadow:0 8px 24px #0000004d;max-width:400px;word-wrap:break-word;font-size:14px;color:var(--md-sys-color-on-surface);opacity:0;transform:translateY(-10px);transition:opacity .2s cubic-bezier(.4,0,.2,1),transform .2s cubic-bezier(.4,0,.2,1);pointer-events:none}.dda-preview-tooltip.show{opacity:1;transform:translateY(0)}.dda-popup-item-text{font-size:14px;color:var(--md-sys-color-on-surface);line-height:1.4;margin-bottom:4px}.dda-popup-item-active .dda-popup-item-text{color:var(--md-sys-color-on-tertiary-container);font-weight:600}.dda-popup-item-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.dda-popup-tag{display:inline-block;padding:2px 6px;background-color:var(--md-sys-color-tertiary);color:var(--md-sys-color-on-primary);font-size:11px;border-radius:12px;line-height:1.2}.dda-popup-item-active .dda-popup-tag{background-color:var(--md-sys-color-primary);color:var(--md-sys-color-on-primary)}.dda-popup-empty{max-height:60px}.dda-empty-message{padding:16px;text-align:center;color:var(--md-sys-color-on-surface-variant);font-size:13px}@media (max-width: 480px){.dda-popup{max-width:90vw;left:5vw!important;right:5vw!important}}@keyframes fadeInUp{0%{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.dda-popup.animate-in{animation:fadeInUp .2s var(--motion-easing)}.send-button:hover{background:var(--md-sys-color-primary-container);color:var(--md-sys-color-on-primary-container)}.send-button:active{transform:scale(.98)}";
-  importCSS(_danmukuPopupCss);
-  const _candidateCapsulesCss = '.ddp-candidate-capsules{display:flex;flex-wrap:nowrap;gap:6px;padding:var(--ddp-capsule-padding, 8px) 12px;background:var(--md-sys-color-surface-container);border-radius:8px;margin:var(--ddp-capsule-margin, 8px) 12px;max-width:calc(100% - 24px);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-ms-overflow-style:none;position:relative;z-index:1000}.ddp-candidate-capsules::-webkit-scrollbar{display:none}.ddp-candidate-capsules.multi-row{flex-wrap:wrap;max-height:120px;overflow-y:auto;mask:none;-webkit-mask:none}.ddp-candidate-capsule{flex-shrink:0;padding:var(--ddp-capsule-item-padding, 3px) 8px;background:var(--md-sys-color-surface-container);border:1.5px solid var(--capsule-border-color, rgba(103, 80, 164, .3));border-radius:12px;color:var(--md-sys-color-on-surface);font-size:12px;line-height:1.3;cursor:pointer;transition:all .25s cubic-bezier(.4,0,.2,1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:left;max-width:150px;min-width:30px;height:var(--ddp-capsule-item-height, 24px);display:flex;align-items:center;justify-content:flex-start;box-sizing:border-box;-webkit-user-select:none;user-select:none;position:relative}.ddp-candidate-capsules.multi-row .ddp-candidate-capsule{flex:0 0 calc(25% - 5px);max-width:calc(25% - 5px);min-width:60px}.ddp-candidate-capsule:hover{background:var(--md-sys-color-surface-bright);border-color:var(--capsule-border-hover, rgba(103, 80, 164, .6));transform:translateY(-1px);box-shadow:0 2px 6px #00000026}.ddp-candidate-capsule.active{background:#f60;border-color:#f83;color:#fff;font-weight:500;box-shadow:0 2px 8px #f606}.ddp-candidate-capsules.selection-mode-active{box-shadow:0 0 0 2px #f60;background:var(--md-sys-color-surface-container)}.ddp-candidate-capsule[title]{position:relative}.ddp-capsule-preview{position:fixed;z-index:10000;background:var(--md-sys-color-surface-container);border:1px solid var(--md-sys-color-outline);border-radius:8px;padding:8px 12px;box-shadow:0 4px 8px 3px #0000004d,0 1px 3px #0006;max-width:300px;min-width:100px;word-wrap:break-word;white-space:normal;opacity:0;transform:translateY(-5px);transition:opacity .2s cubic-bezier(.4,0,.2,1),transform .2s cubic-bezier(.4,0,.2,1);pointer-events:none;font-size:13px;line-height:1.4;color:var(--md-sys-color-on-surface)}.ddp-capsule-preview.show{opacity:1;transform:translateY(0)}.ddp-capsule-preview:before{content:"";position:absolute;bottom:-5px;left:50%;transform:translate(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--md-sys-color-surface-container)}.ddp-capsule-preview.show-below:before{bottom:auto;top:-5px;border-top:none;border-bottom:5px solid var(--md-sys-color-surface-container)}.ddp-capsule-preview.active{border-color:#f60;background:var(--surface-container-highest);box-shadow:0 4px 8px 3px #0000004d,0 1px 3px #0006,0 0 0 1px #f60}.ddp-capsule-preview.active:before{border-top-color:var(--surface-container-highest)}.ddp-capsule-preview.active.show-below:before{border-bottom-color:var(--surface-container-highest)}.layout-Player-chat .Chat .ddp-candidate-capsules{z-index:1000;position:relative}.Chat{background-color:var(--md-sys-color-surface-container)}@media (max-width: 768px){.ddp-candidate-capsules{gap:6px;padding:6px 8px}.ddp-candidate-capsule{padding:4px 8px;font-size:12px;max-width:150px}}@media (prefers-color-scheme: dark){.ddp-candidate-capsules{box-shadow:0 2px 8px #00000040}.ddp-candidate-capsule:hover{box-shadow:0 2px 8px #0000004d}}@keyframes ddp-capsule-appear{0%{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}.ddp-candidate-capsules{animation:ddp-capsule-appear .2s var(--motion-easing)}.ddp-candidate-capsule{animation:ddp-capsule-appear .3s var(--motion-easing) backwards}.ddp-candidate-capsule:nth-child(1){animation-delay:.05s}.ddp-candidate-capsule:nth-child(2){animation-delay:.1s}.ddp-candidate-capsule:nth-child(3){animation-delay:.15s}.ddp-candidate-capsule:nth-child(4){animation-delay:.2s}.ddp-candidate-capsule:nth-child(5){animation-delay:.25s}';
-  importCSS(_candidateCapsulesCss);
-  const DanmuPro = {
-    initialized: false,
-async init() {
-      if (this.initialized) {
-        Utils.log("弹幕助手已经初始化，跳过。", "warn");
-        return;
-      }
-      try {
-        Utils.log("[弹幕助手] 模块开始初始化...");
-        const dbSuccess = await DanmukuDB.init();
-        if (!dbSuccess) {
-          Utils.log("[弹幕助手] 数据库初始化失败，功能可能受限。", "warn");
-        }
-        await this.firstTimeImport();
-        KeyboardController.init();
-        await InputManager.init();
-        this.initialized = true;
-        Utils.log("[弹幕助手] 模块初始化完成！");
-      } catch (error) {
-        Utils.log(`[弹幕助手] 初始化失败: ${error.message}`, "error");
-      }
-    },
-destroy() {
-      if (!this.initialized) return;
-      try {
-        InputManager.destroy();
-        this.initialized = false;
-        Utils.log("[弹幕助手] 模块已关闭");
-      } catch (error) {
-        Utils.log(`[弹幕助手] 关闭失败: ${error.message}`, "error");
-      }
-    },
-async firstTimeImport() {
-      try {
-        const dataCount = await DanmukuDB.getDataCount();
-        if (dataCount === 0) {
-          Utils.log("[弹幕助手] 数据库为空，开始首次数据导入...");
-          const result = await DanmukuDB.autoImportData();
-          if (result && result.successCount > 0) {
-            Utils.log(`[弹幕助手] 首次数据导入成功 ${result.successCount} 条。`);
-          } else {
-            Utils.log("[弹幕助手] 首次数据导入失败。", "warn");
-          }
-        }
-      } catch (error) {
-        Utils.log(`[弹幕助手] 检查首次导入时发生错误: ${error.message}`, "error");
-      }
-    }
-  };
-  const QUEUE_KEY = "douyu_qmx_page_open_queue";
   const PageLoader = {
-getQueue() {
-      const queue = GM_getValue(QUEUE_KEY, []);
-      return Array.isArray(queue) ? queue : [];
+openPrewarmTab(url) {
+      if (!url || typeof url !== "string") {
+        throw new Error("短时工作页 URL 无效");
+      }
+      const targetUrl = new URL(url, "https://www.douyu.com");
+      targetUrl.searchParams.set("qmxPrewarm", "1");
+      const tab = _GM_openInTab(targetUrl.href, { active: false, setParent: true });
+      const openedAt = Date.now();
+      const roomId = url.match(/\/(\d+)/)?.[1] || null;
+      let closed = false;
+      Utils.log(`[PageLoader] 已后台打开短时工作页: ${url}`);
+      return {
+        url: targetUrl.href,
+        roomId,
+        openedAt,
+        close() {
+          if (closed) return;
+          closed = true;
+          closeTabHandle(tab);
+          Utils.log(`[PageLoader] 已关闭短时工作页: ${url}`);
+        }
+      };
+    }
+  };
+  const MAX_DISCOVERY_ATTEMPTS = 6;
+  const MAX_CONSECUTIVE_FAILURES = 3;
+  const ACCOUNT_RISK_THRESHOLD = 3;
+  const tasks = new Map();
+  const roomTaskIds = new Map();
+  const activeBagKeys = new Set();
+  const completedBagKeys = new Set();
+  let taskSequence = 0;
+  const cancelAllTasks = () => {
+    for (const task of tasks.values()) {
+      task.cancelled = true;
+      task.prewarm?.close();
+    }
+    tasks.clear();
+    roomTaskIds.clear();
+    activeBagKeys.clear();
+    const state2 = GlobalState.get();
+    state2.tasks = {};
+    GlobalState.set(state2);
+  };
+  const randomDelay = (min, max) => Utils.getRandomDelay(
+    Math.max(0, Number(min) || 0),
+    Math.max(Number(min) || 0, Number(max) || 0)
+  );
+  const waitForTask = async (task, durationMs) => {
+    const deadline = Date.now() + Math.max(0, durationMs);
+    while (!task.cancelled && Date.now() < deadline) {
+      await Utils.sleep(Math.min(250, deadline - Date.now()));
+    }
+    return !task.cancelled;
+  };
+  const getNextBeijingDayDelay = () => {
+    const now = Date.now();
+    const beijingNow = new Date(now + 8 * 60 * 60 * 1e3);
+    const resetAt = Date.UTC(
+      beijingNow.getUTCFullYear(),
+      beijingNow.getUTCMonth(),
+      beijingNow.getUTCDate() + 1,
+      0,
+      0,
+      30
+    ) - 8 * 60 * 60 * 1e3;
+    return Math.max(0, resetAt - now);
+  };
+  const recordTerminal = (binding, result, details = {}) => ClaimEventStore.record({
+    roomId: binding.bag.rid,
+    roomName: binding.roomName,
+    bagId: binding.bag.id,
+    bagKey: binding.key,
+    phase: "claim",
+    result,
+    source: "snatch",
+    ...details
+  });
+  const releaseCandidate = (task, binding, { removeState = true } = {}) => {
+    activeBagKeys.delete(binding.key);
+    completedBagKeys.add(binding.key);
+    if (task.currentRoomId) {
+      roomTaskIds.delete(task.currentRoomId);
+      if (removeState) GlobalState.removeTask(task.currentRoomId);
+    }
+    task.currentRoomId = null;
+    task.prewarm = null;
+  };
+  const discoverCandidate = async (task) => {
+    for (let attempt = 0; attempt < MAX_DISCOVERY_ATTEMPTS && !task.cancelled; attempt += 1) {
+      const currentRid = task.currentRoomId || SETTINGS.CONTROL_ROOM_ID;
+      const url = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, currentRid, 0);
+      if (!url) return null;
+      const roomId = url.match(/\/(\d+)/)?.[1];
+      if (!roomId || roomTaskIds.has(roomId)) continue;
+      try {
+        const roomData = await DouyuAPI.getRoomRedBags(roomId);
+        const bag = selectActiveRedBag({
+          redBagList: roomData.redBagList,
+          roomId,
+          completedKeys: completedBagKeys
+        });
+        if (!bag) continue;
+        const bagKey = getRedBagKey(bag, roomId);
+        if (activeBagKeys.has(bagKey)) continue;
+        return { url, roomId, roomData, bag };
+      } catch (error) {
+        Utils.claimLog("SNATCH", "候选红包确认失败", {
+          roomId,
+          reason: String(error?.message || error)
+        });
+      }
+    }
+    return null;
+  };
+  const refreshTerminalRoomState = async (binding) => {
+    try {
+      const roomData = await DouyuAPI.getRoomRedBags(binding.bag.rid);
+      const sameBag = roomData.redBagList.find(
+        (bag) => getRedBagKey(bag, binding.bag.rid) === binding.key
+      );
+      return sameBag ? Number(sameBag.status) : null;
+    } catch {
+      return null;
+    }
+  };
+  const claimBoundBag = async (task, binding, openedAt) => {
+    const attemptOffsets = getSnatchAttemptOffsets(binding.bag.waitSec);
+    let consecutiveFailures = 0;
+    let attemptCount = 0;
+    let notReadyCount = 0;
+    let lastAttemptAt = 0;
+    Utils.claimLog("SNATCH", "短时开页完成，等待首次领取", {
+      roomId: binding.bag.rid,
+      bagId: binding.bag.id,
+      intervalMs: attemptOffsets[0]
+    });
+    for (const offsetMs of attemptOffsets) {
+      if (task.cancelled) return { stop: true };
+      const nextAttemptAt = Math.max(openedAt + offsetMs, lastAttemptAt + 1e4);
+      GlobalState.updateTask(binding.bag.rid, "WAITING", "倒计时", {
+        countdown: { endTime: nextAttemptAt },
+        prizes: toDisplayPrizes(binding.bag.prizeList),
+        claimSource: "snatch",
+        bagId: binding.bag.id
+      });
+      if (!await waitForTask(task, nextAttemptAt - Date.now())) return { stop: true };
+      const requestedAt = Date.now();
+      lastAttemptAt = requestedAt;
+      GlobalState.updateTask(binding.bag.rid, "CLAIMING", "请求可领取状态", {
+        countdown: null,
+        prizes: toDisplayPrizes(binding.bag.prizeList),
+        claimSource: "snatch",
+        bagId: binding.bag.id
+      });
+      try {
+        attemptCount += 1;
+        const response = await DouyuAPI.snatchRedBag(binding.bag);
+        const outcome = classifySnatchResponse(response);
+        consecutiveFailures = outcome === SNATCH_OUTCOME.UNKNOWN ? consecutiveFailures + 1 : 0;
+        Utils.claimLog("SNATCH", "控制页领取响应", {
+          roomId: binding.bag.rid,
+          bagId: binding.bag.id,
+          result: outcome,
+          error: response?.error,
+          msg: response?.msg,
+          durationMs: requestedAt - openedAt
+        });
+        if (outcome === SNATCH_OUTCOME.SUCCESS) {
+          const prizes = toDisplayPrizes(response?.data?.prizeList);
+          const rewards = summarizePrizePool(response?.data?.prizeList);
+          const rewardText = [
+            rewards.coins > 0 ? `金币 ${rewards.coins}` : "",
+            rewards.starlight > 0 ? `星光棒 ${rewards.starlight}` : ""
+          ].filter(Boolean).join("、") || "未获得奖励";
+          recordTerminal(binding, "success", {
+            durationMs: Date.now() - openedAt,
+            rewardText,
+            rewards
+          });
+          Utils.claimLog("SNATCH", "领取结果已确认", {
+            roomId: binding.bag.rid,
+            bagId: binding.bag.id,
+            rewardText
+          });
+          GlobalState.updateTask(binding.bag.rid, "SUCCESS", "领取成功", {
+            countdown: null,
+            prizes,
+            claimSource: "snatch",
+            bagId: binding.bag.id
+          });
+          await waitForTask(task, 1500);
+          return { result: "success" };
+        }
+        if (outcome === SNATCH_OUTCOME.EXHAUSTED) {
+          const details = {
+            error: response?.error,
+            reason: String(response?.msg || "红包已派完"),
+            attemptCount,
+            notReadyCount
+          };
+          const riskCount = Number(response?.error) === 12001 && attemptCount === 1 ? countConsecutiveImmediate12001([{
+            timestamp: Date.now(),
+            phase: "claim",
+            result: "exhausted",
+            bagKey: binding.key,
+            ...details
+          }, ...ClaimEventStore.list({ days: 1 })]) : 0;
+          if (riskCount >= ACCOUNT_RISK_THRESHOLD) {
+            recordTerminal(binding, "risk_suspected", details);
+            GlobalState.setAccountRisk(true, {
+              count: riskCount,
+              expiresAt: Date.now() + getNextBeijingDayDelay()
+            });
+            Utils.claimLog("SNATCH", "连续首次请求返回 12001，疑似账户风控，仅提示不停止领取", {
+              count: riskCount
+            });
+            return { result: "risk_suspected" };
+          }
+          recordTerminal(binding, outcome, details);
+          return { result: outcome };
+        }
+        if (outcome === SNATCH_OUTCOME.ALREADY_CLAIMED) {
+          recordTerminal(binding, outcome, {
+            error: response?.error,
+            reason: String(response?.msg || "已经领取"),
+            attemptCount,
+            notReadyCount
+          });
+          return { result: outcome };
+        }
+        if (outcome === SNATCH_OUTCOME.DAILY_LIMIT) {
+          recordTerminal(binding, "daily_limit");
+          GlobalState.setDailyLimit(true);
+          return { result: "daily_limit", dailyLimit: true };
+        }
+        if (outcome === SNATCH_OUTCOME.AUTH_FAILED) {
+          recordTerminal(binding, "auth_failed");
+          GlobalState.updateTask(binding.bag.rid, "ERROR", "领取鉴权失败", {
+            countdown: null,
+            claimSource: "snatch"
+          });
+          return { result: "auth_failed", stop: true, preserveState: true };
+        }
+        if (outcome === SNATCH_OUTCOME.UNKNOWN && consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          recordTerminal(binding, "unknown", { reason: String(response?.msg || "未知业务响应") });
+          return { result: "unknown" };
+        }
+        if (outcome === SNATCH_OUTCOME.NOT_READY) notReadyCount += 1;
+      } catch (error) {
+        consecutiveFailures += 1;
+        Utils.claimLog("SNATCH", "控制页领取请求失败", {
+          roomId: binding.bag.rid,
+          bagId: binding.bag.id,
+          reason: String(error?.message || error),
+          httpStatus: error?.httpStatus
+        });
+        if (error?.kind === "auth" || consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          recordTerminal(binding, "auth_failed", { reason: String(error?.message || error) });
+          GlobalState.updateTask(binding.bag.rid, "ERROR", "领取请求失败", {
+            countdown: null,
+            claimSource: "snatch"
+          });
+          return { result: "request_failed", stop: true, preserveState: true };
+        }
+      }
+    }
+    if (task.cancelled) return { stop: true };
+    const finalStatus = await refreshTerminalRoomState(binding);
+    const result = finalStatus === 3 ? "exhausted" : "unknown";
+    recordTerminal(binding, result, {
+      reason: finalStatus === 3 ? "room/list 确认红包结束" : "五次领取尝试后仍未确认结果"
+    });
+    return { result };
+  };
+  const processCandidate = async (task, candidate) => {
+    const binding = createRedBagBinding(candidate.bag, candidate.roomData.receivedAt);
+    binding.roomName = candidate.roomData.anchorName || `房间 ${candidate.roomId}`;
+    task.binding = binding;
+    task.currentRoomId = candidate.roomId;
+    roomTaskIds.set(candidate.roomId, task.id);
+    activeBagKeys.add(binding.key);
+    GlobalState.updateTask(candidate.roomId, "OPENING", "短时初始化", {
+      nickname: candidate.roomData.anchorName || `房间 ${candidate.roomId}`,
+      countdown: null,
+      prizes: toDisplayPrizes(binding.bag.prizeList),
+      claimSource: "snatch",
+      bagId: binding.bag.id
+    });
+    try {
+      task.prewarm = PageLoader.openPrewarmTab(candidate.url);
+      const openedAt = task.prewarm.openedAt;
+      if (!await waitForTask(task, SETTINGS.ROOM_PREWARM_DURATION)) {
+        return { stop: true };
+      }
+      task.prewarm.close();
+      task.prewarm = null;
+      return await claimBoundBag(task, binding, openedAt);
+    } catch (error) {
+      recordTerminal(binding, "open_failed", { reason: String(error?.message || error) });
+      GlobalState.updateTask(candidate.roomId, "ERROR", "短时开页失败", {
+        countdown: null,
+        claimSource: "snatch"
+      });
+      return { result: "open_failed" };
+    } finally {
+      task.prewarm?.close();
+      task.prewarm = null;
+    }
+  };
+  const runTask = async (task, firstCandidate) => {
+    let candidate = firstCandidate;
+    try {
+      while (!task.cancelled && candidate) {
+        const outcome = await processCandidate(task, candidate);
+        if (outcome.dailyLimit && SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
+          GlobalState.updateTask(candidate.roomId, "DORMANT", "等待次日恢复", {
+            countdown: null,
+            claimSource: "snatch"
+          });
+          if (!await waitForTask(task, getNextBeijingDayDelay())) break;
+          GlobalState.setDailyLimit(false);
+        }
+        releaseCandidate(task, task.binding, { removeState: !outcome.preserveState });
+        if (outcome.dailyLimit && SETTINGS.DAILY_LIMIT_ACTION === "STOP_ALL") {
+          cancelAllTasks();
+          break;
+        }
+        if (outcome.stop) break;
+        if (!await waitForTask(task, randomDelay(600, 1400))) break;
+        candidate = await discoverCandidate(task);
+      }
+    } catch (error) {
+      Utils.claimLog("SNATCH", "领取任务异常结束", { reason: String(error?.message || error) });
+      if (task.currentRoomId) {
+        GlobalState.updateTask(task.currentRoomId, "ERROR", "任务异常结束", {
+          countdown: null,
+          claimSource: "snatch"
+        });
+      }
+    } finally {
+      task.prewarm?.close();
+      tasks.delete(task.id);
+      if (task.currentRoomId) roomTaskIds.delete(task.currentRoomId);
+    }
+  };
+  const RedBagTaskController = {
+    getActiveCount() {
+      return tasks.size;
     },
-setQueue(queue) {
-      GM_setValue(QUEUE_KEY, Array.isArray(queue) ? queue : []);
-    },
-enqueue(url, options = {}) {
-      if (!url || typeof url !== "string") return false;
-      const normalizedUrl = url.trim();
-      if (!normalizedUrl) return false;
-      const { dedupe = true } = options;
-      const queue = this.getQueue();
-      if (dedupe && queue.includes(normalizedUrl)) {
+    async start() {
+      if (tasks.size >= SETTINGS.MAX_CONCURRENT_TASKS) return false;
+      const limitState = GlobalState.getDailyLimit();
+      if (limitState?.reached) return false;
+      const task = {
+        id: `control-task-${Date.now()}-${taskSequence += 1}`,
+        cancelled: false,
+        currentRoomId: null,
+        prewarm: null,
+        binding: null
+      };
+      tasks.set(task.id, task);
+      try {
+        const candidate = await discoverCandidate(task);
+        if (!candidate || task.cancelled) {
+          tasks.delete(task.id);
+          return false;
+        }
+        void runTask(task, candidate);
+        return true;
+      } catch (error) {
+        tasks.delete(task.id);
+        Utils.claimLog("SNATCH", "启动领取任务失败", { reason: String(error?.message || error) });
         return false;
       }
-      queue.push(normalizedUrl);
-      this.setQueue(queue);
+    },
+    stopRoom(roomId) {
+      const normalizedRoomId = String(roomId);
+      const taskId = roomTaskIds.get(normalizedRoomId);
+      const task = taskId ? tasks.get(taskId) : null;
+      if (!task) {
+        GlobalState.removeTask(normalizedRoomId);
+        return false;
+      }
+      task.cancelled = true;
+      task.prewarm?.close();
+      roomTaskIds.delete(normalizedRoomId);
+      if (task.binding?.key) activeBagKeys.delete(task.binding.key);
+      GlobalState.removeTask(normalizedRoomId);
       return true;
     },
-dequeue() {
-      const queue = this.getQueue();
-      if (queue.length === 0) return null;
-      const nextUrl = queue.shift() || null;
-      this.setQueue(queue);
-      return nextUrl;
+    stopAll() {
+      cancelAllTasks();
     },
-openNextTab() {
-      const nextUrl = this.dequeue();
-      if (!nextUrl) return null;
-      const shouldForegroundOpen = SETTINGS.PRELOAD_MODE_ENABLED !== false;
-      const active = shouldForegroundOpen;
-      GM_openInTab(nextUrl, { active, setParent: true });
-      Utils.log(
-        `[PageLoader] 已从队列打开新标签页(${shouldForegroundOpen ? "前台直切" : "后台打开"}): ${nextUrl}`
+    dispose() {
+      this.stopAll();
+    }
+  };
+  const DOUYU_SELECTORS = Object.freeze({
+    playerMain: "#js-player-main",
+    playerVideo: "#js-player-video-case",
+    playerToolbar: "#js-player-toolbar",
+    giftSlot: "#js-giftList-area",
+    aside: "#js-player-asideMain",
+    asideTop: ".layout-Player-asideMainTop",
+    rank: ".layout-Player-rank",
+    chat: ".layout-Player-chat",
+    chatComposer: ".ChatSend",
+    chatInput: '.ChatSend-txt[contenteditable="true"], textarea.ChatSend-txt, input.ChatSend-txt, .ChatSend-txt',
+    chatSendButton: ".ChatSend-button"
+  });
+  const query = (selector, root = document) => root?.querySelector?.(selector) || null;
+  const DouyuLayoutAdapter = {
+    observer: null,
+    resizeObserver: null,
+    callbacks: new Set(),
+    scheduled: false,
+    getPlayerMain() {
+      return query(DOUYU_SELECTORS.playerMain);
+    },
+    getAsideSlot() {
+      return query(DOUYU_SELECTORS.asideTop);
+    },
+    getGiftSlot() {
+      return query(DOUYU_SELECTORS.giftSlot);
+    },
+    getChatComposer() {
+      const container = query(DOUYU_SELECTORS.chatComposer) || query(DOUYU_SELECTORS.chat);
+      if (!container) return null;
+      const input = query(DOUYU_SELECTORS.chatInput, container);
+      const sendButton = query(DOUYU_SELECTORS.chatSendButton, container);
+      return input ? { container, input, sendButton } : null;
+    },
+    isTheaterMode() {
+      return Boolean(
+        document.body?.classList.contains("is-fullScreenPage") && this.getPlayerMain() && this.getGiftSlot()
       );
-      return nextUrl;
+    },
+    isLiveLayout() {
+      return Boolean(this.getPlayerMain() && this.getChatComposer());
+    },
+    getSnapshot() {
+      const composer = this.getChatComposer();
+      return {
+        theater: this.isTheaterMode(),
+        liveLayout: this.isLiveLayout(),
+        playerMain: this.getPlayerMain(),
+        asideSlot: this.getAsideSlot(),
+        giftSlot: this.getGiftSlot(),
+        composer
+      };
+    },
+    scheduleNotify() {
+      if (this.scheduled) return;
+      this.scheduled = true;
+      requestAnimationFrame(() => {
+        this.scheduled = false;
+        const snapshot = this.getSnapshot();
+        this.callbacks.forEach((callback) => callback(snapshot));
+        this.refreshResizeTargets(snapshot);
+      });
+    },
+    refreshResizeTargets(snapshot = this.getSnapshot()) {
+      if (typeof ResizeObserver === "undefined") return;
+      if (!this.resizeObserver) {
+        this.resizeObserver = new ResizeObserver(() => this.scheduleNotify());
+      }
+      this.resizeObserver.disconnect();
+      [snapshot.playerMain, snapshot.asideSlot, snapshot.giftSlot].filter(Boolean).forEach((element) => this.resizeObserver.observe(element));
+    },
+    ensureObserver() {
+      if (this.observer || typeof MutationObserver === "undefined") return;
+      this.observer = new MutationObserver(() => this.scheduleNotify());
+      this.observer.observe(document.body || document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["class"]
+      });
+      this.refreshResizeTargets();
+    },
+    observe(callback, { immediate = true } = {}) {
+      if (typeof callback !== "function") return () => {
+      };
+      this.callbacks.add(callback);
+      this.ensureObserver();
+      if (immediate) callback(this.getSnapshot());
+      return () => {
+        this.callbacks.delete(callback);
+        if (this.callbacks.size === 0) {
+          this.observer?.disconnect();
+          this.resizeObserver?.disconnect();
+          this.observer = null;
+          this.resizeObserver = null;
+        }
+      };
     }
   };
   const ICONS = {
@@ -6595,30 +2230,22 @@ openNextTab() {
     STARLIGHT: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#FF69B4" stroke="#FF1493" stroke-width="2"/></svg>`
   };
   const ControlPage = {
-injectionTarget: null,
+initialized: false,
+    injectionTarget: null,
 isPanelInjected: false,
-commandChannel: null,
-    modalContainer: null,
-openTabTimerId: null,
+modalContainer: null,
+stopLayoutObserver: null,
 init() {
+      if (this.initialized || document.getElementById("qmx-modal-container")) {
+        Utils.log("[控制中心] 检测到已有实例，跳过重复初始化。");
+        return;
+      }
+      this.initialized = true;
       Utils.log("当前是控制页面，开始设置UI...");
-      this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
       ThemeManager.applyTheme(SETTINGS.THEME);
       this.clearClosedTabs();
       this.createHTML();
-      const qmxModalHeader = document.querySelector(".qmx-modal-header");
-      if (SETTINGS.SHOW_STATS_IN_PANEL) {
-        if (qmxModalHeader) {
-          qmxModalHeader.style.padding = "10px 20px 0px 20px";
-        }
-        StatsInfo.init();
-      } else {
-        const statsContent = document.querySelector(".qmx-stats-container");
-        if (statsContent && qmxModalHeader) {
-          statsContent.remove();
-          qmxModalHeader.style.padding = "10px 20px 4px 20px";
-        }
-      }
+      StatsInfo.init();
       this.applyModalMode();
       this.bindEvents();
       window.addEventListener("qmx-settings-update", (e) => {
@@ -6626,15 +2253,11 @@ init() {
       });
       setInterval(() => {
         this.renderDashboard();
-        this.cleanupAndMonitorWorkers();
         this.checkInjectionState();
       }, 1e3);
-      this.startOpenTabScheduler();
-      FirstTimeNotice.showCalibrationNotice();
+      FirstTimeNotice.showFirstUseNotice();
       window.addEventListener("beforeunload", () => {
-        if (this.commandChannel) {
-          this.commandChannel.close();
-        }
+        RedBagTaskController.dispose();
       });
       window.addEventListener("resize", () => {
         this.correctButtonPosition();
@@ -6643,7 +2266,7 @@ init() {
     },
 checkInjectionState() {
       if (SETTINGS.MODAL_DISPLAY_MODE === "inject-rank-list" && this.isPanelInjected) {
-        if (this.modalContainer && !this.modalContainer.isConnected) {
+        if (!this.injectionTarget?.isConnected || !this.modalContainer?.isConnected || this.modalContainer.parentNode !== this.injectionTarget) {
           Utils.log("[监控] 检测到面板脱离DOM (可能是页面重绘)，正在重新注入...");
           this.isPanelInjected = false;
           this.applyModalMode();
@@ -6656,70 +2279,18 @@ async handleSettingsUpdate(newSettings) {
         this.applyModalMode();
         this.correctModalPosition();
       }
-      if (typeof newSettings.ENABLE_DANMU_PRO !== "undefined") {
-        if (newSettings.ENABLE_DANMU_PRO) {
-          DanmuPro.init();
-        } else {
-          DanmuPro.destroy();
-        }
-      }
-      if (typeof newSettings.SHOW_STATS_IN_PANEL !== "undefined") {
-        this.toggleStatsPanel(newSettings.SHOW_STATS_IN_PANEL);
-      }
-      if (newSettings.STATS_UPDATE_INTERVAL && SETTINGS.SHOW_STATS_IN_PANEL) {
-        StatsInfo.updateInterval();
-      }
-      if (typeof newSettings.OPEN_TAB_INTERVAL !== "undefined") {
-        this.startOpenTabScheduler();
-      }
     },
-startOpenTabScheduler() {
-      if (this.openTabTimerId) {
-        clearInterval(this.openTabTimerId);
-        this.openTabTimerId = null;
-      }
-      const interval = Math.max(200, Number(SETTINGS.OPEN_TAB_INTERVAL) || 2e3);
-      this.openTabTimerId = setInterval(() => {
-        PageLoader.openNextTab();
-      }, interval);
-    },
-toggleStatsPanel(show) {
-      const qmxModalHeader = document.querySelector(".qmx-modal-header");
-      let statsContent = document.querySelector(".qmx-stats-container");
-      if (show) {
-        if (!statsContent) {
-          const tempDiv = document.createElement("div");
-          tempDiv.innerHTML = statsPanelTemplate;
-          statsContent = tempDiv.firstElementChild;
-          qmxModalHeader.after(statsContent);
-          const statsToggle = document.getElementById("qmx-stats-toggle");
-          const statsContentEl = document.getElementById("qmx-stats-content");
-          if (statsToggle && statsContentEl) {
-            statsToggle.addEventListener("click", () => {
-              const isExpanded = statsToggle.classList.contains("expanded");
-              if (isExpanded) {
-                statsToggle.classList.remove("expanded");
-                statsContentEl.classList.remove("expanded");
-              } else {
-                statsToggle.classList.add("expanded");
-                statsContentEl.classList.add("expanded");
-              }
-            });
-          }
-        }
-        if (qmxModalHeader) {
-          qmxModalHeader.style.padding = "10px 20px 0px 20px";
-        }
-        StatsInfo.init();
-      } else {
-        if (statsContent) {
-          statsContent.remove();
-        }
-        if (qmxModalHeader) {
-          qmxModalHeader.style.padding = "10px 20px 4px 20px";
-        }
-        StatsInfo.destroy();
-      }
+    setPanelPage(page) {
+      const modal = this.modalContainer || document.getElementById("qmx-modal-container");
+      if (!modal) return;
+      const title = modal.querySelector("#qmx-panel-title");
+      const button = modal.querySelector("#qmx-page-switch-btn");
+      const showStats = page === "stats";
+      modal.classList.toggle("is-stats-page", showStats);
+      modal.dataset.page = showStats ? "stats" : "tasks";
+      if (title) title.setAttribute("aria-label", showStats ? "数据统计" : "控制中心");
+      if (button) button.title = showStats ? "返回当前工作" : "查看统计";
+      if (showStats) void StatsInfo.refreshFromSources?.();
     },
     createHTML() {
       Utils.log("创建UI的HTML结构...");
@@ -6728,7 +2299,7 @@ toggleStatsPanel(show) {
       const modalContainer = document.createElement("div");
       modalContainer.id = "qmx-modal-container";
       this.modalContainer = modalContainer;
-      modalContainer.innerHTML = mainPanelTemplate(SETTINGS.MAX_WORKER_TABS);
+      modalContainer.innerHTML = mainPanelTemplate(SETTINGS.MAX_CONCURRENT_TASKS);
       document.body.appendChild(modalBackdrop);
       document.body.appendChild(modalContainer);
       const mainButton = document.createElement("button");
@@ -6738,64 +2309,45 @@ toggleStatsPanel(show) {
       const settingsModal = document.createElement("div");
       settingsModal.id = "qmx-settings-modal";
       document.body.appendChild(settingsModal);
-      const globalTooltip = document.createElement("div");
-      globalTooltip.id = "qmx-global-tooltip";
-      document.body.appendChild(globalTooltip);
-    },
-cleanupAndMonitorWorkers() {
-      const state = GlobalState.get();
-      let stateModified = false;
-      for (const roomId in state.tabs) {
-        const tab = state.tabs[roomId];
-        const timeSinceLastUpdate = Date.now() - tab.lastUpdateTime;
-        if (tab.status === "DISCONNECTED" && timeSinceLastUpdate > SETTINGS.DISCONNECTED_GRACE_PERIOD) {
-          Utils.log(
-            `[监控] 任务 ${roomId} (已断开) 超过 ${SETTINGS.DISCONNECTED_GRACE_PERIOD / 1e3} 秒未重连，执行清理。`
-          );
-          delete state.tabs[roomId];
-          stateModified = true;
-          continue;
-        }
-        if (tab.status === "SWITCHING" && timeSinceLastUpdate > SETTINGS.SWITCHING_CLEANUP_TIMEOUT) {
-          Utils.log(`[监控] 任务 ${roomId} (切换中) 已超时，判定为已关闭，执行清理。`);
-          delete state.tabs[roomId];
-          stateModified = true;
-          continue;
-        }
-        if (timeSinceLastUpdate > SETTINGS.UNRESPONSIVE_TIMEOUT && tab.status !== "UNRESPONSIVE") {
-          Utils.log(`[监控] 任务 ${roomId} 已失联超过 ${SETTINGS.UNRESPONSIVE_TIMEOUT / 6e4} 分钟，标记为无响应。`);
-          tab.status = "UNRESPONSIVE";
-          tab.statusText = "心跳失联，请点击激活或关闭此标签页";
-          stateModified = true;
-        }
-      }
-      if (stateModified) {
-        GlobalState.set(state);
-      }
     },
 bindEvents() {
       Utils.log("为UI元素绑定事件...");
       const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
       const modalContainer = document.getElementById("qmx-modal-container");
       const modalBackdrop = document.getElementById("qmx-modal-backdrop");
-      const statsToggle = document.getElementById("qmx-stats-toggle");
-      const statsContent = document.getElementById("qmx-stats-content");
-      if (statsToggle && statsContent) {
-        statsToggle.addEventListener("click", () => {
-          const isExpanded = statsToggle.classList.contains("expanded");
-          if (isExpanded) {
-            statsToggle.classList.remove("expanded");
-            statsContent.classList.remove("expanded");
-          } else {
-            statsToggle.classList.add("expanded");
-            statsContent.classList.add("expanded");
-          }
+      const pageSwitchButton = modalContainer.querySelector("#qmx-page-switch-btn");
+      if (pageSwitchButton) {
+        pageSwitchButton.addEventListener("click", () => {
+          const nextPage = modalContainer.dataset.page === "stats" ? "tasks" : "stats";
+          this.setPanelPage(nextPage);
         });
       }
+      const themeButton = modalContainer.querySelector("#qmx-theme-toggle-btn");
+      const updateThemeButton = () => {
+        if (!themeButton) return;
+        const dark = SETTINGS.THEME === "dark";
+        themeButton.dataset.theme = dark ? "dark" : "light";
+        themeButton.title = dark ? "切换到日间模式" : "切换到夜间模式";
+        themeButton.setAttribute("aria-label", themeButton.title);
+      };
+      updateThemeButton();
+      if (themeButton) {
+        themeButton.onclick = () => {
+          themeButton.classList.remove("is-switching");
+          void themeButton.offsetWidth;
+          themeButton.classList.add("is-switching");
+          const nextTheme = SETTINGS.THEME === "dark" ? "light" : "dark";
+          SettingsManager.update({ THEME: nextTheme });
+          ThemeManager.applyTheme(nextTheme);
+          updateThemeButton();
+          window.setTimeout(() => themeButton.classList.remove("is-switching"), 560);
+        };
+      }
+      modalContainer.querySelector("#qmx-modal-settings-btn").onclick = () => SettingsPanel.show();
       this.setupDrag(mainButton, SETTINGS.BUTTON_POS_STORAGE_KEY, () => this.showPanel());
       const modalHeader = modalContainer.querySelector(".qmx-modal-header");
       this.setupDrag(modalContainer, "douyu_qmx_modal_position", null, modalHeader);
-      document.getElementById("qmx-modal-close-btn").onclick = () => this.hidePanel();
+      modalContainer.querySelector("#qmx-modal-close-btn").onclick = () => this.hidePanel();
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && modalContainer.classList.contains("visible")) {
           this.hidePanel();
@@ -6804,31 +2356,12 @@ bindEvents() {
       if (SETTINGS.MODAL_DISPLAY_MODE !== "inject-rank-list") {
         modalBackdrop.onclick = () => this.hidePanel();
       }
-      document.getElementById("qmx-modal-open-btn").onclick = () => this.openOneNewTab();
-      document.getElementById("qmx-modal-settings-btn").onclick = () => SettingsPanel.show();
-      document.getElementById("qmx-modal-close-all-btn").onclick = async () => {
-        if (confirm("确定要关闭所有工作标签页吗？")) {
-          Utils.log("用户请求关闭所有标签页。");
-          Utils.log("通过 BroadcastChannel 发出 CLOSE_ALL 指令...");
-          this.commandChannel.postMessage({ action: "CLOSE_ALL", target: "*" });
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          Utils.log("强制清空全局状态中的标签页列表...");
-          let state = GlobalState.get();
-          if (Object.keys(state.tabs).length > 0) {
-            Utils.log(`清理前还有 ${Object.keys(state.tabs).length} 个标签页残留`);
-            state.tabs = {};
-            GlobalState.set(state);
-          }
+      modalContainer.querySelector("#qmx-modal-open-btn").onclick = () => this.startOneNewTask();
+      modalContainer.querySelector("#qmx-modal-close-all-btn").onclick = () => {
+        if (confirm("确定要停止所有领取任务吗？")) {
+          Utils.log("用户请求停止所有领取任务。");
+          RedBagTaskController.stopAll();
           this.renderDashboard();
-          setTimeout(() => {
-            state = GlobalState.get();
-            if (Object.keys(state.tabs).length > 0) {
-              Utils.log("检测到残留标签页，执行二次清理...");
-              state.tabs = {};
-              GlobalState.set(state);
-              this.renderDashboard();
-            }
-          }, 1e3);
         }
       };
       document.getElementById("qmx-tab-list").addEventListener("click", (e) => {
@@ -6837,12 +2370,8 @@ bindEvents() {
         const roomItem = e.target.closest("[data-room-id]");
         const roomId = roomItem?.dataset.roomId;
         if (!roomId) return;
-        Utils.log(`[控制中心] 用户请求关闭房间: ${roomId}。`);
-        const state = GlobalState.get();
-        delete state.tabs[roomId];
-        GlobalState.set(state);
-        Utils.log(`通过 BroadcastChannel 向 ${roomId} 发出 CLOSE 指令...`);
-        this.commandChannel.postMessage({ action: "CLOSE", target: roomId });
+        Utils.log(`[控制中心] 用户请求停止房间任务: ${roomId}。`);
+        RedBagTaskController.stopRoom(roomId);
         roomItem.style.opacity = "0";
         roomItem.style.transform = "scale(0.8)";
         roomItem.style.transition = "all 0.3s ease";
@@ -6850,27 +2379,30 @@ bindEvents() {
       });
     },
 renderDashboard() {
-      const state = GlobalState.get();
+      const state2 = GlobalState.get();
       const tabList = document.getElementById("qmx-tab-list");
       if (!tabList) return;
-      const tabIds = Object.keys(state.tabs);
+      const tabIds = Object.keys(state2.tasks);
       document.getElementById("qmx-active-tabs-count").textContent = tabIds.length;
+      const overviewState = document.getElementById("qmx-overview-state");
+      if (overviewState) {
+        const statuses = tabIds.map((roomId) => state2.tasks[roomId]?.status);
+        const visualState = tabIds.length === 0 ? "idle" : statuses.includes("ERROR") ? "error" : statuses.includes("CLAIMING") ? "claiming" : statuses.includes("WAITING") ? "waiting" : "active";
+        overviewState.dataset.state = visualState;
+      }
       const statusDisplayMap = {
         OPENING: "加载中",
         WAITING: "等待中",
-        CLAIMING: "领取中",
-        SWITCHING: "切换中",
+        CLAIMING: "校验中",
+        SUCCESS: "已领取",
         DORMANT: "休眠中",
-        ERROR: "出错了",
-        UNRESPONSIVE: "无响应",
-        DISCONNECTED: "已断开",
-        STALLED: "UI节流"
+        ERROR: "出错了"
       };
       const existingRoomIds = new Set(
         Array.from(tabList.children).map((node) => node.dataset.roomId).filter(Boolean)
       );
       tabIds.forEach((roomId) => {
-        const tabData = state.tabs[roomId];
+        const tabData = state2.tasks[roomId];
         let existingItem = tabList.querySelector(`[data-room-id="${roomId}"]`);
         let currentStatusText = tabData.statusText;
         if (tabData.status === "WAITING" && tabData.countdown?.endTime && (!currentStatusText || currentStatusText.startsWith("倒计时") || currentStatusText === "寻找任务中...")) {
@@ -6882,6 +2414,7 @@ renderDashboard() {
           }
         }
         if (existingItem) {
+          existingItem.dataset.status = String(tabData.status || "UNKNOWN").toLowerCase();
           const nicknameEl = existingItem.querySelector(".identity-nickname") || existingItem.querySelector(".qmx-tab-nickname");
           const statusNameEl = existingItem.querySelector(".qmx-tab-status-name");
           const statusTextEl = existingItem.querySelector(".qmx-tab-status-text");
@@ -6932,7 +2465,7 @@ renderDashboard() {
         }
       });
       existingRoomIds.forEach((roomId) => {
-        if (!state.tabs[roomId]) {
+        if (!state2.tasks[roomId]) {
           const itemToRemove = tabList.querySelector(`[data-room-id="${roomId}"]`);
           if (itemToRemove && !itemToRemove.classList.contains("qmx-item-exit-active")) {
             Utils.log(`[Render] 房间 ${roomId}: 在最新状态中已消失，执行移除。`);
@@ -6953,6 +2486,7 @@ renderDashboard() {
     },
 renderLimitStatus() {
       let limitState = GlobalState.getDailyLimit();
+      const accountRisk = GlobalState.getAccountRisk();
       let limitMessageEl = document.getElementById("qmx-limit-message");
       const openBtn = document.getElementById("qmx-modal-open-btn");
       if (limitState?.reached && Utils.formatDateAsBeijing(new Date(limitState.timestamp)) !== Utils.formatDateAsBeijing( new Date())) {
@@ -6960,7 +2494,7 @@ renderLimitStatus() {
         GlobalState.setDailyLimit(false);
         limitState = null;
       }
-      if (limitState?.reached) {
+      if (accountRisk?.suspected || limitState?.reached) {
         if (!limitMessageEl) {
           limitMessageEl = document.createElement("div");
           limitMessageEl.id = "qmx-limit-message";
@@ -6969,52 +2503,34 @@ renderLimitStatus() {
           header.parentNode.insertBefore(limitMessageEl, header.nextSibling);
           document.querySelector(".qmx-modal-header").after(limitMessageEl);
         }
-        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-          limitMessageEl.textContent = "今日已达上限。任务休眠中，可新增标签页为明日准备。";
-          openBtn.disabled = false;
-          openBtn.textContent = "新增休眠标签页";
-        } else {
-          limitMessageEl.textContent = "今日已达上限。任务已全部停止。";
+        if (limitState?.reached) {
+          limitMessageEl.textContent = SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT" ? "今日已达上限。现有任务休眠并等待次日恢复。" : "今日已达上限。任务已全部停止。";
           openBtn.disabled = true;
           openBtn.textContent = "今日已达上限";
+        } else {
+          limitMessageEl.textContent = `连续 ${accountRisk.count || 3} 次首次请求返回 12001，疑似账户风控，请自行判断是否继续。`;
+          openBtn.disabled = false;
+          openBtn.textContent = "启动领取任务";
         }
       } else {
         if (limitMessageEl) limitMessageEl.remove();
         openBtn.disabled = false;
-        openBtn.textContent = "打开新房间";
+        openBtn.textContent = "启动领取任务";
       }
     },
-async openOneNewTab() {
+async startOneNewTask() {
       const openBtn = document.getElementById("qmx-modal-open-btn");
       if (openBtn.disabled) return;
-      const state = GlobalState.get();
-      const openedCount = Object.keys(state.tabs).length;
-      if (openedCount >= SETTINGS.MAX_WORKER_TABS) {
-        Utils.log(`已达到最大标签页数量 (${SETTINGS.MAX_WORKER_TABS})。`);
+      if (RedBagTaskController.getActiveCount() >= SETTINGS.MAX_CONCURRENT_TASKS) {
+        Utils.log(`已达到最大领取任务数量 (${SETTINGS.MAX_CONCURRENT_TASKS})。`);
         return;
       }
       openBtn.disabled = true;
       openBtn.textContent = "正在查找...";
       try {
-        const newUrl = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, SETTINGS.CONTROL_ROOM_ID);
-        if (newUrl) {
-          const newRoomId = newUrl.match(/\/(\d+)/)[1];
-          const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-          pendingWorkers.push(newRoomId);
-          GM_setValue("qmx_pending_workers", pendingWorkers);
-          Utils.log(`已将房间 ${newRoomId} 加入待处理列表。`);
-          GlobalState.updateWorker(newRoomId, "OPENING", "正在打开...");
-          if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
-            localStorage.setItem("newWebLive", "A");
-          }
-          const queued = PageLoader.enqueue(newUrl);
-          if (queued) {
-            Utils.log(`打开请求已入队: ${newUrl}`);
-          } else {
-            Utils.log(`打开请求已存在于队列中，跳过重复入队: ${newUrl}`);
-          }
-        } else {
-          Utils.log("未能找到新的、未打开的房间。");
+        const started = await RedBagTaskController.start();
+        if (!started) {
+          Utils.log("未能找到新的有效红包房间。");
           openBtn.textContent = "无新房间";
           await Utils.sleep(SETTINGS.UI_FEEDBACK_DELAY);
         }
@@ -7024,6 +2540,7 @@ async openOneNewTab() {
         await Utils.sleep(SETTINGS.UI_FEEDBACK_DELAY);
       } finally {
         openBtn.disabled = false;
+        this.renderLimitStatus();
       }
     },
 setupDrag(element, storageKey, onClick, handle = element) {
@@ -7035,7 +2552,7 @@ setupDrag(element, storageKey, onClick, handle = element) {
         element.style.setProperty("--tx", `${x}px`);
         element.style.setProperty("--ty", `${y}px`);
       };
-      const savedPos = GM_getValue(storageKey);
+      const savedPos = _GM_getValue(storageKey);
       let currentRatio = null;
       if (savedPos) {
         if (typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
@@ -7048,7 +2565,7 @@ setupDrag(element, storageKey, onClick, handle = element) {
             ratioX: Math.max(0, Math.min(1, savedPos.x / movableWidth)),
             ratioY: Math.max(0, Math.min(1, savedPos.y / movableHeight))
           };
-          GM_setValue(storageKey, currentRatio);
+          _GM_setValue(storageKey, currentRatio);
         }
       }
       if (currentRatio) {
@@ -7069,6 +2586,8 @@ setupDrag(element, storageKey, onClick, handle = element) {
       }
       const onMouseDown = (e) => {
         if (e.button !== 0) return;
+        const interactiveTarget = e.target.closest?.("button, input, select, textarea, a, summary");
+        if (interactiveTarget && interactiveTarget !== element) return;
         isMouseDown = true;
         hasDragged = false;
         const rect = element.getBoundingClientRect();
@@ -7108,7 +2627,7 @@ setupDrag(element, storageKey, onClick, handle = element) {
           const movableHeight = window.innerHeight - element.offsetHeight;
           const ratioX = movableWidth > 0 ? Math.max(0, Math.min(1, finalRect.left / movableWidth)) : 0;
           const ratioY = movableHeight > 0 ? Math.max(0, Math.min(1, finalRect.top / movableHeight)) : 0;
-          GM_setValue(storageKey, { ratioX, ratioY });
+          _GM_setValue(storageKey, { ratioX, ratioY });
         } else if (onClick && typeof onClick === "function") {
           onClick();
         }
@@ -7120,7 +2639,7 @@ showPanel() {
       const modalContainer = document.getElementById("qmx-modal-container");
       mainButton.classList.add("hidden");
       if (this.isPanelInjected) {
-        this.injectionTarget.classList.add("qmx-hidden");
+        this.injectionTarget.classList.add("qmx-aside-slot-active");
         modalContainer.classList.remove("qmx-hidden");
       } else {
         modalContainer.classList.add("visible");
@@ -7136,9 +2655,7 @@ hidePanel() {
       mainButton.classList.remove("hidden");
       if (this.isPanelInjected) {
         modalContainer.classList.add("qmx-hidden");
-        if (this.injectionTarget) {
-          this.injectionTarget.classList.remove("qmx-hidden");
-        }
+        this.injectionTarget?.classList.remove("qmx-aside-slot-active");
       } else {
         modalContainer.classList.remove("visible");
         if (SETTINGS.MODAL_DISPLAY_MODE === "centered") {
@@ -7151,6 +2668,7 @@ createTaskItem(roomId, tabData, statusMap, statusText) {
       const newItem = document.createElement("div");
       newItem.className = "qmx-tab-list-item qmx-item-enter";
       newItem.dataset.roomId = roomId;
+      newItem.dataset.status = String(tabData.status || "UNKNOWN").toLowerCase();
       const statusColor = `var(--status-color-${tabData.status.toLowerCase()}, #9E9E9E)`;
       const nickname = tabData.nickname || "加载中...";
       const statusName = statusMap[tabData.status] || tabData.status;
@@ -7177,7 +2695,7 @@ createTaskItem(roomId, tabData, statusMap, statusText) {
                     </div>
                 </div>
                 ${prizesHtml}
-                <button class="qmx-tab-close-btn" title="关闭该标签页">
+                <button class="qmx-tab-close-btn" title="停止该领取任务">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -7188,12 +2706,12 @@ createTaskItem(roomId, tabData, statusMap, statusText) {
       const nicknameSpan = identityBtn.querySelector(".identity-nickname");
       const roomIdSpan = identityBtn.querySelector(".identity-roomid");
       const iconSpan = identityBtn.querySelector(".qmx-tab-identity-icon");
-      const setIdentityState = (state) => {
-        identityBtn.dataset.state = state;
+      const setIdentityState = (state2) => {
+        identityBtn.dataset.state = state2;
       };
-      const copyIdentityValue = async (state) => {
-        const value = state === "room" ? roomIdSpan.textContent.trim() : nicknameSpan.textContent.trim();
-        const label = state === "room" ? "房间号" : "房间名";
+      const copyIdentityValue = async (state2) => {
+        const value = state2 === "room" ? roomIdSpan.textContent.trim() : nicknameSpan.textContent.trim();
+        const label = state2 === "room" ? "房间号" : "房间名";
         try {
           await navigator.clipboard.writeText(value);
           identityBtn.classList.add("copied");
@@ -7243,66 +2761,40 @@ applyModalMode() {
       if (!modalContainer) return;
       const mode = SETTINGS.MODAL_DISPLAY_MODE;
       const mainButton = document.getElementById(SETTINGS.DRAGGABLE_BUTTON_ID);
-      Utils.log(`尝试应用模态框模式: ${mode}`);
-      if (this.isPanelInjected && mode !== "inject-rank-list") {
-        if (this.injectionTarget) {
-          this.injectionTarget.classList.remove("qmx-hidden");
-        }
-        document.body.appendChild(modalContainer);
-        this.isPanelInjected = false;
-        this.injectionTarget = null;
-        modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
-        if (mainButton && mainButton.classList.contains("hidden")) {
-          modalContainer.classList.add("visible");
-        } else {
-          modalContainer.classList.remove("visible");
-        }
-      }
+      this.stopLayoutObserver?.();
+      this.stopLayoutObserver = null;
+      this.injectionTarget?.classList.remove("qmx-aside-slot-active");
       if (mode === "inject-rank-list") {
-        const waitForTarget = (retries = SETTINGS.INJECT_TARGET_RETRIES, interval = SETTINGS.INJECT_TARGET_INTERVAL) => {
-          const target = document.querySelector(SETTINGS.SELECTORS.rankListContainer);
-          if (target) {
-            if (this.isPanelInjected && this.injectionTarget === target && modalContainer.parentNode === target.parentNode) {
-              return;
-            }
-            Utils.log("执行注入逻辑...");
-            if (this.injectionTarget && this.injectionTarget !== target) {
-              this.injectionTarget.classList.remove("qmx-hidden");
-            }
-            this.injectionTarget = target;
-            this.isPanelInjected = true;
-            target.parentNode.insertBefore(modalContainer, target.nextSibling);
-            modalContainer.classList.add("mode-inject-rank-list");
-            modalContainer.classList.remove("mode-centered", "mode-floating");
-            if (mainButton && mainButton.classList.contains("hidden")) {
-              modalContainer.classList.remove("qmx-hidden");
-              this.injectionTarget.classList.add("qmx-hidden");
-            } else {
-              modalContainer.classList.add("qmx-hidden");
-              this.injectionTarget.classList.remove("qmx-hidden");
-            }
-            modalContainer.classList.remove("visible");
-          } else if (retries > 0) {
-            setTimeout(() => waitForTarget(retries - 1, interval), interval);
-          } else {
-            Utils.log(`[注入失败] 未找到目标元素 "${SETTINGS.SELECTORS.rankListContainer}"。`);
-            Utils.log("[降级] 自动切换到 'floating' 备用模式。");
-            SETTINGS.MODAL_DISPLAY_MODE = "floating";
-            this.applyModalMode();
+        const mountIntoAside = (snapshot) => {
+          const target = snapshot.asideSlot;
+          if (!target) return;
+          if (this.injectionTarget && this.injectionTarget !== target) {
+            this.injectionTarget.classList.remove("qmx-aside-slot-active");
           }
+          this.injectionTarget = target;
+          this.isPanelInjected = true;
+          if (modalContainer.parentNode !== target) target.appendChild(modalContainer);
+          modalContainer.classList.remove("mode-centered", "mode-floating", "visible");
+          modalContainer.classList.add("mode-inject-rank-list");
+          const panelOpen = mainButton?.classList.contains("hidden");
+          modalContainer.classList.toggle("qmx-hidden", !panelOpen);
+          target.classList.toggle("qmx-aside-slot-active", Boolean(panelOpen));
         };
-        waitForTarget();
+        this.isPanelInjected = false;
+        this.stopLayoutObserver = DouyuLayoutAdapter.observe(mountIntoAside);
         return;
       }
       this.isPanelInjected = false;
-      modalContainer.classList.remove("mode-inject-rank-list", "qmx-hidden");
-      modalContainer.classList.remove("mode-centered", "mode-floating");
+      this.injectionTarget = null;
+      if (modalContainer.parentNode !== document.body) document.body.appendChild(modalContainer);
+      modalContainer.classList.remove("mode-inject-rank-list", "mode-centered", "mode-floating", "qmx-hidden");
       modalContainer.classList.add(`mode-${mode}`);
+      modalContainer.classList.toggle("visible", Boolean(mainButton?.classList.contains("hidden")));
     },
 correctPosition(elementId, storageKey) {
       const element = document.getElementById(elementId);
       if (!element) return;
-      const savedPos = GM_getValue(storageKey);
+      const savedPos = _GM_getValue(storageKey);
       if (savedPos && typeof savedPos.ratioX === "number" && typeof savedPos.ratioY === "number") {
         const newX = savedPos.ratioX * (window.innerWidth - element.offsetWidth);
         const newY = savedPos.ratioY * (window.innerHeight - element.offsetHeight);
@@ -7320,622 +2812,33 @@ correctModalPosition() {
       this.correctPosition("qmx-modal-container", "douyu_qmx_modal_position");
     },
 clearClosedTabs() {
-      const state = GlobalState.get();
-      if (state.tabs && Object.keys(state.tabs).length > 0) {
-        Utils.log("检测到残留的标签页状态，正在清空...");
-        state.tabs = {};
-        GlobalState.set(state);
-        Utils.log("已清空残留的标签页状态");
+      const state2 = GlobalState.get();
+      if (state2.tasks && Object.keys(state2.tasks).length > 0) {
+        Utils.log("检测到残留的领取任务状态，正在清空...");
+        state2.tasks = {};
+        GlobalState.set(state2);
+        Utils.log("已清空残留的领取任务状态");
       }
-    }
-  };
-  const DOM = {
-async findElement(selector, timeout = SETTINGS.PANEL_WAIT_TIMEOUT, parent = document, validator = null) {
-      const startTime = Date.now();
-      while (Date.now() - startTime < timeout) {
-        const elements = parent.querySelectorAll(selector);
-        for (const element of elements) {
-          if (window.getComputedStyle(element).display === "none") {
-            continue;
-          }
-          if (validator && !validator(element)) {
-            continue;
-          }
-          return element;
-        }
-        await Utils.sleep(300);
-      }
-      Utils.log(`查找元素超时: ${selector}`);
-      return null;
-    },
-async safeClick(element, description) {
-      if (!element) {
-        return false;
-      }
-      try {
-        if (window.getComputedStyle(element).display === "none") {
-          return false;
-        }
-        element.click();
-        return true;
-      } catch (error) {
-        Utils.log(`[点击异常] ${description} 时发生错误: ${error.message}`);
-        return false;
-      }
-    },
-async checkForLimitPopup() {
-      const limitPopup = await this.findElement(SETTINGS.SELECTORS.limitReachedPopup, 3e3);
-      if (limitPopup && limitPopup.textContent.includes("已达上限")) {
-        Utils.log("捕获到“已达上限”弹窗！");
-        return true;
-      }
-      return false;
-    }
-  };
-  const WorkerPage = {
-healthCheckTimeoutId: null,
-    currentTaskEndTime: null,
-    lastHealthCheckTime: null,
-    lastPageCountdown: null,
-    stallLevel: 0,
-remainingTimeMap: new Map(),
-consecutiveStallCount: 0,
-    previousDeviation: 0,
-
-async init() {
-      Utils.log("混合模式工作单元初始化...");
-      const roomId = Utils.getCurrentRoomId();
-      if (!roomId) {
-        Utils.log("无法识别当前房间ID，脚本停止。");
-        return;
-      }
-      GlobalState.updateWorker(roomId, "OPENING", "页面加载中...", { countdown: null, nickname: null });
-      this.startCommandListener(roomId);
-      window.addEventListener("beforeunload", () => {
-        GlobalState.updateWorker(Utils.getCurrentRoomId(), "DISCONNECTED", "连接已断开...");
-        if (this.pauseSentinelInterval) {
-          clearInterval(this.pauseSentinelInterval);
-        }
-      });
-      Utils.log("正在等待页面关键元素 (#js-player-video) 加载...");
-      const criticalElement = await DOM.findElement(SETTINGS.SELECTORS.criticalElement, SETTINGS.ELEMENT_WAIT_TIMEOUT);
-      if (!criticalElement) {
-        Utils.log("页面关键元素加载超时，此标签页可能无法正常工作，即将关闭。");
-        await this.selfClose(roomId);
-        return;
-      }
-      Utils.log("页面关键元素已加载。");
-      Utils.log("开始检测 UI 版本 和红包活动...");
-      if (window.location.href.includes("/beta")) {
-        GlobalState.updateWorker(roomId, "OPENING", "切换旧版UI...");
-        localStorage.setItem("newWebLive", "A");
-        window.location.href = window.location.href.replace("/beta", "");
-      }
-      Utils.log("确认进入稳定工作状态，执行身份核销。");
-      const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-      const myIndex = pendingWorkers.indexOf(roomId);
-      if (myIndex > -1) {
-        pendingWorkers.splice(myIndex, 1);
-        GM_setValue("qmx_pending_workers", pendingWorkers);
-        Utils.log(`房间 ${roomId} 已从待处理列表中移除。`);
-      }
-      const anchorNameElement = document.querySelector(SETTINGS.SELECTORS.anchorName);
-      const nickname = anchorNameElement ? anchorNameElement.textContent.trim() : `房间${roomId}`;
-      GlobalState.updateWorker(roomId, "WAITING", "寻找任务中...", { nickname, countdown: null });
-      const limitState = GlobalState.getDailyLimit();
-      if (limitState?.reached) {
-        Utils.log("初始化检查：检测到全局上限旗标。");
-        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-          await this.enterDormantMode();
-        } else {
-          await this.selfClose(roomId);
-        }
-        return;
-      }
-      this.findAndExecuteNextTask(roomId);
-      if (SETTINGS.AUTO_PAUSE_ENABLED) {
-        this.pauseSentinelInterval = setInterval(() => this.autoPauseVideo(), 8e3);
-      }
-    },
-    async findAndExecuteNextTask(roomId) {
-      if (this.healthCheckTimeoutId) {
-        clearTimeout(this.healthCheckTimeoutId);
-        this.healthCheckTimeoutId = null;
-      }
-      this.stallLevel = 0;
-      const limitState = GlobalState.getDailyLimit();
-      if (limitState?.reached) {
-        Utils.log(`[上限检查] 房间 ${roomId} 检测到已达每日上限。`);
-        if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-          await this.enterDormantMode();
-        } else {
-          await this.selfClose(roomId);
-        }
-        return;
-      }
-      if (SETTINGS.AUTO_PAUSE_ENABLED) this.autoPauseVideo();
-      Utils.log(`[调试] 房间 ${roomId} 进入任务寻找阶段...`);
-      const redEnvelopeDiv = await this.waitForRedEnvelopeContainer(SETTINGS.RED_ENVELOPE_LOAD_TIMEOUT);
-      if (!redEnvelopeDiv) {
-        Utils.log("[判断] 超时后仍未发现红包，执行切房流程。");
-        GlobalState.updateWorker(roomId, "SWITCHING", "未发现红包, 切换中", { countdown: null });
-        await this.switchRoom();
-        return;
-      }
-      const headlineElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
-      const contentElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-      const statusText = headlineElem ? headlineElem.textContent.trim() : "";
-      const countdownText = contentElem ? contentElem.textContent.trim() : "";
-      if (countdownText.includes(":")) {
-        const timeMatch = countdownText.match(/(\d+):(\d+)/);
-        if (timeMatch) {
-          const minutes = parseInt(timeMatch[1]);
-          const seconds = parseInt(timeMatch[2]);
-          const remainingSeconds = minutes * 60 + seconds;
-          const currentCount = this.remainingTimeMap.get(remainingSeconds) || 0;
-          this.remainingTimeMap.set(remainingSeconds, currentCount + 1);
-          if (Array.from(this.remainingTimeMap.values()).some((value) => value > 3)) {
-            GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
-            await this.switchRoom();
-            return;
-          }
-          this.currentTaskEndTime = Date.now() + remainingSeconds * 1e3;
-          Utils.log(`[任务] 识别到倒计时: ${timeMatch[0]}`);
-          const prizes = await this.extractPrizeInfo(redEnvelopeDiv);
-          GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${timeMatch[0]}`, {
-            countdown: { endTime: this.currentTaskEndTime },
-            prizes
-          });
-          const wakeUpDelay = Math.max(0, remainingSeconds * 1e3 - 1500);
-          setTimeout(() => this.claimAndRecheck(roomId), wakeUpDelay);
-          this.startHealthChecks(roomId, redEnvelopeDiv);
-        } else {
-          Utils.log(`[错误] 无法解析时间: "${countdownText}"`);
-          setTimeout(() => this.findAndExecuteNextTask(roomId), 5e3);
-        }
-      } else if (/可领取|立即/.test(statusText)) {
-        Utils.log(`[任务] 检测到可领取状态: ${statusText}`);
-        GlobalState.updateWorker(roomId, "CLAIMING", "立即领取中...");
-        await this.claimAndRecheck(roomId);
-      } else {
-        Utils.log(`[警告] 红包容器存在但状态无法识别 - 标题: "${statusText}" | 内容: "${countdownText}"`);
-        if (statusText.includes("已领完") || statusText.includes("已结束") || statusText.includes("已抢完")) {
-          Utils.log("[判断] 红包已领完或活动已结束。");
-          GlobalState.updateWorker(roomId, "SWITCHING", "红包已领完, 切换中", { countdown: null });
-          await this.switchRoom();
-        } else {
-          GlobalState.updateWorker(roomId, "WAITING", `状态未知, 重试中...`, { countdown: null });
-          setTimeout(() => this.findAndExecuteNextTask(roomId), 5e3);
-        }
-      }
-    },
-async extractPrizeInfo(redEnvelopeDiv) {
-      try {
-        Utils.log("[奖励提取] 开始提取奖励信息...");
-        const clickableContainer = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.clickableContainer);
-        if (!clickableContainer) {
-          Utils.log("[奖励提取] 未找到可点击容器");
-          return null;
-        }
-        if (!await DOM.safeClick(clickableContainer, "红包容器（提取奖励）")) {
-          Utils.log("[奖励提取] 点击失败");
-          return null;
-        }
-        const popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, 3e3);
-        if (!popup) {
-          Utils.log("[奖励提取] 弹窗未出现");
-          return null;
-        }
-        const prizes = [];
-        const prizeContainer = await DOM.findElement(SETTINGS.SELECTORS.prizeContainer, 2e3, popup);
-        if (prizeContainer) {
-          const prizeItems = prizeContainer.querySelectorAll(SETTINGS.SELECTORS.prizeItem);
-          Utils.log(`[奖励提取] 找到 ${prizeItems.length} 个奖励项容器`);
-          for (const item of prizeItems) {
-            const imgElement = item.querySelector(SETTINGS.SELECTORS.prizeImage);
-            const countElement = item.querySelector(SETTINGS.SELECTORS.prizeCount);
-            if (imgElement && countElement && countElement.textContent.trim()) {
-              const prizeData = {
-                img: imgElement.src,
-                text: countElement.textContent.trim(),
-                name: imgElement.getAttribute("alt") || ""
-              };
-              Utils.log(`[奖励提取] ✓ 提取到奖励: ${prizeData.text}, 名称: ${prizeData.name}`);
-              prizes.push(prizeData);
-            } else {
-              Utils.log(`[奖励提取] ✗ 跳过不完整项 - 图片: ${!!imgElement}, 数量: ${countElement ? `"${countElement.textContent.trim()}"` : "null"}`);
-            }
-          }
-        } else {
-          Utils.log("[奖励提取] 未找到奖励容器");
-        }
-        Utils.log(`[奖励提取] 成功提取 ${prizes.length} 个有效奖励`);
-        const closeBtn = popup.querySelector(SETTINGS.SELECTORS.closeButton);
-        if (closeBtn) {
-          await DOM.safeClick(closeBtn, "关闭按钮（提取奖励）");
-          await Utils.sleep(300);
-        }
-        return prizes.length > 0 ? prizes : null;
-      } catch (error) {
-        Utils.log(`[奖励提取] 提取失败: ${error.message}`);
-        try {
-          const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
-          if (closeBtn) {
-            await DOM.safeClick(closeBtn, "关闭按钮（异常）");
-          }
-        } catch {
-        }
-        return null;
-      }
-    },
-startHealthChecks(roomId, redEnvelopeDiv) {
-      const CHECK_INTERVAL = SETTINGS.HEALTHCHECK_INTERVAL;
-      const STALL_THRESHOLD = 4;
-      const check = () => {
-        const contentElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.countdownTimer);
-        const headlineElem = redEnvelopeDiv.querySelector(SETTINGS.SELECTORS.statusHeadline);
-        const currentPageContent = contentElem ? contentElem.textContent.trim() : "";
-        const currentPageHeadline = headlineElem ? headlineElem.textContent.trim() : "";
-        if (!currentPageHeadline.includes("倒计时") || !currentPageContent.includes(":")) {
-          Utils.log("[哨兵] 检测到状态变化，停止监控。");
-          return;
-        }
-        const scriptRemainingSeconds = (this.currentTaskEndTime - Date.now()) / 1e3;
-        const timeMatch = currentPageContent.match(/(\d+):(\d+)/);
-        if (!timeMatch) {
-          Utils.log("[哨兵] 无法解析UI倒计时，跳过本次检查。");
-          return;
-        }
-        const pMin = parseInt(timeMatch[1]);
-        const pSec = parseInt(timeMatch[2]);
-        const pageRemainingSeconds = pMin * 60 + pSec;
-        const deviation = Math.abs(scriptRemainingSeconds - pageRemainingSeconds);
-        const currentFormattedTime = Utils.formatTime(scriptRemainingSeconds);
-        const pageFormattedTime = Utils.formatTime(pageRemainingSeconds);
-        Utils.log(
-          `[哨兵] 脚本倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime} | 差值: ${deviation.toFixed(2)}秒`
-        );
-        Utils.log(`校准模式开启状态为 ${SETTINGS.CALIBRATION_MODE_ENABLED ? "开启" : "关闭"}`);
-        if (SETTINGS.CALIBRATION_MODE_ENABLED) {
-          if (deviation <= STALL_THRESHOLD) {
-            const difference = scriptRemainingSeconds - pageRemainingSeconds;
-            this.currentTaskEndTime = Date.now() + pageRemainingSeconds * 1e3;
-            if (deviation > 0.1) {
-              const direction = difference > 0 ? "慢" : "快";
-              const calibrationMessage = `${direction}${deviation.toFixed(1)}秒, 已校准`;
-              Utils.log(`[校准] ${calibrationMessage}。新倒计时: ${pageFormattedTime}`);
-              GlobalState.updateWorker(roomId, "WAITING", calibrationMessage, {
-                countdown: { endTime: this.currentTaskEndTime }
-              });
-              setTimeout(() => {
-                if (this.currentTaskEndTime > Date.now()) {
-                  GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
-                    countdown: { endTime: this.currentTaskEndTime }
-                  });
-                }
-              }, 2500);
-            } else {
-              GlobalState.updateWorker(roomId, "WAITING", `倒计时...`, {
-                countdown: { endTime: this.currentTaskEndTime }
-              });
-            }
-            this.consecutiveStallCount = 0;
-            this.previousDeviation = 0;
-            this.stallLevel = 0;
-          } else {
-            const deviationIncreasing = deviation > this.previousDeviation;
-            this.previousDeviation = deviation;
-            if (deviationIncreasing) {
-              this.consecutiveStallCount++;
-              Utils.log(`[警告] 检测到UI卡顿第 ${this.consecutiveStallCount} 次，差值: ${deviation.toFixed(2)}秒`);
-            } else {
-              this.consecutiveStallCount = Math.max(0, this.consecutiveStallCount - 1);
-            }
-            if (this.consecutiveStallCount >= 3) {
-              Utils.log(`[严重] 连续检测到卡顿且差值增大，判定为卡死状态。`);
-              GlobalState.updateWorker(roomId, "SWITCHING", "倒计时卡死, 切换中", { countdown: null });
-              clearTimeout(this.healthCheckTimeoutId);
-              this.switchRoom();
-              return;
-            }
-            this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "ERROR", `UI卡顿 (${deviation.toFixed(1)}秒)`, {
-              countdown: { endTime: this.currentTaskEndTime }
-            });
-          }
-        } else {
-          if (deviation > STALL_THRESHOLD) {
-            if (this.stallLevel === 0) {
-              Utils.log(`[哨兵] 检测到UI节流。脚本精确倒计时: ${currentFormattedTime} | UI显示: ${pageFormattedTime}`);
-            }
-            this.stallLevel = 1;
-            GlobalState.updateWorker(roomId, "STALLED", `UI节流中...`, {
-              countdown: { endTime: this.currentTaskEndTime }
-            });
-          } else {
-            if (this.stallLevel > 0) {
-              Utils.log("[哨兵] UI已从节流中恢复。");
-              this.stallLevel = 0;
-            }
-            GlobalState.updateWorker(roomId, "WAITING", `倒计时 ${currentFormattedTime}`, {
-              countdown: { endTime: this.currentTaskEndTime }
-            });
-          }
-        }
-        if (scriptRemainingSeconds > CHECK_INTERVAL / 1e3 + 1) {
-          this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
-        }
-      };
-      this.healthCheckTimeoutId = setTimeout(check, CHECK_INTERVAL);
-    },
-async claimAndRecheck(roomId) {
-      if (this.healthCheckTimeoutId) {
-        clearTimeout(this.healthCheckTimeoutId);
-        this.healthCheckTimeoutId = null;
-      }
-      Utils.log(`[领取] 房间 ${roomId} 准备触发红包弹窗...`);
-      GlobalState.updateWorker(roomId, "CLAIMING", "尝试打开红包...", { countdown: null });
-      let popup = document.querySelector(SETTINGS.SELECTORS.popupModal);
-      const isPopupVisible = popup && window.getComputedStyle(popup).display !== "none";
-      if (isPopupVisible) {
-        Utils.log("[领取] 检测到弹窗已在页面显示，跳过容器点击步骤。");
-      } else {
-        const outerContainers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
-        let targetBtn = null;
-        for (const outer of outerContainers) {
-          const hasBoxIcon = outer.querySelector(SETTINGS.SELECTORS.boxIcon);
-          if (!hasBoxIcon) continue;
-          const innerContainer = outer.querySelector(SETTINGS.SELECTORS.clickableContainer);
-          if (!innerContainer) continue;
-          const headlineElem = outer.querySelector(SETTINGS.SELECTORS.statusHeadline);
-          const contentElem = outer.querySelector(SETTINGS.SELECTORS.countdownTimer);
-          const headline = headlineElem ? headlineElem.textContent.trim() : "";
-          const content = contentElem ? contentElem.textContent.trim() : "";
-          if (headline.includes("倒计时") && content.includes(":") || headline.includes("可领取") || headline.includes("立即")) {
-            targetBtn = innerContainer;
-            Utils.log(`[领取] 锁定点击目标 - 标题: "${headline}" | 内容: "${content}"`);
-            break;
-          }
-        }
-        if (!targetBtn) {
-          const outerDiv = await DOM.findElement(SETTINGS.SELECTORS.redEnvelopeContainer, 3e3);
-          if (outerDiv) {
-            targetBtn = outerDiv.querySelector(SETTINGS.SELECTORS.clickableContainer) || outerDiv;
-          }
-        }
-        if (!await DOM.safeClick(targetBtn, "红包内层容器", { immediate: true })) {
-          Utils.log("[领取] 点击失败，重新寻找任务。");
-          await Utils.sleep(2e3);
-          this.findAndExecuteNextTask(roomId);
-          return;
-        }
-        popup = await DOM.findElement(SETTINGS.SELECTORS.popupModal, SETTINGS.POPUP_WAIT_TIMEOUT);
-        if (!popup) {
-          Utils.log("等待红包弹窗超时，重新寻找任务。");
-          await Utils.sleep(2e3);
-          this.findAndExecuteNextTask(roomId);
-          return;
-        }
-      }
-      const singleBag = popup.querySelector(SETTINGS.SELECTORS.singleBag);
-      const openBtn = singleBag ? singleBag.querySelector(SETTINGS.SELECTORS.openButton) : null;
-      if (openBtn) {
-        const btnText = openBtn.textContent.trim();
-        Utils.log(`[领取] 找到打开按钮，文本: "${btnText}"`);
-        if (/(\d+)秒后/.test(btnText)) {
-          const waitMatch = btnText.match(/(\d+)秒后/);
-          if (waitMatch) {
-            const waitSeconds = parseInt(waitMatch[1]);
-            Utils.log(`[领取] 按钮显示还需等待 ${waitSeconds} 秒...`);
-            GlobalState.updateWorker(roomId, "CLAIMING", `等待 ${waitSeconds} 秒...`, { countdown: null });
-            await Utils.sleep(waitSeconds * 1e3);
-          }
-        }
-      }
-      const clickTarget = openBtn || singleBag || popup;
-      const targetName = openBtn ? "红包打开按钮" : singleBag ? "红包主体" : "红包弹窗";
-      await Utils.sleep(Utils.getRandomDelay(SETTINGS.MIN_DELAY, SETTINGS.MAX_DELAY));
-      if (await DOM.safeClick(clickTarget, targetName, { immediate: true })) {
-        if (await DOM.checkForLimitPopup()) {
-          GlobalState.setDailyLimit(true);
-          Utils.log("检测到每日上限！");
-          if (SETTINGS.DAILY_LIMIT_ACTION === "CONTINUE_DORMANT") {
-            await this.enterDormantMode();
-          } else {
-            await this.selfClose(roomId);
-          }
-          return;
-        }
-        const successIndicator = await DOM.findElement(SETTINGS.SELECTORS.rewardSuccessIndicator, 3e3, popup);
-        const reward = successIndicator ? "领取成功 " : "空包或失败";
-        Utils.log(`领取操作完成，结果: ${reward}`);
-        GlobalState.updateWorker(roomId, "WAITING", `领取到: ${reward}`, { countdown: null });
-        const closeBtn = document.querySelector(SETTINGS.SELECTORS.closeButton);
-        await DOM.safeClick(closeBtn, "关闭按钮");
-      } else {
-        Utils.log("[领取] 点击打开操作失败。");
-      }
-      STATE.lastActionTime = Date.now();
-      Utils.log("操作完成，2秒后在本房间内寻找下一个任务...");
-      await Utils.sleep(2e3);
-      this.findAndExecuteNextTask(roomId);
-    },
-async autoPauseVideo() {
-      if (STATE.isSwitchingRoom || Date.now() - STATE.lastActionTime < SETTINGS.AUTO_PAUSE_DELAY_AFTER_ACTION) {
-        return;
-      }
-      let pauseBtn = document.querySelector(SETTINGS.SELECTORS.pauseButton);
-      if (!pauseBtn) {
-        const player = document.querySelector("#js-player-video");
-        if (player) {
-          player.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-          await Utils.sleep(500);
-          pauseBtn = document.querySelector(SETTINGS.SELECTORS.pauseButton);
-        }
-      }
-      if (pauseBtn) {
-        const isPauseIcon = pauseBtn.innerHTML.includes("M9.5 7");
-        if (isPauseIcon) {
-          if (await DOM.safeClick(pauseBtn, "暂停按钮")) {
-            Utils.log("视频已通过脚本暂停。");
-          }
-        }
-      }
-    },
-async switchRoom() {
-      if (this.healthCheckTimeoutId) {
-        clearTimeout(this.healthCheckTimeoutId);
-        this.healthCheckTimeoutId = null;
-      }
-      if (STATE.isSwitchingRoom) return;
-      STATE.isSwitchingRoom = true;
-      Utils.log("开始执行切换房间流程...");
-      const currentRoomId = Utils.getCurrentRoomId();
-      GlobalState.updateWorker(currentRoomId, "SWITCHING", "查找新房间...");
-      try {
-        const nextUrl = await DouyuAPI.getRoom(SETTINGS.API_ROOM_FETCH_COUNT, currentRoomId);
-        if (nextUrl) {
-          Utils.log(`确定下一个房间链接: ${nextUrl}`);
-          const nextRoomId = nextUrl.match(/\/(\d+)/)[1];
-          const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-          pendingWorkers.push(nextRoomId);
-          GM_setValue("qmx_pending_workers", pendingWorkers);
-          Utils.log(`已将房间 ${nextRoomId} 加入待处理列表。`);
-          if (window.location.href.includes("/beta") || localStorage.getItem("newWebLive") !== "A") {
-            localStorage.setItem("newWebLive", "A");
-          }
-          const queued = PageLoader.enqueue(nextUrl);
-          if (queued) {
-            Utils.log(`切房打开请求已入队: ${nextUrl}`);
-          } else {
-            Utils.log(`切房打开请求已存在于队列中，跳过重复入队: ${nextUrl}`);
-          }
-          await Utils.sleep(SETTINGS.CLOSE_TAB_DELAY);
-          await this.selfClose(currentRoomId);
-        } else {
-          Utils.log("API未能返回任何新的、未打开的房间，将关闭当前页。");
-          await this.selfClose(currentRoomId);
-        }
-      } catch (error) {
-        Utils.log(`切换房间时发生严重错误: ${error.message}`);
-        await this.selfClose(currentRoomId);
-      }
-    },
-async enterDormantMode() {
-      const roomId = Utils.getCurrentRoomId();
-      Utils.log(`[上限处理] 房间 ${roomId} 进入休眠模式。`);
-      GlobalState.updateWorker(roomId, "DORMANT", "休眠中 (等待北京时间0点)", { countdown: null });
-      const now = Utils.getBeijingTime();
-      const tomorrow = new Date(now.getTime());
-      tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-      tomorrow.setUTCHours(0, 0, 30, 0);
-      const msUntilMidnight = tomorrow.getTime() - now.getTime();
-      Utils.log(`将在 ${Math.round(msUntilMidnight / 1e3 / 60)} 分钟后自动刷新页面 (基于北京时间)。`);
-      setTimeout(() => window.location.reload(), msUntilMidnight);
-    },
-async selfClose(roomId, fromCloseAll = false) {
-      Utils.log(`本单元任务结束 (房间: ${roomId})，尝试更新状态并关闭。`);
-      if (this.pauseSentinelInterval) {
-        clearInterval(this.pauseSentinelInterval);
-      }
-      if (fromCloseAll) {
-        Utils.log(`[关闭所有] 跳过状态更新，直接关闭标签页 (房间: ${roomId})`);
-        GlobalState.removeWorker(roomId);
-        await Utils.sleep(100);
-        this.closeTab();
-        return;
-      }
-      GlobalState.updateWorker(roomId, "SWITCHING", "任务结束，关闭中...");
-      await Utils.sleep(100);
-      GlobalState.removeWorker(roomId);
-      await Utils.sleep(300);
-      this.closeTab();
-    },
-closeTab() {
-      try {
-        window.close();
-      } catch (e) {
-        window.location.replace("about:blank");
-        Utils.log(`关闭失败，故障为: ${e.message}`);
-      }
-    },
-
-startCommandListener(roomId) {
-      this.commandChannel = new BroadcastChannel("douyu_qmx_commands");
-      Utils.log(`工作页 ${roomId} 已连接到指令广播频道。`);
-      this.commandChannel.onmessage = (event) => {
-        const { action, target } = event.data;
-        if (target === roomId || target === "*") {
-          Utils.log(`接收到广播指令: ${action} for target ${target}`);
-          if (action === "CLOSE") {
-            this.selfClose(roomId, false);
-          } else if (action === "CLOSE_ALL") {
-            this.selfClose(roomId, true);
-          }
-        }
-      };
-      window.addEventListener("beforeunload", () => {
-        if (this.commandChannel) {
-          this.commandChannel.close();
-        }
-      });
-    },
-async waitForRedEnvelopeContainer(timeout) {
-      const startTime = Date.now();
-      Utils.log(`[等待] 开始串行计时：等待红包组件渲染 (超时: ${timeout / 1e3}s)...`);
-      while (Date.now() - startTime < timeout) {
-        const containers = document.querySelectorAll(SETTINGS.SELECTORS.redEnvelopeContainer);
-        for (const container of containers) {
-          const hasBoxIcon = container.querySelector(SETTINGS.SELECTORS.boxIcon);
-          if (!hasBoxIcon) continue;
-          const headlineElem = container.querySelector(SETTINGS.SELECTORS.statusHeadline);
-          const contentElem = container.querySelector(SETTINGS.SELECTORS.countdownTimer);
-          const headline = headlineElem ? headlineElem.textContent.trim() : "";
-          const content = contentElem ? contentElem.textContent.trim() : "";
-          if (headline || content) {
-            Utils.log(`[等待] 红包组件完全就绪，耗时 ${Date.now() - startTime}ms`);
-            return container;
-          }
-        }
-        await Utils.sleep(500);
-      }
-      Utils.log(`[等待] 阶段二超时：红包组件未能在 ${timeout / 1e3}s 内完成渲染。`);
-      return null;
     }
   };
   (function() {
     function main() {
       initHackTimer("HackTimerWorker.js");
-      const currentUrl = window.location.href;
-      const controlIds = [SETTINGS.CONTROL_ROOM_ID, SETTINGS.TEMP_CONTROL_ROOM_RID].filter(Boolean);
+      const currentUrl = new URL(window.location.href);
+      const pathRoomId = currentUrl.pathname.match(/^\/(?:beta\/)?(\d+)\/?$/)?.[1] || "";
+      const topicRoomId = currentUrl.pathname.includes("/topic/") ? currentUrl.searchParams.get("rid") || "" : "";
+      const controlIds = [SETTINGS.CONTROL_ROOM_ID, SETTINGS.TEMP_CONTROL_ROOM_RID].filter(Boolean).map(String);
+      const controlIdSet = new Set(controlIds);
       Utils.log(`控制页识别ID列表: ${controlIds.join(", ")}`);
-      const isControlRoom = controlIds.some(
-        (id) => currentUrl.includes(`/${id}`) || currentUrl.includes(`/topic/`) && currentUrl.includes(`rid=${id}`)
-      );
+      const isControlRoom = controlIdSet.has(pathRoomId) || controlIdSet.has(topicRoomId);
       if (isControlRoom) {
         ControlPage.init();
-        if (SETTINGS.ENABLE_DANMU_PRO) {
-          DanmuPro.init();
-        }
         return;
       }
       const roomId = Utils.getCurrentRoomId();
-      if (roomId && (currentUrl.match(/douyu\.com\/(?:beta\/)?(\d+)/) || currentUrl.match(/douyu\.com\/(?:beta\/)?topic\/.*rid=(\d+)/))) {
-        const globalTabs = GlobalState.get().tabs;
-        const pendingWorkers = GM_getValue("qmx_pending_workers", []);
-        if (Object.hasOwn(globalTabs, roomId) || pendingWorkers.includes(roomId)) {
-          Utils.log(`[身份验证] 房间 ${roomId} 身份合法，授权初始化。`);
-          const pendingIndex = pendingWorkers.indexOf(roomId);
-          if (Object.hasOwn(globalTabs, roomId) && pendingIndex > -1) {
-            pendingWorkers.splice(pendingIndex, 1);
-            GM_setValue("qmx_pending_workers", pendingWorkers);
-          }
-          WorkerPage.init();
-        } else {
-          Utils.log(`[身份验证] 房间 ${roomId} 未在全局状态或待处理列表中，脚本不活动。`);
-        }
-      } else {
-        Utils.log("当前页面非控制页或工作页，脚本不活动。");
+      if (roomId) ;
+      else {
+        Utils.log("当前页面非控制页或直播间，脚本不活动。");
       }
     }
     Utils.log(`脚本将在 ${SETTINGS.INITIAL_SCRIPT_DELAY / 1e3} 秒后开始初始化...`);
